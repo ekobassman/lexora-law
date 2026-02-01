@@ -1,0 +1,1464 @@
+{
+  "home": {
+    "archive": {
+      "title": "Your Secure Case Archive",
+      "subtitle": "All your cases, documents, and legal history in one secure place.",
+      "card1": {
+        "title": "Secure archive",
+        "text": "Your cases are stored securely and organized."
+      },
+      "card2": {
+        "title": "Always accessible",
+        "text": "Access your cases anytime on mobile or desktop."
+      },
+      "card3": {
+        "title": "History & exports",
+        "text": "Track drafts, exports, and actions in one place."
+      },
+      "card4": {
+        "title": "Deadlines tracked",
+        "text": "Keep deadlines visible so nothing is missed."
+      }
+    }
+  },
+  "process": {
+    "step1": {
+      "title": "Upload document",
+      "desc": "Scan or upload your official letter"
+    },
+    "step2": {
+      "title": "AI analysis",
+      "desc": "AI reads and understands the document"
+    },
+    "step3": {
+      "title": "Take action",
+      "desc": "Get clear steps to follow"
+    },
+    "step4": {
+      "title": "Send or export",
+      "desc": "Print, download or send your response"
+    },
+    "step5": {
+      "title": "Secure storage",
+      "desc": "Saved securely in your personal account"
+    },
+    "step6": {
+      "title": "Always accessible",
+      "desc": "Access your documents anytime"
+    }
+  },
+  "dashboardChat.createDocument": "Create document",
+  "dashboardChat.nameYourCase": "Name your case",
+  "dashboardChat.nameYourCaseDesc": "Give your document a name to save it",
+  "dashboardChat.caseNamePlaceholder": "e.g., Rent dispute, Tax appeal...",
+  "dashboardChat.saveCase": "Save case",
+  "dashboardChat.nameRequired": "Please enter a name for your case",
+  "dashboardChat.draftReady": "Document ready!",
+  "dashboardChat.draftReadyHint": "Use the \"Create document\" button below to save it.",
+  "chat.inputTitle": "💬 Ask AI to modify the draft",
+  "chat.inputPlaceholder": "Write here what you want to change or ask AI for help…",
+  "dashboardChat": {
+    "title": "Explain what happened",
+    "subtitle": "I help you gain clarity and understand how to proceed legally.",
+    "welcome": "Hello! Have you received a letter and don't know what to do?",
+    "welcomeHint": "Describe your situation and I'll help you understand how to proceed.",
+    "placeholder": "Describe your situation...",
+    "selectCase": "Select a case",
+    "selectCaseHint": "Select a case to continue the conversation",
+    "noCaseSelected": "No case selected",
+    "continueInCase": "Continue conversation in this case",
+    "caseMemoryInfo": "Conversation is saved to your case",
+    "error": "Error sending message. Please try again.",
+    "rateLimitError": "Too many requests. Please try again later.",
+    "limitReached": "You have reached your plan's limit.",
+    "limitReachedHint": "Upgrade to Starter or Pro to continue chatting.",
+    "upgradePlan": "View plans",
+    "newCase": "Open a new case",
+    "clearChatTitle": "Clear chat?",
+    "clearChatDesc": "All messages will be deleted. This action cannot be undone.",
+    "clearChatConfirm": "Clear chat",
+    "resetChat": "Reset chat",
+    "chatCleared": "Chat cleared ✅",
+    "clearError": "Error clearing chat",
+    "dailyMessages": "Daily AI messages",
+    "dailyMessagesHint": "Messages reset daily",
+    "createCaseTitle": "Create a case with the draft ready?",
+    "createCaseFromChat": "Create case",
+    "creatingCase": "Creating…",
+    "createCaseSuccess": "Case created successfully!",
+    "createCaseError": "Error creating case. Please try again.",
+    "newCaseTitle": "New case from chat",
+    "continueCreateCase": "Continue: create case and upload document",
+    "draftRequiredHint": "Ask the AI to create a formal letter first",
+    "noDraftError": "No draft available. Ask the AI to create a formal letter first."
+  },
+  "loader": {
+    "analyzing": "Analyzing document…",
+    "evaluating": "Evaluating content, risks and deadlines"
+  },
+  "chat": {
+    "applyToDraft": "Apply to draft",
+    "updateDraft": "Update draft",
+    "draftUpdated": "Draft updated ✓",
+    "noLetterFound": "No letter found in message",
+    "stop": "Stop",
+    "stopped": "Generation stopped",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "copyError": "Failed to copy",
+    "copyMessage": "Copy message",
+    "scrollToBottom": "Jump to latest",
+    "thinking": "Thinking..."
+  },
+  "credits": {
+    "creditsLabel": "Credits",
+    "balance": "Available credits",
+    "casesThisMonth": "Cases this month",
+    "estimatedCases": "estimated cases with current credits",
+    "upgrade": "Upgrade to PRO",
+    "monthlyCasesIncluded": "Monthly credits included",
+    "trialCaseTitle": "Trial credit",
+    "trialCaseTooltip": "You have 1 total case (one-time only). To create more cases, upgrade to a paid plan.",
+    "trialCasesDesc": "You have {{remaining}} total case (one-time only).",
+    "monthlyCasesTitle": "Monthly credits",
+    "unlimitedTitle": "Unlimited credits",
+    "monthlyCasesRemaining": "Remaining this month: {{remaining}} of {{limit}}",
+    "monthlyCasesTooltip": "A case = a complete file. It's only consumed when you create a new case.",
+    "casesLabel": "Cases",
+    "casesUsed": "{{count}} used",
+    "casesRemaining": "{{count}} remaining",
+    "casesNotMessages": "These are complete cases, not individual messages.",
+    "eachCaseIncludes": "Each case includes up to 15 AI messages.",
+    "casesRemainingThisMonth": "Cases remaining this month: {{count}}",
+    "limitReachedWarning": "You have used all included cases for this month.",
+    "unlimitedCasesDesc": "Unlimited cases included in your plan.",
+    "unlimited": "Unlimited",
+    "outOfMonthlyCases": "You've used all monthly cases. Upgrade to PRO or wait for renewal.",
+    "renewsAt": "Renews on {{date}}",
+    "caseMessagesLabel": "AI Messages",
+    "caseMessagesTitle": "AI messages for this case",
+    "caseMessagesTooltip": "This limit applies ONLY within this case. It does not consume your monthly cases.",
+    "outOfCaseMessages": "You've reached the message limit for this case.",
+    "outOfCaseMessagesHint": "Upgrade to PRO or create a new case (if you have cases available).",
+    "syncingPlan": "Updating your plan…",
+    "retry": "Retry"
+  },
+  "checkout": {
+    "syncing": "Updating your plan…",
+    "pleaseWait": "Please wait while we sync your subscription.",
+    "retryCount": "Attempt {{count}} of {{max}}",
+    "success": "Plan updated!",
+    "redirecting": "Redirecting to dashboard…",
+    "syncFailed": "Sync failed",
+    "syncFailedDesc": "We couldn't sync your plan. Don't worry, your payment went through successfully.",
+    "retry": "Retry",
+    "goToDashboard": "Go to dashboard",
+    "contactSupport": "If the problem persists, contact support."
+  },
+  "common": {
+    "languageCode": "en",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "continue": "Continue",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "change": "Change",
+    "apply": "Apply",
+    "popular": "Popular",
+    "otherCountries": "Other Countries",
+    "legalContextPreview": "Legal Context Preview",
+    "letterFormat": "Letter format",
+    "authorityTerm": "Authority term",
+    "privacyLaw": "Privacy law"
+  },
+  "termsReaccept": {
+    "error": "Error saving. Please try again.",
+    "success": "Terms accepted!"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "cases": "Cases",
+    "upload": "Upload",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign up"
+  },
+  "header": {
+    "myAccount": "My Account",
+    "settings": "Settings",
+    "logout": "Logout",
+    "logoutAction": "Logout",
+    "dashboard": "Dashboard",
+    "privateWorkspace": "Private Legal Workspace",
+    "adminPanel": "Admin Panel",
+    "subscription": "Subscription"
+  },
+  "landing": {
+    "hero": {
+      "title": "Understand official letters.\nRespond with confidence.",
+      "subtitle": "Lexora helps you understand official communications in your country, explains what is required in clear terms, and prepares the correct response based on local regulations."
+    },
+    "cta": {
+      "upload": "Upload a letter",
+      "urgent": "Urgent Response",
+      "login": "Login",
+      "start": "Start now"
+    },
+    "badge": {
+      "europe": "Works worldwide",
+      "laws": "AI based on national laws",
+      "fast": "From letter to response in minutes"
+    },
+    "actions": {
+      "title": "Choose your legal action",
+      "subtitle": "You can manage your first case for free. To continue with more cases, choose the plan that best fits your needs. No payment card required to start.",
+      "note": "The first case is free. Plans are only activated if you decide to continue.",
+      "comparePlans": "Compare plans",
+      "urgent": {
+        "title": "Urgent Response",
+        "desc": "Respond quickly to a letter with an imminent deadline. Feature available with an active plan.",
+        "button": "Start now",
+        "locked": "🔒 Unlock with a plan"
+      },
+      "reply": {
+        "title": "Reply to a letter",
+        "desc": "Received an official letter and don't know how to respond? Lexora writes the right response for you.",
+        "button": "Reply now"
+      },
+      "appeal": {
+        "title": "File an appeal",
+        "desc": "Want to contest a public authority's decision? Lexora prepares a structured appeal according to your country's laws.",
+        "button": "Prepare an appeal"
+      },
+      "explain": {
+        "title": "Explain this letter",
+        "desc": "Just want to understand what a letter means without responding immediately? Lexora translates and explains it clearly.",
+        "button": "Explain it"
+      },
+      "manage": {
+        "title": "Manage a case",
+        "desc": "Already have an open case? Add new letters: Lexora recognizes them and automatically adds them to the correct file.",
+        "button": "Open a case"
+      },
+      "speedcam": {
+        "title": "Speed Camera Appeal",
+        "desc": "Received a speed camera fine or photo ticket? Lexora analyzes the report and automatically prepares the correct appeal based on current regulations.",
+        "button": "Start Speed Camera Appeal"
+      }
+    },
+    "intelligence": {
+      "title": "An AI that knows your country",
+      "desc": "Lexora automatically recognizes:",
+      "nation": "Your nation",
+      "language": "The correct language",
+      "authority": "The competent authority",
+      "laws": "Applicable laws",
+      "adapted": "Every response is adapted to the real context, not a generic answer."
+    },
+    "trust": {
+      "title": "Your digital shield against bureaucracy",
+      "line1": "You don't need to know the law.",
+      "line2": "You don't need to write in bureaucratic language.",
+      "line3": "You don't need a lawyer for every letter.",
+      "promise": "Lexora protects you, guides you, and helps you respond with confidence."
+    },
+    "final": {
+      "title": "Upload a letter.",
+      "subtitle": "Lexora does the rest.",
+      "start": "Start now",
+      "login": "Login"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "name": "Full name",
+    "subtitle": "Access your private legal workspace",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginBtn": "Login",
+    "signupBtn": "Create account",
+    "termsAccept": "I accept the",
+    "termsLink": "Terms of Service",
+    "termsAnd": "and the",
+    "privacyLink": "Privacy Policy",
+    "disclaimerLink": "End User Disclaimer",
+    "termsNote": "You can delete your account and documents anytime.",
+    "ageConfirm": "I confirm that I am at least 18 years old",
+    "ageNote": "Lexora is not intended for minors. Use is only permitted for persons aged 18 and over.",
+    "error": {
+      "email": "Invalid email",
+      "password": "Password must be at least 6 characters",
+      "passwordMatch": "Passwords don't match",
+      "termsRequired": "You must accept the Terms, Privacy Policy, and Disclaimer to continue.",
+      "ageRequired": "You must confirm that you are at least 18 years old",
+      "generic": "An error occurred. Please try again."
+    },
+    "success": {
+      "signup": "Account created successfully!"
+    },
+    "forgotPassword": "Forgot password?"
+  },
+  "dashboard": {
+    "title": "Your cases",
+    "pageTitle": "Your Legal Cases",
+    "pageSubtitle": "Manage documents, letters and official responses in one secure place.",
+    "new": "+ New case",
+    "empty": "No ongoing cases",
+    "emptyDesc": "Start a new case to get started",
+    "logout": "Logout",
+    "open": "Open file",
+    "lastUpdate": "Last update",
+    "file": "File",
+    "authority": "Authority",
+    "documents": "Documents",
+    "deleted": "Case deleted",
+    "deleteError": "Error deleting case",
+    "confirmDelete": "Confirm deletion",
+    "confirmDeleteDesc": "Are you sure you want to delete this case? This action cannot be undone.",
+    "quickActions": {
+      "title": "Choose your action",
+      "subtitle": "Select the procedure you want to start. Each action is handled professionally, confidentially, and in compliance with applicable law.",
+      "free": "Free. No payment data required."
+    },
+    "actions": {
+      "urgent": {
+        "title": "Urgent Response",
+        "desc": "Quickly respond to a letter with an imminent deadline",
+        "button": "Start now"
+      },
+      "read": {
+        "title": "Read Letter",
+        "desc": "Scan and analyze a new letter",
+        "button": "Scan letter"
+      },
+      "appeal": {
+        "title": "File an Appeal",
+        "desc": "Prepare an appeal against a fine notice",
+        "button": "Start appeal"
+      },
+      "explain": {
+        "title": "Explain Document",
+        "desc": "Have a complex document explained by AI",
+        "button": "Get explanation"
+      }
+    },
+    "plansIntro": {
+      "title": "When additional support is needed",
+      "text": "Lexora can also support more complex or ongoing situations. For users who need continued assistance, multiple cases, or long-term document handling, different plans are available depending on individual needs.",
+      "cta": "View plans"
+    }
+  },
+  "status": {
+    "new": "New",
+    "in_progress": "In progress",
+    "inProgress": "In progress",
+    "readyToSend": "Ready to send",
+    "sent": "Sent",
+    "waiting": "Waiting",
+    "completed": "Completed",
+    "archived": "Archived",
+    "pending": "Pending",
+    "resolved": "Resolved",
+    "markDone": "Mark as completed",
+    "markDoneHint": "Have you finished this case?",
+    "markedDone": "Case marked as completed ✅",
+    "reopen": "Reopen case",
+    "reopened": "Case reopened"
+  },
+  "pratica": {
+    "new": {
+      "title": "New Case",
+      "back": "Back to dashboard",
+      "field": {
+        "title": "Title",
+        "authority": "Authority",
+        "aktenzeichen": "File number",
+        "deadline": "Deadline",
+        "file": "Upload document",
+        "letterText": "Letter text"
+      },
+      "placeholder": {
+        "title": "E.g.: Document request Tax Office",
+        "authority": "E.g.: Tax Office Munich",
+        "aktenzeichen": "E.g.: 123/456/78901",
+        "letterText": "Paste the letter text here if you don't have the PDF..."
+      },
+      "fileHint": "PDF, JPG, PNG, WEBP - Max 10MB",
+      "letterTextHint": "Optional: paste text if you can't upload the file",
+      "save": "Save case",
+      "success": "Case created successfully!",
+      "fileUploaded": "File uploaded successfully",
+      "error": {
+        "required": "This field is required",
+        "fileType": "File type not supported",
+        "fileSize": "File too large (max 10MB)",
+        "upload": "Error during upload",
+        "save": "Error during save"
+      }
+    },
+    "edit": {
+      "title": "Edit Case",
+      "save": "Save changes",
+      "success": "Case updated successfully!",
+      "existingFile": "Existing attached file"
+    },
+    "detail": {
+      "back": "Back to dashboard",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete this case?",
+      "confirmDeleteDesc": "This action cannot be undone. The case and all attached files will be permanently deleted.",
+      "cancel": "Cancel",
+      "confirmDeleteBtn": "Delete",
+      "deleted": "Case deleted",
+      "deleteError": "Error during deletion",
+      "loadError": "Error loading case",
+      "notFound": "Case not found",
+      "attachment": "Attachment",
+      "download": "Download file",
+      "downloadError": "Error downloading file",
+      "letterText": "Letter text",
+      "fullLetterText": "📄 Full letter text",
+      "letterTextHint": "Tap here to read the full text",
+      "analysis": "AI Analysis",
+      "noAnalysis": "No analysis available. Click \"Analyze\" to generate it.",
+      "risks": "Identified risks",
+      "languageMismatchHint": "Content detected in different language. Click 'Regenerate analysis' to update.",
+      "noRisks": "No risks identified",
+      "draftResponse": "Draft response",
+      "noDraft": "No draft available. Click \"Generate response\" to create it.",
+      "createdAt": "Created on",
+      "updatedAt": "Updated on",
+      "tone": "Tone",
+      "startAnalysis": "Analyze",
+      "analyzing": "Analysis in progress...",
+      "analyzingDesc": "AI is analyzing your letter. This may take a few seconds.",
+      "analyzeSuccess": "Analysis completed successfully!",
+      "analyzeError": "Error during analysis. Please try again.",
+      "noTextToAnalyze": "No text to analyze. Enter the letter text.",
+      "selectDocumentToAnalyze": "Select a document above to analyze.",
+      "analyzingDocument": "Analyzing document",
+      "regenerate": "Regenerate analysis",
+      "generateDraft": "Generate response",
+      "regenerateDraft": "Regenerate response",
+      "generatingDraft": "Generating response...",
+      "generating": "Generating...",
+      "draftSuccess": "Draft generated successfully!",
+      "selectTone": "Response tone",
+      "toneFormal": "Formal",
+      "toneFriendly": "Friendly",
+      "toneAssertive": "Assertive",
+      "badgeText": "Text",
+      "badgeDraft": "Draft",
+      "rateLimitError": "Too many requests. Please try again later.",
+      "creditsError": "Insufficient credits. Please upgrade your plan.",
+      "saveError": "Error saving. Please try again."
+    }
+  },
+  "analysis": {
+    "uploading": "Uploading file...",
+    "extracting": "Extracting text...",
+    "analyzing": "AI analysis in progress...",
+    "completed": "Analysis completed!",
+    "error": "Error during analysis",
+    "analyzingHint": "AI is analyzing the document. This may take a few seconds.",
+    "ocrError": "Error extracting text",
+    "autoAnalysis": "Automatic analysis"
+  },
+  "camera": {
+    "button": "Scan with camera",
+    "processing": "Processing document...",
+    "success": "Document captured!",
+    "error": "Scanning error",
+    "errorNotImage": "Select a valid image",
+    "errorProcessing": "Error processing image",
+    "hint": "On mobile, camera opens. On desktop, select a file."
+  },
+  "cameraScan": {
+    "button": "Scan with camera",
+    "processing": "Processing document...",
+    "success": "Document captured!",
+    "error": "Scanning error",
+    "errorNotImage": "Select a valid image",
+    "errorProcessing": "Error processing image",
+    "hint": "On mobile, camera opens. On desktop, select a file."
+  },
+  "inAppCamera": {
+    "photos": "photos",
+    "hint": "Tap to capture, then Done when finished",
+    "errorAccess": "Cannot access camera. Please check permissions."
+  },
+  "actions": {
+    "title": "Actions",
+    "back": "Back",
+    "downloadPdf": "Save PDF",
+    "print": "Print",
+    "email": "Send by email",
+    "copy": "Copy text",
+    "share": "Share",
+    "copied": "Copied to clipboard ✅",
+    "copyError": "Copy error",
+    "pdfSuccess": "PDF downloaded successfully!",
+    "pdfError": "Error generating PDF",
+    "emailFallback": "Text copied: paste it in email ✅",
+    "emailOpened": "Email app opened",
+    "emailFallbackCopy": "Text copied to clipboard ✅",
+    "emailLongTextNote": "The text has been copied to clipboard. Please paste it.",
+    "incompleteProfile": "Complete your profile to have the correct header.",
+    "shareSuccess": "Shared successfully!",
+    "shareCopied": "Text copied to clipboard ✅",
+    "shareError": "Sharing error",
+    "documentContainsPlaceholder": "Internal error: data not correctly filled"
+  },
+  "sender": {
+    "title": "Sender data",
+    "edit": "Edit",
+    "name": "Full name",
+    "namePlaceholder": "Your name",
+    "address": "Address",
+    "addressPlaceholder": "Street and number",
+    "postalCode": "Postal code",
+    "postalCodePlaceholder": "Postal code",
+    "city": "City",
+    "cityPlaceholder": "City",
+    "country": "Country",
+    "date": "Date",
+    "saveForLetter": "Save only for this letter",
+    "saveAsDefault": "Save as default",
+    "cancel": "Cancel",
+    "saved": "Sender data saved ✅",
+    "savedAsDefault": "Data saved to profile ✅",
+    "saveError": "Error saving",
+    "saveProfileError": "Error saving profile",
+    "noData": "No sender data. Click \"Edit\" to enter it."
+  },
+  "chat": {
+    "title": "Chat with AI",
+    "subtitle": "Write what you want us to do. You can write or speak.",
+    "placeholder": "Write your request here...",
+    "modifyTitle": "Modify Draft",
+    "modifySubtitle": "Tell the AI how you want to change the letter",
+    "modifyPlaceholder": "E.g. 'Make it more assertive' or 'Add that I already paid'...",
+    "modifyHint": "Use AI to refine and improve your draft response",
+    "modifyButton": "Modify Draft",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "error": "Error sending message",
+    "welcome": "Hello! How can I help you with this letter?",
+    "regenerate": "Regenerate response",
+    "speak": "Speak",
+    "stop": "Stop",
+    "speechNotSupported": "Speech recognition not supported",
+    "speechError": "Speech recognition error",
+    "microphonePermissionDenied": "Microphone permission denied",
+    "responseLanguage": "AI responds in",
+    "languageChanged": "AI will now respond in the selected language",
+    "selectLanguage": "Select response language"
+  },
+  "documents": {
+    "title": "Documents",
+    "upload": "Upload document",
+    "noDocuments": "No documents yet",
+    "empty": "No documents uploaded",
+    "emptyDesc": "Upload a document to get started",
+    "selectHint": "Tap a document to select it for AI analysis",
+    "addNew": "Add document",
+    "addNewDesc": "Upload a new document or enter text manually",
+    "direction": "Document direction",
+    "incoming": "Received",
+    "outgoing": "Sent",
+    "selectFile": "Select file",
+    "fileTooLarge": "File is too large (max 10MB)",
+    "noContent": "Please select a file or enter text",
+    "uploadSuccess": "Document uploaded successfully",
+    "uploadAndTextUpdated": "Document uploaded and analysis started",
+    "delete": "Delete",
+    "download": "Download",
+    "preview": "Preview",
+    "rename": "Rename",
+    "renameTitle": "Rename document",
+    "newName": "New name",
+    "renamed": "Document renamed",
+    "renameError": "Error renaming document",
+    "deleted": "Document deleted",
+    "deleteError": "Error deleting document",
+    "confirmDelete": "Delete document?",
+    "confirmDeleteDesc": "This action cannot be undone.",
+    "type": {
+      "letter": "Letter",
+      "attachment": "Attachment",
+      "evidence": "Evidence"
+    },
+    "uploadAndAnalyze": "Upload and analyze",
+    "uploading": "Uploading...",
+    "multiSelectHint": "Multiple files allowed"
+  },
+  "newPratica": {
+    "title": "New case",
+    "back": "Back to dashboard",
+    "success": "Case created successfully!",
+    "field": {
+      "file": "Upload document",
+      "letterText": "Letter text",
+      "title": "Title",
+      "authority": "Authority",
+      "aktenzeichen": "File number",
+      "deadline": "Deadline"
+    },
+    "fileHint": "PDF, JPG, PNG (max 10MB)",
+    "letterTextHint": "Paste the letter text here if you don't have a file",
+    "placeholder": {
+      "letterText": "Enter or paste the letter text...",
+      "title": "E.g.: Document request Tax Office",
+      "authority": "E.g.: Tax Office",
+      "aktenzeichen": "E.g.: 123/456/78901"
+    },
+    "error": {
+      "required": "This field is required",
+      "fileType": "File type not supported",
+      "fileSize": "File too large (max 10MB)",
+      "upload": "Error during upload",
+      "save": "Error during save"
+    },
+    "fileUploaded": "File uploaded successfully"
+  },
+  "editPratica": {
+    "title": "Edit case",
+    "save": "Save changes",
+    "success": "Case updated successfully!",
+    "existingFile": "Existing attached file",
+    "deadlineHint": "Set or update the deadline for this case",
+    "dangerZone": "Warning!",
+    "deleteWarning": "Deleting this case is permanent and cannot be undone. All associated documents and data will be lost.",
+    "draftSection": {
+      "title": "Draft response"
+    }
+  },
+  "detail": {
+    "back": "Back to dashboard",
+    "loadError": "Error loading case",
+    "analyzeSuccess": "Analysis completed successfully!",
+    "analyzeError": "Error during analysis. Please try again.",
+    "deleteCase": "Delete case"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "disclaimer": "Disclaimer",
+    "legal": "Legal Notice",
+    "impressum": "Impressum",
+    "disclaimerText": "This service does not constitute legal advice. For complex cases, consult a lawyer.",
+    "copyright": "© {year} LEXORA. All rights reserved."
+  },
+"pricing": {
+    "localCurrencyNote": "Prices shown in your local currency.",
+    "free": "Free",
+    "title": "Lexora Plans",
+    "subtitle": "Start free. Continue only if you need to.",
+    "perMonth": "month",
+    "popular": "Popular",
+    "currentPlan": "Current plan",
+    "activate": "Activate plan",
+    "legal": "Lexora is not a law firm. The service provides automated digital assistance in compliance with EU law.",
+    "features": {
+      "freeCase": "1 free case included",
+      "noCard": "No card required to start",
+      "cancelAnytime": "Cancel anytime",
+      "clearPricing": "Clear pricing, no surprises"
+    },
+    "plans": {
+      "basic": {
+        "description": "Up to 10 cases"
+      },
+      "plus": {
+        "description": "10 to 50 cases"
+      },
+      "pro": {
+        "description": "Unlimited cases"
+      }
+    },
+    "thumbnails": {
+      "starter": {
+        "name": "Starter",
+        "cases": "Up to 10 cases",
+        "feature1": "Basic support",
+        "feature2": "Document management",
+        "feature3": "Email reminders"
+      },
+      "pro": {
+        "name": "Pro",
+        "cases": "10–50 cases",
+        "feature1": "Priority support",
+        "feature2": "Advanced case tracking",
+        "feature3": "Document organization"
+      },
+      "unlimited": {
+        "name": "Unlimited",
+        "cases": "Unlimited cases",
+        "feature1": "Premium support",
+        "feature2": "Full case management",
+        "feature3": "Comprehensive reporting"
+      },
+      "cta": "Choose",
+      "compareAll": "Compare all plans"
+    }
+  },
+  "ai": {
+    "badge": "AI-generated",
+    "disclaimer": "AI-generated content may contain errors.",
+    "verify": "Always verify important information.",
+    "inlineDisclaimer": "AI-generated – please verify",
+    "poweredBy": "Powered by Lexora AI"
+  },
+  "consent": {
+    "title": "Terms and Conditions",
+    "description": "By using Lexora, you agree to our terms of service and privacy policy.",
+    "accept": "I accept",
+    "decline": "Decline"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated",
+    "backHome": "Back to home",
+    "controller": {
+      "title": "Data Controller",
+      "text": "The data controller is Roberto Imbimbo, Mörikestraße 10, 72202 Nagold, Germany.",
+      "contact": "Contact"
+    },
+    "purpose": {
+      "title": "Purpose of Processing",
+      "text": "We process your data to:",
+      "item1": "Provide the Lexora service (letter analysis and response generation)",
+      "item2": "Improve our AI models and service quality",
+      "item3": "Communicate with you about your account"
+    },
+    "legalBasis": {
+      "title": "Legal Basis",
+      "text": "Processing is based on Art. 6(1)(b) GDPR (contract performance) and Art. 6(1)(a) GDPR (consent for AI processing)."
+    },
+    "dataTypes": {
+      "title": "Types of Data Collected",
+      "item1": "Account data (email, name)",
+      "item2": "Uploaded documents and their content",
+      "item3": "Generated responses and analysis",
+      "item4": "Usage data and logs"
+    },
+    "retention": {
+      "title": "Data Retention",
+      "text": "Data is retained for the duration of your account. You can delete your data at any time through settings."
+    },
+    "subprocessors": {
+      "title": "Sub-processors",
+      "item1": "Cloud infrastructure: secure servers",
+      "item2": "AI processing: Google AI (Gemini)"
+    },
+    "rights": {
+      "title": "Your Rights",
+      "text": "Under GDPR, you have the following rights:",
+      "access": "Right of Access",
+      "accessDesc": "Request a copy of your data",
+      "deletion": "Right to Erasure",
+      "deletionDesc": "Request deletion of your data"
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "For privacy inquiries, contact us at:"
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated",
+    "backHome": "Back to home",
+    "intro": {
+      "title": "Introduction",
+      "text": "Welcome to Lexora. By using our service, you agree to these terms."
+    },
+    "service": {
+      "title": "Service Description",
+      "text": "Lexora provides AI-powered analysis of official letters and generates response drafts. This is not legal advice."
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "text": "Lexora is an AI assistant and does not replace professional legal advice. For complex legal matters, consult a qualified lawyer."
+    },
+    "liability": {
+      "title": "Limitation of Liability",
+      "text": "We are not liable for any damages arising from the use of AI-generated content. Always verify important information."
+    },
+    "termination": {
+      "title": "Termination",
+      "text": "You may terminate your account at any time. We reserve the right to suspend accounts that violate these terms."
+    }
+  },
+  "legal": {
+    "title": "Legal Notice",
+    "impressum": {
+      "title": "Impressum",
+      "according": "Information according to § 5 TMG",
+      "responsible": "Responsible for content according to § 55 Abs. 2 RStV"
+    },
+    "provider": {
+      "title": "Service Provider",
+      "name": "Roberto Imbimbo",
+      "address": "Mörikestraße 10",
+      "city": "72202 Nagold",
+      "country": "Germany",
+      "email": "Email",
+      "vat": "VAT ID"
+    },
+    "dispute": {
+      "title": "Dispute Resolution",
+      "text": "The European Commission provides a platform for online dispute resolution (OS):",
+      "link": "https://ec.europa.eu/consumers/odr",
+      "note": "We are not obligated and not willing to participate in dispute resolution proceedings before a consumer arbitration board."
+    },
+    "copyright": {
+      "title": "Copyright",
+      "text": "The content of this website is protected by copyright. Reproduction requires written consent."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences",
+    "credits": {
+      "title": "Credits & Usage",
+      "desc": "Overview of your monthly credits and usage",
+      "viewDetails": "View details"
+    },
+    "account": {
+      "title": "Account & Profile",
+      "desc": "Manage your account information",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "emailHint": "Email cannot be changed",
+      "phone": "Phone",
+      "address": "Address",
+      "city": "City",
+      "postalCode": "Postal code",
+      "country": "Country",
+      "language": "Language",
+      "save": "Save profile"
+    },
+    "sender": {
+      "title": "Sender Data",
+      "desc": "This data will be used in letters and generated PDFs",
+      "fullName": "Full name / Company",
+      "address": "Address",
+      "postalCode": "Postal code",
+      "city": "City",
+      "country": "Country",
+      "location": "Place of drafting",
+      "signature": "Text signature",
+      "autoUse": "Automatically use this data in every new case",
+      "save": "Save sender data"
+    },
+    "practices": {
+      "title": "Cases & Documents",
+      "desc": "Configure the behavior of cases and documents",
+      "autoSave": "Auto-save drafts",
+      "autoSaveDesc": "Automatically save drafts during editing",
+      "autoUpdate": "Update letter on upload",
+      "autoUpdateDesc": "Automatically update text when uploading new documents",
+      "formats": "Allowed formats",
+      "save": "Save settings",
+      "downloadDocs": "Download all my documents",
+      "deleteClosed": "Delete closed cases",
+      "deleteClosedConfirm": "Confirm deletion",
+      "deleteClosedDesc": "This action will delete all cases with status \"Resolved\", \"Completed\" or \"Archived\". Associated documents will be permanently deleted.",
+      "deleteClosedDone": "Closed cases deleted"
+    },
+    "ai": {
+      "title": "AI & Automation",
+      "desc": "Customize AI assistant behavior",
+      "languageLevel": "Language level",
+      "languageLevel.simple": "Simple",
+      "languageLevel.formal": "Formal",
+      "languageLevel.legal": "Advanced legal",
+      "tone": "Default tone",
+      "tone.collaborative": "Collaborative",
+      "tone.firm": "Firm",
+      "tone.formalNotice": "Formal notice",
+      "defaultLanguage": "Default AI language",
+      "autoUpdateDraft": "Auto-update draft",
+      "autoUpdateDraftDesc": "Update draft when interacting with AI",
+      "suggestLegal": "Suggest legal references",
+      "suggestLegalDesc": "GDPR, laws and other automatic references",
+      "save": "Save AI settings"
+    },
+    "security": {
+      "title": "Security",
+      "desc": "Manage your account security",
+      "lastLogin": "Last login",
+      "resetPassword": "Change password",
+      "resetSent": "Password reset email sent",
+      "resetError": "Error sending email",
+      "logoutAll": "Logout from all devices",
+      "logoutAllConfirm": "Confirm global logout",
+      "logoutAllDesc": "You will be logged out from all devices. You will need to log in again.",
+      "logoutAllDone": "Logged out from all devices"
+    },
+    "usage": {
+      "title": "Usage & Credits",
+      "desc": "View your credits, AI usage, and transaction history.",
+      "viewButton": "View Usage & Credits"
+    },
+    "subscription": {
+      "title": "Subscription",
+      "desc": "View your plan, billing status, and manage payments.",
+      "viewButton": "Subscription"
+    },
+    "plan": {
+      "title": "Plan & Info",
+      "desc": "Information about your plan and support",
+      "free": "Lexora is free.",
+      "freeDesc": "No subscription. No credit card. You only pay for optional premium services.",
+      "info": "Plan info",
+      "contact": "Contact support"
+    },
+    "danger": {
+      "title": "Warning!",
+      "desc": "Irreversible actions on your account",
+      "export": "Request data export (GDPR)",
+      "exportDone": "Export request sent. You will receive your data via email within 30 days.",
+      "deleteAccount": "Delete account",
+      "deleteAccountConfirm": "Account deletion",
+      "deleteAccountDesc": "Account deletion is irreversible. All your data, cases and documents will be permanently deleted. To proceed, contact support@lexora-law.com.",
+      "deleteAccountDone": "To delete your account, contact support@lexora-law.com",
+      "understand": "I understand"
+    },
+    "saved": "Settings saved ✅",
+    "saveError": "Error saving settings"
+  },
+  "countries": {
+    "US": "USA",
+    "DE": "Germany",
+    "AT": "Austria",
+    "CH": "Switzerland",
+    "IT": "Italy",
+    "FR": "France",
+    "ES": "Spain",
+    "UK": "United Kingdom",
+    "UA": "Ukraine",
+    "LATAM": "Latin America",
+    "PL": "Poland",
+    "RO": "Romania",
+    "NL": "Netherlands",
+    "BE": "Belgium",
+    "PT": "Portugal",
+    "GR": "Greece",
+    "CZ": "Czech Republic",
+    "HU": "Hungary",
+    "SE": "Sweden",
+    "DK": "Denmark",
+    "FI": "Finland",
+    "NO": "Norway",
+    "IE": "Ireland",
+    "GB": "United Kingdom",
+    "TR": "Turkey",
+    "OTHER": "Other"
+  },
+  "languages": {
+    "IT": "Italian",
+    "DE": "German",
+    "EN": "English",
+    "FR": "French",
+    "ES": "Spanish",
+    "PL": "Polish",
+    "RO": "Romanian",
+    "TR": "Turkish"
+  },
+  "deadline": {
+    "title": "Deadline",
+    "source": "Source",
+    "manual": "Manual",
+    "detected": "Detected by AI",
+    "addToCalendar": "Add to calendar",
+    "calendarAdded": "Added to calendar",
+    "daysLeft": "days left",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "upload": {
+    "title": "Upload Document",
+    "dragDrop": "Drag and drop a file here",
+    "or": "or",
+    "browse": "Browse files",
+    "hint": "PDF, JPG, PNG, WEBP - Max 10MB",
+    "uploading": "Uploading...",
+    "success": "File uploaded successfully",
+    "error": "Upload error",
+    "tooLarge": "File too large (max 10MB)",
+    "invalidType": "Invalid file type"
+  },
+  "scan": {
+    "title": "Upload your document",
+    "subtitle": "Take a photo or upload a file to get started",
+    "nameTitle": "Name your case",
+    "nameSubtitle": "Enter a descriptive name to find it easily",
+    "nameLabel": "Case name",
+    "namePlaceholder": "E.g.: Tax office, Fine, Notice...",
+    "nameHint": "Choose a name that helps you identify this document",
+    "nameRequired": "Please enter a name for the case",
+    "camera": "Take a photo",
+    "cameraDesc": "Use the camera to photograph the document",
+    "upload": "Upload a file",
+    "uploadDesc": "Select a PDF or image file from your device",
+    "processing": "Processing...",
+    "formats": "Supported formats: JPG, PNG, PDF",
+    "success": "Document analyzed successfully!",
+    "error": "Error during upload",
+    "addPhoto": "+ Photo",
+    "addFiles": "+ File",
+    "cameraDescMulti": "Take multiple document photos in sequence",
+    "step": {
+      "creating": "Creating case...",
+      "uploading": "Uploading file...",
+      "ocr": "Extracting text (OCR)...",
+      "saving": "Saving document...",
+      "analyzing": "AI analysis in progress..."
+    },
+    "anonymousHint": "To save this analysis, create a free account"
+  },
+  "subscription": {
+    "paywall": {
+      "title": "You've reached your case limit",
+      "description": "You're actively using Lexora. To create more cases, choose the plan that fits your needs."
+    },
+    "upgrade": "Upgrade now",
+    "currentPlan": "Current plan",
+    "popular": "Most popular",
+    "perMonth": "month",
+    "cancelAnytime": "Cancel anytime. No hidden fees.",
+    "error": {
+      "checkout": "Error starting checkout. Please try again."
+    },
+    "plan": {
+      "basic": {
+        "casesDesc": "Up to 10 cases per month"
+      },
+      "plus": {
+        "casesDesc": "Up to 50 cases per month"
+      },
+      "pro": {
+        "casesDesc": "Unlimited cases"
+      }
+    },
+    "features": {
+      "oneCase": "1 case (lifetime)",
+      "tenCases": "Up to 10 cases/month",
+      "fiftyCases": "Up to 50 cases/month",
+      "unlimitedCases": "Unlimited cases",
+      "upload": "Upload documents (PDF, photos)",
+      "ocr": "OCR text extraction",
+      "aiAnalysis": "AI analysis",
+      "aiDraft": "AI draft reply",
+      "aiChat": "AI chat on draft",
+      "multipleDocuments": "Multiple documents per case",
+      "unlimitedOcr": "Unlimited OCR",
+      "unlimitedAi": "Unlimited AI usage",
+      "pdfExport": "PDF export (DIN 5008)",
+      "print": "Print",
+      "email": "Email sending",
+      "caseStatus": "Case status management",
+      "allBasic": "Everything from BASIC",
+      "families": "Designed for families",
+      "allPlus": "Everything from PLUS",
+      "unlimitedDocuments": "Unlimited documents",
+      "heavyAi": "Heavy AI usage",
+      "professional": "For professionals"
+    }
+  },
+  "proposal": {
+    "title": "AI Suggestion",
+    "preview": "Preview",
+    "apply": "Apply changes",
+    "discard": "Discard",
+    "regenerate": "Regenerate"
+  },
+  "admin": {
+    "backToDashboard": "Back to dashboard"
+  },
+  "legalClassification": {
+    "title": "Legal Classification",
+    "cannotProceed": "Classification Failed",
+    "classificationFailed": "Unable to classify this document",
+    "documentType": "Document Type",
+    "riskLevel": "Risk Level",
+    "authority": "Authority/Sender",
+    "legalDomain": "Legal Domain",
+    "deadlineDetected": "Deadline Detected",
+    "extractedFacts": "Extracted Facts",
+    "missingInfo": "Missing Information",
+    "confidence": "Classification Confidence",
+    "risk": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "confidenceLevel": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "legalDraft": {
+    "structuredAnalysis": "Structured Legal Analysis",
+    "service": "Service",
+    "legalBasis": "Legal Basis",
+    "claim": "Claim",
+    "burdenOfProof": "Burden of Proof",
+    "deadline": "Deadline",
+    "deadlinePresent": "Present",
+    "noDeadline": "None",
+    "risks": "Risks",
+    "template": "Template",
+    "versionStandard": "Standard",
+    "versionReinforced": "Reinforced",
+    "noDraft": "No draft available",
+    "applyDraft": "Use this draft",
+    "undo": "Undo",
+    "qualityCheck": "Quality Check",
+    "lawsOk": "Laws verified",
+    "phrasesOk": "Language OK",
+    "structureOk": "Structure OK",
+    "warnings": "Verify before sending",
+    "disclaimer": "⚠️ AI-generated draft - verify before sending. This is not legal advice."
+  },
+  "support": {
+    "title": "Support",
+    "intro": "Have a question or problem?\nIf something is unclear or you're stuck, you can contact us via this form.\nWe'll get back to you as soon as possible.",
+    "formTitle": "Contact Support",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "requestType": "Request type",
+      "message": "Message",
+      "file": "Attachment"
+    },
+    "placeholders": {
+      "name": "Your name",
+      "email": "your@email.com",
+      "message": "Describe your issue or question..."
+    },
+    "requestTypes": {
+      "technical": "Technical issue",
+      "document": "Document question",
+      "billing": "Account / Billing",
+      "other": "Other"
+    },
+    "optional": "optional",
+    "emailHint": "Used only to reply to your request",
+    "fileHint": "Upload screenshot or document (max 10MB)",
+    "submit": "Send request",
+    "sending": "Sending...",
+    "success": {
+      "title": "Thank you!",
+      "message": "Your message has been sent.\nWe'll get back to you within 24–48 hours."
+    },
+    "errors": {
+      "emailRequired": "Email is required",
+      "messageRequired": "Message is required",
+      "invalidEmail": "Invalid email address",
+      "fileTooLarge": "File too large (max 10MB)",
+      "sendFailed": "Failed to send. Please try again."
+    },
+    "problemHint": "Problem?",
+    "contactSupport": "Contact Support"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "cases": "Cases",
+    "upload": "Upload",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign up",
+    "support": "Support"
+  },
+  "tryChat": {
+    "title": "Try Lexora now",
+    "subtitle": "Describe a letter you received and get a clear explanation + next steps.",
+    "placeholder": "Paste or describe your letter here…",
+    "emptyState": "Paste or describe an official letter and I'll help you understand it.",
+    "error": "Error getting response. Please try again.",
+    "emptyWarning": "Please describe your letter first.",
+    "genericErrorToast": "Temporary error. Please try again.",
+    "freeCaption": "Try free — 3 messages/day",
+    "quickActions": {
+      "explain": "📄 Explain this letter",
+      "draft": "✍️ Draft my reply",
+      "deadline": "⚠️ Check deadline"
+    },
+    "starterPrompts": {
+      "explain": "I received an official letter. Sender: [who]. Topic: [what]. Text: [paste here]. Please explain in simple terms and list next steps.",
+      "draft": "Write a formal reply in [language] to the sender. Goal: [my goal]. Key facts: [facts]. Tone: professional. Provide a ready-to-send draft.",
+      "deadline": "Is this urgent? What deadline applies? What happens if I do nothing? Tell me the safest next step."
+    },
+    "limit": {
+      "title": "Free preview limit reached",
+      "body": "Create a free account to continue and save your case.",
+      "signup": "Create account",
+      "login": "Login"
+    },
+    "lock": {
+      "title": "Want to continue?",
+      "text": "To analyze full documents, save your results, and get step-by-step actions, create a free account.",
+      "signup": "Create free account",
+      "login": "Log in"
+    },
+    "disclaimer": "Lexora is not a law firm and does not provide legal advice. AI can make mistakes. Please verify before acting."
+  },
+  "landingChat": {
+    "title": "Chat with Lexora",
+    "subtitle": "Describe your situation or upload a document to get started.",
+    "placeholder": "Describe your situation or paste your letter...",
+    "emptyState": "Upload a document or describe what happened. I'll help you understand and respond.",
+    "error": "Temporary error. Please try again.",
+    "limit": {
+      "title": "Free preview ended",
+      "body": "Create a free account to continue and save your case.",
+      "signup": "Create account",
+      "login": "Login"
+    },
+    "cameraPermission": {
+      "title": "Camera Access",
+      "body": "We need camera access to scan your document. Your photo will only be used for text extraction.",
+      "allow": "Allow Camera"
+    },
+    "processingOCR": "Extracting text...",
+    "ocrSuccess": "Text extracted from document",
+    "ocrError": "Could not read document. Please try again.",
+    "disclaimer": "AI can make mistakes. Verify before acting."
+  },
+  "demoChat": {
+    "sectionTitle": "Try Lexora now",
+    "sectionSubtitle": "Upload a document or describe your situation — see how Lexora helps.",
+    "placeholder": "Describe your problem or take a photo of the document. Lexora will help.",
+    "emptyState": "Upload a document or describe what happened.",
+    "freeMessages": "{{remaining}} free messages remaining",
+    "error": "Temporary error. Please try again.",
+    "limit": {
+      "title": "Free preview ended",
+      "body": "Create a free account to continue and save your case.",
+      "signup": "Create account",
+      "login": "Login"
+    },
+    "cameraPermission": {
+      "title": "Camera Access",
+      "body": "We need camera access to scan your document. Your photo is only used for text extraction.",
+      "allow": "Allow Camera"
+    },
+    "processingOCR": "Extracting text...",
+    "ocrSuccess": "Text extracted from document",
+    "ocrError": "Could not read document. Please try again.",
+    "scanDocument": "Scan document",
+    "uploadFile": "Upload file",
+    "reset": "Reset",
+    "print": "Print",
+    "email": "Email",
+    "chatCleared": "Chat cleared",
+    "nothingToPrint": "No messages to print",
+    "nothingToEmail": "No messages to email",
+    "emailSubject": "Lexora Chat Transcript",
+    "previewTitle": "Response preview",
+    "previewSubtitle": "Write a message to start",
+    "noDraft": "No letter draft available yet",
+    "draftReady": "Draft ready",
+    "preview": "Preview",
+    "copyLetter": "Copy letter",
+    "listening": "Listening..."
+  },
+  "intake": {
+    "phase": {
+      "collecting": "Data collection",
+      "review": "Summary",
+      "final": "Final document"
+    },
+    "checklist": {
+      "title": "Required data",
+      "required": "Required",
+      "optional": "Optional",
+      "complete": "Complete",
+      "missing": "Missing"
+    },
+    "review": {
+      "title": "Data summary",
+      "subtitle": "Review the collected data before generating the document.",
+      "edit": "Edit",
+      "confirm": "Confirm and generate"
+    },
+    "fields": {
+      "parentName": "Parent name",
+      "studentName": "Student name",
+      "schoolName": "School name",
+      "absenceDates": "Absence dates",
+      "absenceReason": "Absence reason",
+      "classSection": "Class/section",
+      "schoolAddress": "School address",
+      "recipient": "Recipient",
+      "contactInfo": "Contact info",
+      "hasCertificate": "Certificate attached",
+      "senderName": "Sender name",
+      "senderAddress": "Sender address",
+      "employerName": "Employer name",
+      "subject": "Subject",
+      "requestDetails": "Request details",
+      "employerAddress": "Employer address",
+      "referenceNumber": "Reference number",
+      "tenantName": "Tenant name",
+      "tenantAddress": "Tenant address",
+      "landlordName": "Landlord name",
+      "landlordAddress": "Landlord address",
+      "contractDate": "Contract date",
+      "authorityName": "Authority name",
+      "authorityAddress": "Authority address",
+      "deadline": "Deadline",
+      "recipientName": "Recipient name",
+      "recipientAddress": "Recipient address",
+      "content": "Content",
+      "location": "Location",
+      "letterDate": "Letter date"
+    },
+    "showSummary": "Show summary",
+    "confirmed": "Data confirmed",
+    "documentGenerated": "Document generated"
+  },
+  "landingSections": {
+    "howItWorks": {
+      "badge": "How It Works",
+      "title": "Your response in 4 easy steps",
+      "subtitle": "From official letter to professional response - quick, simple, and legally secure.",
+      "timeIndicator": "⏱️ Average time: 5-10 minutes",
+      "steps": {
+        "1": { "title": "Upload", "description": "Scan or upload your official letter. PDF, photo, or directly with your camera." },
+        "2": { "title": "AI Analysis", "description": "Our AI analyzes the document, identifies the sender, extracts deadlines, and understands the content." },
+        "3": { "title": "Review & Adjust", "description": "Review the generated response and customize it to your needs." },
+        "4": { "title": "Send", "description": "Export as PDF, print, or send directly by mail." }
+      }
+    },
+    "pricing": {
+      "badge": "Pricing",
+      "title": "Transparent pricing, no hidden costs",
+      "subtitle": "Choose the plan that fits your needs. Start free and upgrade anytime.",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "2 months free",
+      "perMonth": "/month",
+      "perYear": "/year",
+      "free": "Free",
+      "popular": "Popular",
+      "trustNote": "No credit card required for the free plan. Cancel anytime.",
+      "plans": {
+        "free": { "name": "Free", "description": "Perfect for trying out", "cta": "Start Free", "features": ["1 case included", "AI document analysis", "Automatic response generation", "30-day storage"] },
+        "starter": { "name": "Starter", "description": "For occasional use", "cta": "Choose Starter", "features": ["3 cases per month", "15 AI messages per case", "PDF export", "Email sending", "Deadline tracking"] },
+        "pro": { "name": "Pro", "description": "For regular users", "cta": "Choose Pro", "features": ["10 cases per month", "30 AI messages per case", "Everything in Starter", "Family support", "Priority support"] },
+        "unlimited": { "name": "Unlimited", "description": "For professionals & power users", "cta": "Choose Unlimited", "features": ["Unlimited cases", "Unlimited AI messages", "Unlimited documents", "Everything in Pro", "Professional support"] }
+      }
+    },
+    "testimonials": {
+      "badge": "Testimonials",
+      "title": "What our users say",
+      "subtitle": "Thousands of people trust Lexora to respond to official letters.",
+      "stats": {
+        "satisfaction": { "value": "98%", "label": "Satisfaction rate" },
+        "rating": { "value": "4.8/5", "label": "Average rating" },
+        "documents": { "value": "2,500+", "label": "Documents analyzed" }
+      },
+      "users": [
+        { "name": "Thomas M.", "location": "Munich, Germany", "text": "I received a letter from the tax office and didn't know how to respond. Lexora helped me formulate a professional response in 10 minutes.", "useCase": "Tax Notice" },
+        { "name": "Maria K.", "location": "Vienna, Austria", "text": "As a foreigner, I often don't understand official language. Lexora explains everything clearly and helps me respond correctly. Highly recommended!", "useCase": "Residence Permit" },
+        { "name": "Stefan B.", "location": "Zurich, Switzerland", "text": "My landlord wanted to wrongly issue a warning. With Lexora I was able to create a legally sound objection. The case was dismissed.", "useCase": "Rental Law" },
+        { "name": "Anna L.", "location": "Berlin, Germany", "text": "Received a speed camera ticket, filed an appeal with Lexora - the fine was reduced! The AI really knows the relevant laws.", "useCase": "Traffic Law" }
+      ]
+    },
+    "faq": {
+      "badge": "FAQ",
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to the most important questions about Lexora.",
+      "contactCta": "Still have questions?",
+      "contactLink": "Contact us",
+      "items": [
+        { "question": "Is my data secure?", "answer": "Yes, your data is fully protected. We use end-to-end encryption and store all data on EU servers. We never share your data with third parties. You can completely delete your account and all documents at any time." },
+        { "question": "Which countries are supported?", "answer": "Lexora currently supports Germany, Austria, and Switzerland with full legal adaptation. Basic functions are also available for other European countries. We are continuously expanding our coverage." },
+        { "question": "How accurate is the AI analysis?", "answer": "Our AI achieves over 98% accuracy in document recognition and analysis. It is specially trained on German-language official letters and knows the relevant laws and deadlines." },
+        { "question": "Can I edit the generated responses?", "answer": "Absolutely! All responses generated by Lexora can be fully customized. You can change, add, or remove text. The AI can also help you with further adjustments." },
+        { "question": "Which file formats are supported?", "answer": "Lexora accepts PDF, JPG, PNG, WEBP, and HEIC files up to 10MB. You can also scan documents directly with your smartphone camera." },
+        { "question": "Does Lexora replace a lawyer?", "answer": "Lexora is an AI assistant and not a substitute for legal advice. For complex legal matters, court proceedings, or when large sums are at stake, we always recommend consulting a qualified lawyer." },
+        { "question": "How does the free version work?", "answer": "With the free version, you can process one complete case - from analysis to finished response. This is ideal for testing. For regular use, we recommend our Starter or Pro plans." },
+        { "question": "Can I cancel my subscription at any time?", "answer": "Yes, you can cancel your subscription at any time. There is no minimum term. After cancellation, you have access to all features until the end of the billing period." }
+      ]
+    },
+    "documents": {
+      "badge": "Supported Documents",
+      "title": "Which documents can Lexora analyze?",
+      "subtitle": "Lexora understands a variety of official letters and helps you formulate the right response.",
+      "formatsTitle": "Supported file formats:",
+      "types": [
+        { "title": "Tax Notices", "description": "Income tax, VAT, property tax" },
+        { "title": "Court Letters", "description": "Payment orders, summons, judgments" },
+        { "title": "Immigration Office", "description": "Residence permits, visas, naturalization" },
+        { "title": "Insurance", "description": "Claim reports, rejections, cancellations" },
+        { "title": "Rental Law", "description": "Rent increases, warnings, terminations" },
+        { "title": "Employment Law", "description": "Warnings, terminations, references" },
+        { "title": "Fine Notices", "description": "Speed cameras, parking violations, misdemeanors" },
+        { "title": "Debt Collection", "description": "Payment demands, collection procedures" },
+        { "title": "Official Letters", "description": "Job center, social services, family benefits" }
+      ]
+    },
+    "trust": {
+      "badge": "Security & Trust",
+      "title": "Your data is safe with us",
+      "subtitle": "Security and privacy are our top priorities. We use state-of-the-art technology to protect your sensitive documents.",
+      "countriesTitle": "Supported Countries",
+      "countriesSubtitle": "Specially adapted to legal requirements in 11 countries worldwide:",
+      "certifications": { "gdpr": "GDPR" },
+      "countries": { "us": "USA", "de": "Germany", "at": "Austria", "ch": "Switzerland", "it": "Italy", "fr": "France", "es": "Spain", "uk": "United Kingdom", "ua": "Ukraine", "tr": "Turkey", "latam": "Latin America" },
+      "features": [
+        { "title": "GDPR Compliant", "description": "Fully compliant with European data protection regulations." },
+        { "title": "SSL Encryption", "description": "256-bit SSL encryption for all data transfers." },
+        { "title": "EU Servers", "description": "All data is stored exclusively on servers in the EU." },
+        { "title": "No Data Sharing", "description": "Your documents are never shared with or sold to third parties." }
+      ]
+    }
+  },
+  "pwa": {
+    "installPrompt": "Add Lexora to Home for instant access",
+    "installButton": "Install App",
+    "installLater": "Later",
+    "installing": "Installing...",
+    "installed": "App installed!",
+    "alreadyInstalled": "App already installed",
+    "updateApp": "Update App",
+    "offlineTitle": "You are offline",
+    "offlineMessage": "Some features are limited. Saved documents are available.",
+    "online": "Online",
+    "offline": "Offline",
+    "iOSGuide": {
+      "title": "Install Lexora on your iPhone",
+      "step1": "Tap the Share button at the bottom",
+      "step2": "Select 'Add to Home Screen'",
+      "step3": "Confirm with 'Add'",
+      "gotIt": "Got it, don't show again"
+    },
+    "updateAvailable": "New version available. Reload to update."
+  }
+}
