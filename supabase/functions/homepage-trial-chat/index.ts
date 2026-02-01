@@ -1,0 +1,644 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callOpenAI } from "../_shared/openai.ts";
+import { normLang } from "../_shared/lang.ts";
+import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
+import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
+import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
+import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary } from "../_shared/documentGate.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+type OkResponse = { ok: true; reply: string; draftText: string | null; meta?: { model?: string; blocked?: boolean; confidence?: number }; webSources?: SearchResult[] };
+type ErrResponse = { ok: false; error: { code: string; message: string } };
+
+function json(status: number, body: OkResponse | ErrResponse) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+const LANGUAGE_MAP: Record<string, string> = {
+  IT: "Italian",
+  DE: "German",
+  EN: "English",
+  FR: "French",
+  ES: "Spanish",
+  PL: "Polish",
+  RO: "Romanian",
+  TR: "Turkish",
+  AR: "Arabic",
+  UK: "Ukrainian",
+  RU: "Russian",
+};
+
+// Unified Intelligent Chat Behavior - SAME FOR ALL LANGUAGES
+const UNIFIED_CHAT_BEHAVIOR = `
+
+=== UNIFIED INTELLIGENT CHAT BEHAVIOR ===
+
+You are Lexora, an intelligent AI assistant that behaves like ChatGPT but specializes in legal/administrative documents.
+
+CORE PRINCIPLE: Be a helpful, conversational AI. Answer questions naturally, provide explanations, brainstorm ideas - AND when the user needs a formal document, create it with precision.
+
+=== 1) AUTOMATIC INTENT DETECTION ===
+Detect user intent automatically (NO toggles, NO UI changes):
+- CONVERSATION: Questions, explanations, ideas, strategies → respond conversationally like ChatGPT
+- INFORMATION REQUEST: Need external data → search online autonomously first
+- DOCUMENT CREATION: Need a formal letter/document → follow strict document rules
+
+=== 2) INTELLIGENT ONLINE SEARCH (AUTONOMOUS) ===
+When external information is needed (addresses, procedures, contacts):
+
+STEP 1: Search autonomously using query expansion:
+- Direct query in user's language
+- Synonyms in DE/IT/EN
+- "zuständig für" / "competente per" / "responsible for"
+- Territorial fallback: city → county → competent authority
+
+STEP 2: If found with good reliability:
+- PROPOSE the result to the user
+- Ask for simple confirmation before using in documents
+
+STEP 3: If NOT found reliably:
+- DO NOT invent anything
+- Ask ONE clear question
+
+STEP 4: If user says "find it yourself" / "trovalo tu" / "such es selbst":
+- MUST perform online search, do not ask the user again
+
+FORBIDDEN: Using approximate addresses, unofficial entities as fallback, "guessing" missing information
+
+=== 3) DOCUMENT GENERATION RULES (STRICT) ===
+NEVER generate a final document automatically without confirmation.
+
+MANDATORY FLOW:
+1. Collect all necessary information (from user profile, case, conversation, or search)
+2. Summarize what will be included in the document
+3. Ask EXPLICIT confirmation: "Shall I create the letter with this information?"
+4. ONLY after confirmation → generate the formal document
+
+⚠️ ABSOLUTE PLACEHOLDER BAN ⚠️
+NEVER generate documents containing ANY bracketed placeholders:
+- [Name], [Nome], [Vorname], [Nachname]
+- [Date], [Data], [Datum]
+- [Address], [Indirizzo], [Adresse]
+- [City], [Città], [Stadt], [Ort], [Luogo]
+- [ZIP], [CAP], [PLZ]
+- ANY text in square brackets [...]
+
+If information is missing:
+1. DO NOT generate the document yet
+2. ASK for the specific missing information
+3. Wait for answer
+4. ONLY THEN generate with real data
+
+=== 4) CONVERSATIONAL MODE (CHATGPT-LIKE) ===
+For non-document requests, respond naturally:
+- Answer questions about laws, procedures, rights
+- Explain concepts in accessible language
+- Brainstorm strategies and options
+- Provide advice and suggestions
+- Be helpful and informative
+
+=== 5) LETTER FORMAT (WHEN GENERATING) ===
+When generating a formal letter AFTER confirmation:
+- Wrap in [LETTER] and [/LETTER] tags
+- Structure: Sender → Recipient → Place+Date → Subject → Body → Closing → Signature
+- NO explanations inside the letter
+- Letter ends with signature, NOTHING after
+
+Current date: ${new Date().toLocaleDateString('it-IT')}
+`;
+
+// System prompts - DYNAMIC LANGUAGE from UI locale
+const SYSTEM_PROMPTS: Record<string, string> = {
+  IT: `Sei Lexora, assistente AI intelligente per questioni legali e amministrative.
+
+COMPORTAMENTO: Funzioni come ChatGPT ma sei specializzata in documenti legali/amministrativi.
+- Rispondi alle domande in modo conversazionale e utile
+- Cerca informazioni online automaticamente quando servono
+- Crea documenti formali SOLO dopo conferma esplicita dell'utente
+
+AMBITO AMMESSO (SEMPRE ACCETTARE):
+- Lettere a scuole, asili, università, datori di lavoro, proprietari, aziende
+- Comunicazioni con uffici pubblici, banche, assicurazioni
+- Qualsiasi comunicazione formale o semi-formale scritta
+- MAI rifiutare questi tipi di richieste
+
+REGOLA LINGUA: Rispondi in italiano.
+${UNIFIED_CHAT_BEHAVIOR}
+Questa è una demo gratuita.`,
+
+  DE: `Du bist Lexora, intelligenter KI-Assistent für rechtliche und administrative Angelegenheiten.
+
+VERHALTEN: Du funktionierst wie ChatGPT, bist aber auf rechtliche/administrative Dokumente spezialisiert.
+- Beantworte Fragen gesprächig und hilfreich
+- Suche automatisch online nach Informationen wenn nötig
+- Erstelle formelle Dokumente NUR nach ausdrücklicher Bestätigung des Benutzers
+
+ERLAUBTER BEREICH (IMMER AKZEPTIEREN):
+- Briefe an Schulen, Kindergärten, Universitäten, Arbeitgeber, Vermieter, Unternehmen
+- Kommunikation mit Behörden, Banken, Versicherungen
+- Jede formelle oder halbformelle schriftliche Kommunikation
+- NIEMALS diese Anfragen ablehnen
+
+SPRACHREGEL: Antworte auf Deutsch. DIN 5008 Format für Briefe.
+${UNIFIED_CHAT_BEHAVIOR}
+Dies ist eine kostenlose Demo.`,
+
+  EN: `You are Lexora, an intelligent AI assistant for legal and administrative matters.
+
+BEHAVIOR: You function like ChatGPT but specialize in legal/administrative documents.
+- Answer questions conversationally and helpfully
+- Search online automatically when information is needed
+- Create formal documents ONLY after explicit user confirmation
+
+ALLOWED SCOPE (ALWAYS ACCEPT):
+- Letters to schools, kindergartens, universities, employers, landlords, companies
+- Communications with public offices, banks, insurance companies
+- Any formal or semi-formal written communication
+- NEVER refuse these types of requests
+
+LANGUAGE RULE: Respond in English.
+${UNIFIED_CHAT_BEHAVIOR}
+This is a free demo.`,
+
+  FR: `Tu es Lexora, assistant IA intelligent pour les questions juridiques et administratives.
+
+COMPORTEMENT: Tu fonctionnes comme ChatGPT mais tu es spécialisée dans les documents juridiques/administratifs.
+- Réponds aux questions de manière conversationnelle et utile
+- Recherche automatiquement en ligne quand des informations sont nécessaires
+- Crée des documents formels UNIQUEMENT après confirmation explicite de l'utilisateur
+
+DOMAINE ACCEPTÉ (TOUJOURS ACCEPTER):
+- Lettres aux écoles, crèches, universités, employeurs, propriétaires, entreprises
+- Communications avec administrations, banques, assurances
+- Toute communication formelle ou semi-formelle écrite
+- Ne JAMAIS refuser ces demandes
+
+RÈGLE LANGUE: Réponds en français.
+${UNIFIED_CHAT_BEHAVIOR}
+Ceci est une démo gratuite.`,
+
+  ES: `Eres Lexora, asistente IA inteligente para asuntos legales y administrativos.
+
+COMPORTAMIENTO: Funcionas como ChatGPT pero te especializas en documentos legales/administrativos.
+- Responde preguntas de manera conversacional y útil
+- Busca información en línea automáticamente cuando sea necesario
+- Crea documentos formales SOLO después de confirmación explícita del usuario
+
+ÁMBITO PERMITIDO (SIEMPRE ACEPTAR):
+- Cartas a escuelas, guarderías, universidades, empleadores, propietarios, empresas
+- Comunicaciones con oficinas públicas, bancos, aseguradoras
+- Cualquier comunicación formal o semiformal escrita
+- NUNCA rechazar estas solicitudes
+
+REGLA IDIOMA: Responde en español.
+${UNIFIED_CHAT_BEHAVIOR}
+Esta es una demo gratuita.`,
+
+  PL: `Jesteś Lexora, inteligentnym asystentem AI do spraw prawnych i administracyjnych.
+
+ZACHOWANIE: Działasz jak ChatGPT, ale specjalizujesz się w dokumentach prawnych/administracyjnych.
+- Odpowiadaj na pytania konwersacyjnie i pomocnie
+- Automatycznie szukaj informacji online gdy potrzeba
+- Twórz formalne dokumenty TYLKO po wyraźnym potwierdzeniu użytkownika
+
+DOZWOLONY ZAKRES (ZAWSZE AKCEPTUJ):
+- Listy do szkół, przedszkoli, uniwersytetów, pracodawców, wynajmujących, firm
+- Komunikacja z urzędami, bankami, ubezpieczycielami
+- Każda formalna lub półformalna komunikacja pisemna
+- NIGDY nie odmawiaj tych próśb
+
+REGUŁA JĘZYKA: Odpowiadaj po polsku.
+${UNIFIED_CHAT_BEHAVIOR}
+To jest bezpłatna demo.`,
+
+  RO: `Ești Lexora, asistent AI inteligent pentru chestiuni juridice și administrative.
+
+COMPORTAMENT: Funcționezi ca ChatGPT dar ești specializată în documente juridice/administrative.
+- Răspunde la întrebări conversațional și util
+- Caută automat online când sunt necesare informații
+- Creează documente formale DOAR după confirmarea explicită a utilizatorului
+
+DOMENIU PERMIS (ACCEPTĂ ÎNTOTDEAUNA):
+- Scrisori către școli, grădinițe, universități, angajatori, proprietari, companii
+- Comunicări cu birouri publice, bănci, asiguratori
+- Orice comunicare formală sau semiformală scrisă
+- Nu refuza NICIODATĂ aceste cereri
+
+REGULĂ LIMBĂ: Răspunde în română.
+${UNIFIED_CHAT_BEHAVIOR}
+Aceasta este o demo gratuită.`,
+
+  TR: `Sen Lexora, hukuki ve idari konular için akıllı yapay zeka asistanısın.
+
+DAVRANIŞ: ChatGPT gibi çalışırsın ama hukuki/idari belgelerde uzmanlaşmışsın.
+- Soruları sohbet tarzında ve yardımcı bir şekilde yanıtla
+- Bilgi gerektiğinde otomatik olarak çevrimiçi ara
+- Resmi belgeleri SADECE kullanıcının açık onayından sonra oluştur
+
+İZİN VERİLEN KAPSAM (HER ZAMAN KABUL ET):
+- Okullara, anaokullarına, üniversitelere, işverenlere, ev sahiplerine, şirketlere mektuplar
+- Kamu daireleri, bankalar, sigorta şirketleri ile iletişim
+- Her türlü resmi veya yarı resmi yazılı iletişim
+- Bu talepleri ASLA reddetme
+
+DİL KURALI: Türkçe yanıt ver.
+${UNIFIED_CHAT_BEHAVIOR}
+Bu ücretsiz bir demodur.`,
+
+  AR: `أنت Lexora، مساعد ذكاء اصطناعي ذكي للمسائل القانونية والإدارية.
+
+السلوك: تعمل مثل ChatGPT لكنك متخصصة في المستندات القانونية/الإدارية.
+- أجب على الأسئلة بطريقة محادثة ومفيدة
+- ابحث تلقائياً عبر الإنترنت عند الحاجة لمعلومات
+- أنشئ المستندات الرسمية فقط بعد تأكيد صريح من المستخدم
+
+النطاق المسموح (اقبل دائماً):
+- رسائل إلى المدارس، رياض الأطفال، الجامعات، أصحاب العمل، الملاك، الشركات
+- التواصل مع المكاتب الحكومية، البنوك، شركات التأمين
+- أي اتصال رسمي أو شبه رسمي مكتوب
+- لا ترفض أبداً هذه الطلبات
+
+قاعدة اللغة: أجب بالعربية.
+${UNIFIED_CHAT_BEHAVIOR}
+هذه نسخة تجريبية مجانية.`,
+
+  UK: `Ти Lexora, інтелектуальний асистент ШІ для юридичних та адміністративних питань.
+
+ПОВЕДІНКА: Ти працюєш як ChatGPT, але спеціалізуєшся на юридичних/адміністративних документах.
+- Відповідай на запитання розмовно та корисно
+- Автоматично шукай інформацію онлайн коли потрібно
+- Створюй офіційні документи ТІЛЬКИ після явного підтвердження користувача
+
+ДОЗВОЛЕНА СФЕРА (ЗАВЖДИ ПРИЙМАТИ):
+- Листи до шкіл, дитячих садків, університетів, роботодавців, орендодавців, компаній
+- Спілкування з державними установами, банками, страховими компаніями
+- Будь-яке офіційне чи напівофіційне письмове спілкування
+- НІКОЛИ не відмовляти в цих запитах
+
+ПРАВИЛО МОВИ: Відповідай українською.
+${UNIFIED_CHAT_BEHAVIOR}
+Це безкоштовна демо.`,
+
+  RU: `Ты Lexora, интеллектуальный ИИ-ассистент для юридических и административных вопросов.
+
+ПОВЕДЕНИЕ: Ты работаешь как ChatGPT, но специализируешься на юридических/административных документах.
+- Отвечай на вопросы разговорно и полезно
+- Автоматически ищи информацию онлайн когда нужно
+- Создавай официальные документы ТОЛЬКО после явного подтверждения пользователя
+
+РАЗРЕШЁННАЯ СФЕРА (ВСЕГДА ПРИНИМАТЬ):
+- Письма в школы, детские сады, университеты, работодателям, арендодателям, компаниям
+- Общение с государственными органами, банками, страховыми компаниями
+- Любая официальная или полуофициальная письменная коммуникация
+- НИКОГДА не отказывать в этих запросах
+
+ПРАВИЛО ЯЗЫКА: Отвечай на русском.
+${UNIFIED_CHAT_BEHAVIOR}
+Это бесплатная демо.`,
+};
+
+// Greeting prefixes per language (ONLY for first message)
+const GREETINGS: Record<string, string> = {
+  IT: "Ciao, sono Lexora, il tuo assistente legale AI. ",
+  DE: "Hallo, ich bin Lexora, dein KI-Rechtsassistent. ",
+  EN: "Hello, I'm Lexora, your AI legal assistant. ",
+  FR: "Bonjour, je suis Lexora, votre assistant juridique IA. ",
+  ES: "Hola, soy Lexora, tu asistente legal de IA. ",
+  PL: "Cześć, jestem Lexora, Twój asystent prawny AI. ",
+  RO: "Bună, sunt Lexora, asistentul tău juridic AI. ",
+  TR: "Merhaba, ben Lexora, yapay zeka hukuk asistanınız. ",
+  AR: "مرحباً، أنا Lexora، مساعدك القانوني بالذكاء الاصطناعي. ",
+  UK: "Привіт, я Lexora, ваш юридичний асистент на базі ШІ. ",
+  RU: "Привет, я Lexora, ваш юридический ассистент на базе ИИ. ",
+};
+
+// Extract letter from AI response using [LETTER]...[/LETTER] markers (primary)
+// Falls back to pattern-based detection if markers not found
+function extractLetterFromResponse(text: string): string | null {
+  if (!text) return null;
+  
+  // PRIMARY: Look for [LETTER]...[/LETTER] markers (case insensitive)
+  const markerMatch = text.match(/\[LETTER\]([\s\S]*?)\[\/LETTER\]/i);
+  
+  if (markerMatch && markerMatch[1]) {
+    const extracted = markerMatch[1].trim();
+    if (extracted.length >= 50) {
+      return extracted;
+    }
+  }
+  
+  // FALLBACK: Pattern-based detection for when AI doesn't use markers
+  return extractFormalLetterFallback(text);
+}
+
+// Fallback extraction using formal letter patterns
+function extractFormalLetterFallback(text: string): string | null {
+  if (!text || text.length < 100) return null;
+
+  // Formal letter markers (multi-language)
+  const hasSubject = /\b(oggetto|betreff|subject|objet|asunto|re:|betrifft)\s*:/i.test(text);
+  const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|guten\s+tag|an\s+die|an\s+das)/i.test(text);
+  const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza|freundliche\s+grüße|viele\s+grüße)/i.test(text);
+  const hasAddress = /\b(absender|empfänger|mittente|destinatario|sender|recipient|indirizzo|adresse|straße|via|platz)\s*:/i.test(text);
+  const hasDate = /\b(datum|data|date)\s*:/i.test(text) || /\d{1,2}[\.\-\/]\d{1,2}[\.\-\/]\d{2,4}/i.test(text);
+
+  const markerCount = [hasSubject, hasOpening, hasClosing, hasAddress, hasDate].filter(Boolean).length;
+  if (markerCount < 1) return null;
+
+  // Clean up the text
+  let cleaned = text.replace(/```[\s\S]*?```/g, '').trim();
+
+  // Strip chatty prefaces
+  const prefacePatterns: RegExp[] = [
+    /^\s*(hallo,?\s*(ich\s+bin\s+)?lexora[^.]*\.\s*)/i,
+    /^\s*(hello,?\s*(i'?m\s+)?lexora[^.]*\.\s*)/i,
+    /^\s*(ciao,?\s*(sono\s+)?lexora[^.]*\.\s*)/i,
+    /^\s*(certamente|certo|ecco(\s+la)?|ti\s+propongo|qui\s+trovi|di\s+seguito)[^:]*:\s*/i,
+    /^\s*(sure|of\s+course|here\s+is|below\s+is|here'?s)[^:]*:\s*/i,
+    /^\s*(sehr\s+gern|natürlich|hier\s+ist|im\s+folgenden|gerne)[^:]*:\s*/i,
+  ];
+  for (const p of prefacePatterns) {
+    cleaned = cleaned.replace(p, '');
+  }
+  cleaned = cleaned.trim();
+
+  // Cut after signature/closing
+  const endPatterns: RegExp[] = [
+    /(mit\s+freundlichen\s+grüßen[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+    /(freundliche\s+grüße[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+    /(cordiali\s+saluti[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+    /(distinti\s+saluti[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+    /(sincerely[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+    /(best\s+regards[\s\S]*?)(?=\n\s*\n\s*#{1,6}|\n\s*\n\s*\*\*(?![\w])|$)/i,
+  ];
+
+  for (const p of endPatterns) {
+    const m = cleaned.match(p);
+    if (m && m.index != null) {
+      const signatureEnd = m.index + m[0].length;
+      const afterSignature = cleaned.slice(signatureEnd);
+      const nameMatch = afterSignature.match(/^[\s\n]*([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+      if (nameMatch) {
+        return cleaned.slice(0, signatureEnd + nameMatch.index! + nameMatch[0].length).trim();
+      }
+      return cleaned.slice(0, signatureEnd).trim();
+    }
+  }
+
+  return cleaned.length >= 100 ? cleaned : null;
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [] } = await req.json();
+
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
+      return json(400, {
+        ok: false,
+        error: { code: "invalid_input", message: "Message is required" },
+      });
+    }
+
+    // Limit message length for security
+    const trimmedMessage = message.trim().slice(0, 4000);
+    const lang = normLang(language);
+    
+    // SCOPE GATE: Check if message is within allowed scope (bureaucratic/legal topics)
+    const hasContext = Array.isArray(conversationHistory) && conversationHistory.length > 0;
+    const isConfirmation = /^(ok|okay|sì|si|yes|ja|oui|d'accordo|einverstanden|procedi|proceed|fallo|mach das|do it|genera|generate|scrivi|schreibe|write)[\s.,!?]*$/i.test(trimmedMessage);
+    
+    if (!hasContext && !isConfirmation) {
+      const scopeCheck = checkScope(trimmedMessage);
+      if (!scopeCheck.inScope && scopeCheck.confidence !== 'low') {
+        console.log(`[homepage-trial-chat] Scope rejected: ${scopeCheck.reason}`);
+        const refusalMessage = getRefusalMessage(lang);
+        return json(200, {
+          ok: true,
+          reply: refusalMessage,
+          draftText: null,
+          meta: { model: "scope-gate", blocked: true },
+        });
+      }
+    }
+    
+    const systemPrompt = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.EN;
+    
+    // Add greeting instruction ONLY for first message
+    const greetingInstruction = isFirstMessage 
+      ? `\n\nIMPORTANT: This is the user's FIRST message. Start your response with a brief greeting: "${GREETINGS[lang] || GREETINGS.EN}" Then proceed to ask what they need help with.`
+      : `\n\nNote: This is a follow-up message. Do NOT greet or introduce yourself again. Just respond directly to the user's question or continue the intake process.`;
+
+    // =====================
+    // INTELLIGENT AUTO-SEARCH (REAL LOGIC - NOT JUST PROMPT)
+    // =====================
+    // Check if user explicitly wants us to search
+    const userWantsSearch = detectSearchIntent(trimmedMessage);
+    // Check if message requests external info
+    const needsExternalInfo = detectInfoRequest(trimmedMessage);
+    
+    let intelligentSearchResult = null;
+    let webSearchContext = '';
+    let webSearchResults: SearchResult[] = [];
+    
+    if (userWantsSearch || needsExternalInfo) {
+      console.log(`[homepage-trial-chat] Intelligent search triggered (userWantsSearch: ${userWantsSearch}, needsExternalInfo: ${needsExternalInfo})`);
+      
+      // Perform intelligent search with query expansion and confidence scoring
+      intelligentSearchResult = await intelligentSearch(trimmedMessage.slice(0, 200), language);
+      
+      if (intelligentSearchResult.found && intelligentSearchResult.confidence >= 0.85) {
+        // High confidence - propose result and ask for confirmation
+        console.log(`[homepage-trial-chat] High confidence result found (${intelligentSearchResult.confidence.toFixed(2)})`);
+        
+        // Return proposal instead of calling AI
+        return json(200, {
+          ok: true,
+          reply: intelligentSearchResult.proposedAnswer + (intelligentSearchResult.sourcesSection || ''),
+          draftText: null,
+          meta: { model: "intelligent-search", confidence: intelligentSearchResult.confidence },
+          webSources: intelligentSearchResult.results.slice(0, 3),
+        });
+      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found) {
+        // Low confidence - ask user for info, DON'T invent
+        console.log(`[homepage-trial-chat] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
+        
+        return json(200, {
+          ok: true,
+          reply: intelligentSearchResult.userQuestion || "Could you provide the specific address or office?",
+          draftText: null,
+          meta: { model: "intelligent-search-fallback", confidence: intelligentSearchResult.confidence },
+        });
+      }
+      
+      // Medium confidence - include in context for AI
+      if (intelligentSearchResult.results.length > 0) {
+        webSearchResults = intelligentSearchResult.results;
+        const resultsText = webSearchResults.map((r, i) => 
+          `[${i+1}] ${r.title}\n${r.snippet}\nURL: ${r.url}`
+        ).join('\n\n');
+        webSearchContext = `\n\n📌 WEB SEARCH RESULTS (verify before using):\n${resultsText}\n\nIMPORTANT: Confidence is ${(intelligentSearchResult.confidence * 100).toFixed(0)}%. If using this info, propose it to user and ask for confirmation first.`;
+      }
+    }
+    
+    // =====================
+    // DOCUMENT CONFIRMATION GATE (REAL LOGIC)
+    // =====================
+    // Check if previous message was a summary block awaiting confirmation
+    const previousWasSummary = wasPreviousMessageSummary(conversationHistory);
+    const userConfirmed = hasUserConfirmed(trimmedMessage);
+    
+    // If user confirmed after summary, allow document generation
+    const allowDocumentGeneration = previousWasSummary && userConfirmed;
+    
+    // Add gate instruction to system prompt
+    let gateInstruction = '';
+    if (!allowDocumentGeneration) {
+      gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
+CRITICAL: Before generating ANY final document/letter, you MUST:
+1. First show a SUMMARY of all data you will use (sender, recipient, subject, etc.)
+2. Ask for confirmation (any affirmative response like "yes", "ok", "confirm", "proceed", "go ahead" is valid)
+3. ONLY after user confirms, generate the letter with [LETTER]...[/LETTER] tags
+
+The user has NOT confirmed yet. Do NOT generate final letters yet.
+If you have all the data, show a summary and ask for confirmation.`;
+    } else {
+      gateInstruction = `\n\n=== CONFIRMATION RECEIVED ===
+User has confirmed. Proceed IMMEDIATELY to create the letter. Say something brief like "I will proceed to create the letter now." then generate it with [LETTER]...[/LETTER] tags.
+DO NOT mention or correct any typos in the user's confirmation. DO NOT comment on how they confirmed. Just proceed directly.`;
+      console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
+    }
+
+    // Build messages array with conversation history for context
+    const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+       { role: "system", content: systemPrompt + greetingInstruction + gateInstruction + webSearchContext },
+    ];
+    
+    // Add conversation history (limited to last 10 exchanges for token efficiency)
+    const historyToUse = Array.isArray(conversationHistory) 
+      ? conversationHistory.slice(-20) // Last 20 messages (10 exchanges)
+      : [];
+    
+    for (const msg of historyToUse) {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        aiMessages.push({
+          role: msg.role as "user" | "assistant",
+          content: String(msg.content || '').slice(0, 4000),
+        });
+      }
+    }
+
+    // Use OpenAI API directly (no Lovable credits)
+    const aiResult = await callOpenAI({
+      messages: aiMessages,
+      model: "gpt-4.1-mini",
+      temperature: 0.7,
+    });
+
+    if (!aiResult.ok) {
+      console.error("[homepage-trial-chat] OpenAI error:", aiResult.error);
+      
+      if (aiResult.status === 429) {
+        return json(429, {
+          ok: false,
+          error: { code: "rate_limited", message: "Too many requests" },
+        });
+      }
+
+      return json(500, {
+        ok: false,
+        error: { code: "AI_PROVIDER_ERROR", message: "AI temporarily unavailable" },
+      });
+    }
+
+    const responseText = aiResult.content || "";
+
+    // Extract letter using [LETTER]...[/LETTER] markers (primary) with pattern fallback
+    let draftText = extractLetterFromResponse(responseText);
+    let finalReply = responseText;
+
+    // =====================
+    // PLACEHOLDER HARD-STOP (same as dashboard-chat)
+    // =====================
+    // If the model returns bracket placeholders, REJECT the draft and ask for missing data
+    // IMPORTANT: Exclude system markers like [LETTER], [/LETTER] from detection
+    const SYSTEM_MARKERS = new Set(["[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]"]);
+    
+    const containsPlaceholders = (text: string): boolean => {
+      if (!text) return false;
+      const matches = text.match(/\[[^\]]+\]/g) || [];
+      // Filter out system markers
+      const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+      return realPlaceholders.length > 0;
+    };
+
+    const extractPlaceholders = (text: string, max = 5): string[] => {
+      if (!text) return [];
+      const matches = text.match(/\[[^\]]+\]/g) || [];
+      // Filter out system markers
+      const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+      const unique = [...new Set(realPlaceholders)];
+      return unique.slice(0, max);
+    };
+
+    const PLACEHOLDER_BLOCK_MESSAGES: Record<string, string> = {
+      IT: "Per creare una lettera completa, mi servono alcune informazioni. Per favore indicami:",
+      DE: "Um einen vollständigen Brief zu erstellen, benötige ich einige Informationen. Bitte geben Sie an:",
+      EN: "To create a complete letter, I need some information. Please provide:",
+      FR: "Pour créer une lettre complète, j'ai besoin de quelques informations. Veuillez indiquer:",
+      ES: "Para crear una carta completa, necesito alguna información. Por favor indique:",
+    };
+
+    const placeholderBlocked = containsPlaceholders(responseText) || containsPlaceholders(draftText || "");
+    
+    if (placeholderBlocked) {
+      // REJECT the draft - don't send it to frontend
+      draftText = null;
+      
+      // Build a question asking for missing data
+      const lang = (language || "EN").toUpperCase();
+      const intro = PLACEHOLDER_BLOCK_MESSAGES[lang] || PLACEHOLDER_BLOCK_MESSAGES.EN;
+      const placeholders = extractPlaceholders(responseText, 5);
+      const bullets = placeholders.map((p) => `• ${p}`).join("\n");
+      
+      finalReply = `${intro}\n${bullets}`;
+      
+      console.log(`[homepage-trial-chat] PLACEHOLDER BLOCKED: ${placeholders.join(", ")}`);
+    }
+
+    // WEB ASSIST: Append sources section if web search was performed
+    if (webSearchResults.length > 0 && !placeholderBlocked) {
+      const sourcesSection = formatSourcesSection(webSearchResults, lang);
+      finalReply = finalReply + sourcesSection;
+    }
+
+    return json(200, {
+      ok: true,
+      reply: finalReply,
+      draftText: draftText,
+      meta: { model: "gpt-4.1-mini" },
+      webSources: webSearchResults.length > 0 ? webSearchResults : undefined,
+    });
+
+  } catch (error) {
+    console.error("[homepage-trial-chat] Unhandled error:", error);
+    return json(500, {
+      ok: false,
+      error: {
+        code: "internal_error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+    });
+  }
+});
