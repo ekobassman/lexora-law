@@ -1,0 +1,1229 @@
+{
+  "home": {
+    "archive": {
+      "title": "Twoje bezpieczne archiwum spraw",
+      "subtitle": "Wszystkie Twoje sprawy, dokumenty i historia prawna w jednym bezpiecznym miejscu.",
+      "card1": {
+        "title": "Bezpieczne archiwum",
+        "text": "Twoje sprawy są przechowywane bezpiecznie i uporządkowanie."
+      },
+      "card2": {
+        "title": "Zawsze dostępne",
+        "text": "Dostęp do spraw w dowolnym momencie z telefonu lub komputera."
+      },
+      "card3": {
+        "title": "Historia i eksporty",
+        "text": "Śledź wersje robocze, eksporty i działania w jednym miejscu."
+      },
+      "card4": {
+        "title": "Terminy pod kontrolą",
+        "text": "Trzymaj terminy na widoku, aby niczego nie przegapić."
+      }
+    }
+  },
+  "process": {
+    "step1": {
+      "title": "Prześlij dokument",
+      "desc": "Zeskanuj lub prześlij oficjalny list"
+    },
+    "step2": {
+      "title": "Analiza AI",
+      "desc": "AI czyta i rozumie dokument"
+    },
+    "step3": {
+      "title": "Działaj",
+      "desc": "Otrzymaj jasne kroki do wykonania"
+    },
+    "step4": {
+      "title": "Wyślij lub eksportuj",
+      "desc": "Wydrukuj, pobierz lub wyślij odpowiedź"
+    },
+    "step5": {
+      "title": "Bezpieczne przechowywanie",
+      "desc": "Bezpiecznie zapisane na Twoim koncie"
+    },
+    "step6": {
+      "title": "Zawsze dostępne",
+      "desc": "Dostęp do dokumentów w dowolnym momencie"
+    }
+  },
+  "dashboardChat.createDocument": "Utwórz dokument",
+  "dashboardChat.draftReady": "Dokument gotowy!",
+  "dashboardChat.draftReadyHint": "Użyj przycisku \"Utwórz dokument\" poniżej, aby go zapisać.",
+  "dashboardChat": {
+    "title": "Wyjaśnij, co się stało",
+    "subtitle": "Pomagam Ci zyskać jasność i zrozumieć, jak postępować zgodnie z prawem.",
+    "welcome": "Cześć! Otrzymałeś list i nie wiesz, co robić?",
+    "welcomeHint": "Opisz mi swoją sytuację, a pomogę Ci zrozumieć, jak postępować.",
+    "placeholder": "Opisz swoją sytuację...",
+    "selectCase": "Wybierz sprawę",
+    "selectCaseHint": "Wybierz sprawę, aby kontynuować rozmowę",
+    "noCaseSelected": "Nie wybrano sprawy",
+    "continueInCase": "Kontynuuj rozmowę w tej sprawie",
+    "caseMemoryInfo": "Rozmowa jest zapisywana w Twojej sprawie",
+    "error": "Błąd podczas wysyłania wiadomości. Spróbuj ponownie.",
+    "rateLimitError": "Za dużo żądań. Spróbuj później.",
+    "limitReached": "Osiągnąłeś limit swojego planu.",
+    "limitReachedHint": "Przejdź na Starter lub Pro, aby kontynuować rozmowę.",
+    "upgradePlan": "Zobacz plany",
+    "newCase": "Otwórz nową sprawę",
+    "clearChatTitle": "Wyczyścić czat?",
+    "clearChatDesc": "Wszystkie wiadomości zostaną usunięte. Tej czynności nie można cofnąć.",
+    "clearChatConfirm": "Wyczyść czat",
+    "resetChat": "Zresetuj czat",
+    "chatCleared": "Czat wyczyszczony ✅",
+    "clearError": "Błąd podczas czyszczenia",
+    "dailyMessages": "Dzienne wiadomości AI",
+    "dailyMessagesHint": "Wiadomości są resetowane codziennie",
+    "createCaseTitle": "Utworzyć sprawę z gotowym szkicem?",
+    "createCaseFromChat": "Utwórz sprawę",
+    "creatingCase": "Tworzenie…",
+    "createCaseSuccess": "Sprawa utworzona pomyślnie!",
+    "createCaseError": "Błąd podczas tworzenia sprawy.",
+    "newCaseTitle": "Nowa sprawa z czatu",
+    "continueCreateCase": "Kontynuuj: utwórz sprawę i prześlij dokument",
+    "draftRequiredHint": "Najpierw poproś AI o utworzenie formalnego listu",
+    "noDraftError": "Brak szkicu. Najpierw poproś AI o utworzenie formalnego listu.",
+    "nameYourCase": "Nazwij swoją sprawę",
+    "caseNamePlaceholder": "np. Odwołanie od mandatu, Pismo do urzędu...",
+    "saveCase": "Zapisz sprawę",
+    "caseNameRequired": "Proszę podać nazwę sprawy"
+  },
+  "credits": {
+    "balance": "Dostępne kredyty",
+    "casesThisMonth": "Sprawy w tym miesiącu",
+    "estimatedCases": "szacowane sprawy z bieżącymi kredytami",
+    "upgrade": "Przejdź na PRO",
+    "monthlyCasesIncluded": "Miesięczne sprawy w planie",
+    "monthlyCasesTitle": "Miesięczne sprawy w planie",
+    "monthlyCasesRemaining": "Pozostałe w tym miesiącu: {{remaining}} z {{limit}}",
+    "monthlyCasesTooltip": "Sprawa = kompletna teczka. Zużywana jest tylko przy tworzeniu nowej sprawy.",
+    "casesLabel": "Sprawy",
+    "casesUsed": "{{count}} użyte",
+    "casesRemaining": "{{count}} pozostałe",
+    "casesNotMessages": "To pełne sprawy, nie pojedyncze wiadomości.",
+    "eachCaseIncludes": "Każda sprawa zawiera do 15 wiadomości AI.",
+    "casesRemainingThisMonth": "Pozostałe sprawy w tym miesiącu: {{count}}",
+    "limitReachedWarning": "Wykorzystałeś wszystkie sprawy w tym miesiącu.",
+    "unlimitedCasesDesc": "Nielimitowane sprawy w Twoim planie.",
+    "unlimited": "Nielimitowane",
+    "outOfMonthlyCases": "Wykorzystałeś miesięczne sprawy. Przejdź na PRO lub poczekaj na odnowienie.",
+    "renewsAt": "Odnawia się {{date}}",
+    "caseMessagesLabel": "Wiadomości AI",
+    "caseMessagesTitle": "Wiadomości AI dla tej sprawy",
+    "caseMessagesTooltip": "Ten limit dotyczy TYLKO tej sprawy. Nie zużywa Twoich miesięcznych spraw.",
+    "outOfCaseMessages": "Osiągnąłeś limit wiadomości dla tej sprawy.",
+    "outOfCaseMessagesHint": "Przejdź na PRO lub utwórz nową sprawę (jeśli masz dostępne).",
+    "syncingPlan": "Aktualizacja planu…",
+    "retry": "Ponów"
+  },
+  "common": {
+    "languageCode": "pl",
+    "loading": "Ładowanie...",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "back": "Wstecz",
+    "continue": "Dalej",
+    "confirm": "Potwierdź",
+    "close": "Zamknij",
+    "yes": "Tak",
+    "no": "Nie",
+    "error": "Błąd",
+    "success": "Sukces",
+    "warning": "Ostrzeżenie",
+    "info": "Info",
+    "change": "Zmień",
+    "apply": "Zastosuj",
+    "popular": "Popularne",
+    "otherCountries": "Inne kraje",
+    "legalContextPreview": "Podgląd kontekstu prawnego",
+    "letterFormat": "Format listu",
+    "authorityTerm": "Termin urzędowy",
+    "privacyLaw": "Prawo prywatności"
+  },
+  "termsReaccept": {
+    "error": "Błąd podczas zapisywania. Spróbuj ponownie.",
+    "success": "Warunki zaakceptowane!"
+  },
+  "nav": {
+    "home": "Strona główna",
+    "dashboard": "Panel",
+    "cases": "Sprawy",
+    "upload": "Prześlij",
+    "settings": "Ustawienia",
+    "logout": "Wyloguj",
+    "login": "Zaloguj",
+    "signup": "Zarejestruj się"
+  },
+  "header": {
+    "myAccount": "Moje konto",
+    "settings": "Ustawienia",
+    "logout": "Wyloguj",
+    "logoutAction": "Wyloguj",
+    "dashboard": "Panel główny",
+    "privateWorkspace": "Prywatna Przestrzeń Prawna",
+    "adminPanel": "Admin Panel",
+    "subscription": "Subskrypcja"
+  },
+  "landing": {
+    "hero": {
+      "title": "Zrozum urzędowe pisma.\nOdpowiadaj z pewnością.",
+      "subtitle": "Lexora pomaga zrozumieć oficjalną korespondencję w Twoim kraju, wyjaśnia czego się od Ciebie wymaga i przygotowuje właściwą odpowiedź zgodną z obowiązującymi przepisami."
+    },
+    "cta": {
+      "upload": "Prześlij pismo",
+      "urgent": "Pilna odpowiedź",
+      "login": "Zaloguj",
+      "start": "Rozpocznij teraz"
+    },
+    "badge": {
+      "europe": "Działa na całym świecie",
+      "laws": "AI oparta na krajowych przepisach",
+      "fast": "Od pisma do odpowiedzi w minuty"
+    },
+    "actions": {
+      "title": "Wybierz swoją czynność prawną",
+      "subtitle": "Wybierz procedurę, którą chcesz rozpocząć. Każda czynność jest obsługiwana profesjonalnie, poufnie i zgodnie z obowiązującym prawem.",
+      "free": "Bezpłatnie. Dane płatnicze nie są wymagane.",
+      "urgent": {
+        "title": "Pilna odpowiedź",
+        "desc": "Dla pilnych pism, zbliżających się terminów, gróźb kar, zajęć lub blokad. Lexora natychmiast analizuje dokument i generuje formalną, asertywną odpowiedź.",
+        "button": "Rozpocznij pilną odpowiedź"
+      },
+      "reply": {
+        "title": "Odpowiedz na pismo",
+        "desc": "Otrzymałeś oficjalne pismo i nie wiesz jak odpowiedzieć? Lexora napisze właściwą odpowiedź za Ciebie.",
+        "button": "Odpowiedz teraz"
+      },
+      "appeal": {
+        "title": "Złóż odwołanie",
+        "desc": "Chcesz zakwestionować decyzję urzędu? Lexora przygotuje strukturalne odwołanie zgodne z przepisami Twojego kraju.",
+        "button": "Przygotuj odwołanie"
+      },
+      "explain": {
+        "title": "Wyjaśnij to pismo",
+        "desc": "Chcesz tylko zrozumieć co oznacza pismo bez natychmiastowej odpowiedzi? Lexora przetłumaczy je i wyjaśni w prosty sposób.",
+        "button": "Wyjaśnij"
+      },
+      "manage": {
+        "title": "Zarządzaj sprawą",
+        "desc": "Masz już otwartą sprawę? Dodaj nowe pisma: Lexora je rozpozna i automatycznie doda do właściwej teczki.",
+        "button": "Otwórz sprawę"
+      },
+      "speedcam": {
+        "title": "Odwołanie od fotoradaru",
+        "desc": "Dostałeś mandat z fotoradaru? Lexora analizuje raport i automatycznie przygotowuje prawidłowe odwołanie zgodnie z obowiązującymi przepisami.",
+        "button": "Rozpocznij odwołanie"
+      }
+    },
+    "intelligence": {
+      "title": "AI, która zna Twój kraj",
+      "desc": "Lexora automatycznie rozpoznaje:",
+      "nation": "Twój kraj",
+      "language": "Właściwy język",
+      "authority": "Właściwy urząd",
+      "laws": "Obowiązujące przepisy",
+      "adapted": "Każda odpowiedź jest dostosowana do rzeczywistego kontekstu, nie jest ogólnikowa."
+    },
+    "trust": {
+      "title": "Twoja cyfrowa tarcza przeciwko biurokracji",
+      "line1": "Nie musisz znać prawa.",
+      "line2": "Nie musisz pisać urzędowym językiem.",
+      "line3": "Nie potrzebujesz prawnika do każdego pisma.",
+      "promise": "Lexora chroni Cię, prowadzi i pomaga odpowiadać z pewnością."
+    },
+    "final": {
+      "title": "Prześlij pismo.",
+      "subtitle": "Resztę zrobi Lexora.",
+      "start": "Rozpocznij teraz",
+      "login": "Zaloguj"
+    }
+  },
+  "auth": {
+    "login": "Zaloguj",
+    "signup": "Zarejestruj się",
+    "email": "Email",
+    "password": "Hasło",
+    "confirmPassword": "Potwierdź hasło",
+    "name": "Pełne imię i nazwisko",
+    "subtitle": "Uzyskaj dostęp do swojej prywatnej przestrzeni prawnej",
+    "noAccount": "Nie masz konta?",
+    "hasAccount": "Masz już konto?",
+    "loginBtn": "Zaloguj się",
+    "signupBtn": "Utwórz konto",
+    "error": {
+      "email": "Nieprawidłowy email",
+      "password": "Hasło musi mieć co najmniej 6 znaków",
+      "passwordMatch": "Hasła nie są zgodne",
+      "generic": "Wystąpił błąd. Spróbuj ponownie."
+    },
+    "success": {
+      "signup": "Konto utworzone pomyślnie!"
+    },
+    "forgotPassword": "Nie pamiętasz hasła?"
+  },
+  "dashboard": {
+    "title": "Twoje sprawy",
+    "pageTitle": "Twoje sprawy prawne",
+    "pageSubtitle": "Zarządzaj dokumentami, pismami i oficjalnymi odpowiedziami w jednym bezpiecznym miejscu.",
+    "new": "+ Nowa sprawa",
+    "empty": "Brak spraw w toku",
+    "emptyDesc": "Rozpocznij nową sprawę, aby zacząć",
+    "logout": "Wyloguj",
+    "open": "Otwórz teczkę",
+    "lastUpdate": "Ostatnia aktualizacja",
+    "file": "Teczka",
+    "authority": "Urząd",
+    "documents": "Dokumenty",
+    "deleted": "Sprawa usunięta",
+    "deleteError": "Błąd podczas usuwania",
+    "confirmDelete": "Potwierdź usunięcie",
+    "confirmDeleteDesc": "Czy na pewno chcesz usunąć tę sprawę? Tej operacji nie można cofnąć.",
+    "quickActions": {
+      "title": "Wybierz swoją akcję",
+      "subtitle": "Wybierz procedurę, którą chcesz rozpocząć. Każda akcja jest obsługiwana profesjonalnie, poufnie i zgodnie z obowiązującym prawem.",
+      "free": "Bezpłatnie. Dane płatnicze nie są wymagane."
+    },
+    "actions": {
+      "urgent": {
+        "title": "Pilna odpowiedź",
+        "desc": "Szybko odpowiedz na pismo z bliskim terminem",
+        "button": "Zacznij teraz"
+      },
+      "read": {
+        "title": "Przeczytaj pismo",
+        "desc": "Zeskanuj i przeanalizuj nowe pismo",
+        "button": "Skanuj pismo"
+      },
+      "appeal": {
+        "title": "Złóż odwołanie",
+        "desc": "Przygotuj odwołanie od mandatu",
+        "button": "Rozpocznij odwołanie"
+      },
+      "explain": {
+        "title": "Wyjaśnij dokument",
+        "desc": "Pozwól AI wyjaśnić skomplikowany dokument",
+        "button": "Uzyskaj wyjaśnienie"
+      }
+    },
+    "plansIntro": {
+      "title": "Gdy potrzebujesz większego wsparcia",
+      "text": "Lexora może towarzyszyć Ci również w bardziej złożonych lub długotrwałych sytuacjach. Dla osób potrzebujących stałej pomocy, zarządzania wieloma sprawami lub długoterminowego wsparcia dokumentowego dostępne są różne opcje.",
+      "cta": "Zobacz plany"
+    }
+  },
+  "status": {
+    "new": "Nowa",
+    "in_progress": "W toku",
+    "inProgress": "W toku",
+    "readyToSend": "Gotowa do wysłania",
+    "sent": "Wysłana",
+    "waiting": "Oczekująca",
+    "completed": "Zakończona",
+    "archived": "Zarchiwizowana",
+    "pending": "Oczekująca",
+    "resolved": "Rozwiązana",
+    "markDone": "Oznacz jako zakończoną",
+    "markDoneHint": "Czy zakończyłeś tę sprawę?",
+    "markedDone": "Sprawa oznaczona jako zakończona ✅",
+    "reopen": "Otwórz ponownie sprawę",
+    "reopened": "Sprawa otwarta ponownie"
+  },
+  "pratica": {
+    "new": {
+      "title": "Nowa sprawa",
+      "back": "Wróć do panelu",
+      "field": {
+        "title": "Tytuł",
+        "authority": "Urząd",
+        "aktenzeichen": "Numer sprawy",
+        "deadline": "Termin",
+        "file": "Prześlij dokument",
+        "letterText": "Tekst pisma"
+      },
+      "placeholder": {
+        "title": "Np.: Żądanie dokumentów Urząd Skarbowy",
+        "authority": "Np.: Urząd Skarbowy Warszawa",
+        "aktenzeichen": "Np.: 123/456/78901",
+        "letterText": "Wklej tutaj tekst pisma jeśli nie masz PDF..."
+      },
+      "fileHint": "PDF, JPG, PNG, WEBP - Maks 10MB",
+      "letterTextHint": "Opcjonalnie: wklej tekst jeśli nie możesz przesłać pliku",
+      "save": "Zapisz sprawę",
+      "success": "Sprawa utworzona pomyślnie!",
+      "fileUploaded": "Plik przesłany pomyślnie",
+      "error": {
+        "required": "To pole jest wymagane",
+        "fileType": "Nieobsługiwany typ pliku",
+        "fileSize": "Plik za duży (maks 10MB)",
+        "upload": "Błąd podczas przesyłania",
+        "save": "Błąd podczas zapisywania"
+      }
+    },
+    "edit": {
+      "title": "Edytuj sprawę",
+      "save": "Zapisz zmiany",
+      "success": "Sprawa zaktualizowana pomyślnie!",
+      "existingFile": "Istniejący załączony plik"
+    },
+    "detail": {
+      "back": "Wróć do panelu",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "confirmDelete": "Usunąć tę sprawę?",
+      "confirmDeleteDesc": "Tej czynności nie można cofnąć. Sprawa i wszystkie załączone pliki zostaną trwale usunięte.",
+      "cancel": "Anuluj",
+      "confirmDeleteBtn": "Usuń",
+      "deleted": "Sprawa usunięta",
+      "deleteError": "Błąd podczas usuwania",
+      "loadError": "Błąd podczas ładowania sprawy",
+      "notFound": "Sprawa nie znaleziona",
+      "attachment": "Załącznik",
+      "download": "Pobierz plik",
+      "downloadError": "Błąd podczas pobierania pliku",
+      "letterText": "Tekst pisma",
+      "fullLetterText": "📄 Pełna treść pisma",
+      "letterTextHint": "Dotknij tutaj, aby przeczytać całość",
+      "analysis": "Analiza AI",
+      "noAnalysis": "Brak dostępnej analizy. Kliknij \"Analizuj\" aby ją wygenerować.",
+      "risks": "Zidentyfikowane ryzyka",
+      "languageMismatchHint": "Wykryto treść w innym języku. Kliknij 'Wygeneruj ponownie' aby zaktualizować.",
+      "noRisks": "Nie zidentyfikowano ryzyk",
+      "draftResponse": "Projekt odpowiedzi",
+      "noDraft": "Brak dostępnego projektu. Kliknij \"Wygeneruj odpowiedź\" aby go utworzyć.",
+      "createdAt": "Utworzona",
+      "updatedAt": "Zaktualizowana",
+      "tone": "Ton",
+      "startAnalysis": "Analizuj",
+      "analyzing": "Analiza w toku...",
+      "analyzingDesc": "AI analizuje Twoje pismo. Może to potrwać kilka sekund.",
+      "analyzeSuccess": "Analiza zakończona pomyślnie!",
+      "analyzeError": "Błąd podczas analizy. Spróbuj ponownie.",
+      "noTextToAnalyze": "Brak tekstu do analizy. Wprowadź tekst pisma.",
+      "selectDocumentToAnalyze": "Wybierz dokument powyżej do analizy.",
+      "analyzingDocument": "Analizowany dokument",
+      "generateDraft": "Wygeneruj odpowiedź",
+      "regenerateDraft": "Wygeneruj ponownie odpowiedź",
+      "generatingDraft": "Generowanie odpowiedzi...",
+      "generating": "Generowanie...",
+      "draftSuccess": "Projekt wygenerowany pomyślnie!",
+      "selectTone": "Ton odpowiedzi",
+      "toneFormal": "Formalny",
+      "toneFriendly": "Przyjazny",
+      "toneAssertive": "Asertywny",
+      "badgeText": "Tekst",
+      "badgeDraft": "Szkic",
+      "rateLimitError": "Zbyt wiele żądań. Spróbuj ponownie później.",
+      "creditsError": "Niewystarczające kredyty. Zaktualizuj swój plan.",
+      "saveError": "Błąd zapisu. Spróbuj ponownie."
+    }
+  },
+  "analysis": {
+    "uploading": "Przesyłanie pliku...",
+    "extracting": "Ekstrakcja tekstu...",
+    "analyzing": "Analiza AI w toku...",
+    "completed": "Analiza zakończona!",
+    "error": "Błąd podczas analizy",
+    "analyzingHint": "AI analizuje dokument. Może to potrwać kilka sekund.",
+    "ocrError": "Błąd ekstrakcji tekstu",
+    "autoAnalysis": "Automatyczna analiza"
+  },
+  "camera": {
+    "button": "Skanuj aparatem",
+    "processing": "Przetwarzanie dokumentu...",
+    "success": "Dokument przechwycony!",
+    "error": "Błąd skanowania",
+    "errorNotImage": "Wybierz prawidłowy obraz",
+    "errorProcessing": "Błąd przetwarzania obrazu",
+    "hint": "Na telefonie otwiera się aparat. Na komputerze wybierz plik."
+  },
+  "cameraScan": {
+    "button": "Skanuj aparatem",
+    "processing": "Przetwarzanie dokumentu...",
+    "success": "Dokument przechwycony!",
+    "error": "Błąd skanowania",
+    "errorNotImage": "Wybierz prawidłowy obraz",
+    "errorProcessing": "Błąd przetwarzania obrazu",
+    "hint": "Na telefonie otwiera się aparat. Na komputerze wybierz plik."
+  },
+  "actions": {
+    "title": "Akcje",
+    "back": "Wstecz",
+    "downloadPdf": "Zapisz PDF",
+    "print": "Drukuj",
+    "email": "Wyślij emailem",
+    "copy": "Kopiuj tekst",
+    "share": "Udostępnij",
+    "copied": "Skopiowano do schowka ✅",
+    "copyError": "Błąd kopiowania",
+    "pdfSuccess": "PDF pobrany pomyślnie!",
+    "pdfError": "Błąd generowania PDF",
+    "emailFallback": "Tekst skopiowany: wklej go w emailu ✅",
+    "emailOpened": "Aplikacja email otwarta",
+    "emailFallbackCopy": "Tekst skopiowany do schowka ✅",
+    "emailLongTextNote": "Tekst został skopiowany do schowka. Proszę go wkleić.",
+    "incompleteProfile": "Uzupełnij profil aby mieć prawidłowy nagłówek.",
+    "shareSuccess": "Udostępniono pomyślnie!",
+    "shareCopied": "Tekst skopiowany do schowka ✅",
+    "shareError": "Błąd udostępniania"
+  },
+  "sender": {
+    "title": "Dane nadawcy",
+    "edit": "Edytuj",
+    "name": "Pełne imię i nazwisko",
+    "namePlaceholder": "Twoje imię i nazwisko",
+    "address": "Adres",
+    "addressPlaceholder": "Ulica i numer",
+    "postalCode": "Kod pocztowy",
+    "postalCodePlaceholder": "Kod pocztowy",
+    "city": "Miasto",
+    "cityPlaceholder": "Miasto",
+    "country": "Kraj",
+    "date": "Data",
+    "saveForLetter": "Zapisz tylko dla tego pisma",
+    "saveAsDefault": "Zapisz jako domyślne",
+    "cancel": "Anuluj",
+    "saved": "Dane nadawcy zapisane ✅",
+    "savedAsDefault": "Dane zapisane w profilu ✅",
+    "saveError": "Błąd zapisywania",
+    "saveProfileError": "Błąd zapisywania profilu",
+    "noData": "Brak danych nadawcy. Kliknij \"Edytuj\" aby je wprowadzić."
+  },
+  "chat": {
+    "title": "Chat z AI",
+    "subtitle": "Napisz co chcesz zrobić. Możesz pisać lub mówić.",
+    "placeholder": "Wpisz swoje żądanie tutaj...",
+    "modifyTitle": "Modyfikuj szkic",
+    "modifySubtitle": "Powiedz AI jak zmienić list",
+    "modifyPlaceholder": "Np. 'Bardziej asertywny' lub 'Dodaj że zapłaciłem'...",
+    "modifyHint": "Użyj AI, aby udoskonalić i ulepszyć szkic odpowiedzi",
+    "modifyButton": "Modyfikuj szkic",
+    "send": "Wyślij",
+    "thinking": "Myślę...",
+    "error": "Błąd wysyłania wiadomości",
+    "welcome": "Cześć! Jak mogę Ci pomóc z tym pismem?",
+    "regenerate": "Wygeneruj ponownie odpowiedź",
+    "speak": "Mów",
+    "stop": "Stop",
+    "speechNotSupported": "Rozpoznawanie mowy nieobsługiwane",
+    "speechError": "Błąd rozpoznawania mowy",
+    "microphonePermissionDenied": "Odmowa dostępu do mikrofonu",
+    "responseLanguage": "AI odpowiada w języku",
+    "languageChanged": "AI będzie teraz odpowiadać w wybranym języku",
+    "selectLanguage": "Wybierz język odpowiedzi",
+    "updateDraft": "Zaktualizuj szkic",
+    "draftUpdated": "Szkic zaktualizowany ✓",
+    "noLetterFound": "Nie znaleziono listu w wiadomości"
+  },
+  "documents": {
+    "title": "Dokumenty",
+    "upload": "Prześlij dokument",
+    "noDocuments": "Brak dokumentów",
+    "received": "Otrzymane",
+    "sent": "Wysłane",
+    "delete": "Usuń",
+    "download": "Pobierz",
+    "preview": "Podgląd",
+    "uploadAndAnalyze": "Prześlij i analizuj",
+    "uploading": "Przesyłanie...",
+    "multiSelectHint": "Dozwolone wiele plików"
+  },
+  "newPratica": {
+    "title": "Nowa sprawa",
+    "back": "Powrót do panelu",
+    "success": "Sprawa utworzona pomyślnie!",
+    "field": {
+      "file": "Prześlij dokument",
+      "letterText": "Tekst listu",
+      "title": "Tytuł",
+      "authority": "Urząd",
+      "aktenzeichen": "Numer sprawy",
+      "deadline": "Termin"
+    },
+    "fileHint": "PDF, JPG, PNG (maks 10MB)",
+    "letterTextHint": "Wklej tekst listu tutaj, jeśli nie masz pliku",
+    "placeholder": {
+      "letterText": "Wpisz lub wklej tekst listu...",
+      "title": "Np: Wezwanie do złożenia dokumentów",
+      "authority": "Np: Urząd Skarbowy",
+      "aktenzeichen": "Np: 123/456/78901"
+    },
+    "error": {
+      "required": "To pole jest wymagane",
+      "fileType": "Typ pliku nie jest obsługiwany",
+      "fileSize": "Plik za duży (maks 10MB)",
+      "upload": "Błąd podczas przesyłania",
+      "save": "Błąd podczas zapisywania"
+    },
+    "fileUploaded": "Plik przesłany pomyślnie"
+  },
+  "editPratica": {
+    "title": "Edytuj sprawę",
+    "save": "Zapisz zmiany",
+    "success": "Sprawa zaktualizowana pomyślnie!",
+    "existingFile": "Istniejący załączony plik",
+    "deadlineHint": "Ustaw lub zaktualizuj termin dla tej sprawy",
+    "dangerZone": "Uwaga!",
+    "deleteWarning": "Usunięcie tej sprawy jest trwałe i nie można tego cofnąć. Wszystkie powiązane dokumenty i dane zostaną utracone.",
+    "draftSection": {
+      "title": "Wersja robocza odpowiedzi"
+    }
+  },
+  "detail": {
+    "back": "Powrót do panelu",
+    "loadError": "Błąd ładowania sprawy",
+    "analyzeSuccess": "Analiza zakończona pomyślnie!",
+    "analyzeError": "Błąd podczas analizy. Spróbuj ponownie.",
+    "deleteCase": "Usuń sprawę"
+  },
+  "footer": {
+    "privacy": "Polityka prywatności",
+    "terms": "Warunki korzystania",
+    "disclaimer": "Zastrzeżenie",
+    "legal": "Informacje prawne",
+    "impressum": "Impressum",
+    "disclaimerText": "Ta usługa nie stanowi porady prawnej. W skomplikowanych przypadkach skonsultuj się z prawnikiem.",
+    "copyright": "© {year} LEXORA. Wszelkie prawa zastrzeżone."
+  },
+  "pricing": {
+    "localCurrencyNote": "Ceny wyświetlane w Twojej lokalnej walucie.",
+    "free": "Bezpłatny",
+    "title": "Plany Lexora",
+    "subtitle": "Zacznij za darmo. Kontynuuj tylko jeśli potrzebujesz.",
+    "perMonth": "miesiąc",
+    "popular": "Popularne",
+    "currentPlan": "Aktualny plan",
+    "activate": "Aktywuj plan",
+    "legal": "Lexora nie jest kancelarią prawną. Usługa zapewnia zautomatyzowaną pomoc cyfrową zgodną z prawem UE.",
+    "features": {
+      "freeCase": "1 bezpłatna sprawa w zestawie",
+      "noCard": "Karta nie jest wymagana do rozpoczęcia",
+      "cancelAnytime": "Anuluj w dowolnym momencie",
+      "clearPricing": "Przejrzyste ceny, bez niespodzianek"
+    },
+    "plans": {
+      "basic": {
+        "description": "Do 10 spraw"
+      },
+      "plus": {
+        "description": "Od 10 do 50 spraw"
+      },
+      "pro": {
+        "description": "Nieograniczona liczba spraw"
+      }
+    },
+    "thumbnails": {
+      "starter": {
+        "name": "Starter",
+        "cases": "Do 10 spraw",
+        "feature1": "Podstawowe wsparcie",
+        "feature2": "Zarządzanie dokumentami",
+        "feature3": "Przypomnienia e-mail"
+      },
+      "pro": {
+        "name": "Pro",
+        "cases": "10–50 spraw",
+        "feature1": "Priorytetowe wsparcie",
+        "feature2": "Zaawansowane śledzenie spraw",
+        "feature3": "Organizacja dokumentów"
+      },
+      "unlimited": {
+        "name": "Unlimited",
+        "cases": "Nieograniczona liczba spraw",
+        "feature1": "Wsparcie premium",
+        "feature2": "Pełne zarządzanie sprawami",
+        "feature3": "Kompleksowe raporty"
+      },
+      "cta": "Wybierz",
+      "compareAll": "Porównaj wszystkie plany"
+    }
+  },
+  "ai": {
+    "badge": "Wygenerowane przez AI",
+    "disclaimer": "Treści generowane przez AI mogą zawierać błędy.",
+    "verify": "Zawsze weryfikuj ważne informacje.",
+    "inlineDisclaimer": "Wygenerowane przez AI – zweryfikuj",
+    "poweredBy": "Wspierane przez Lexora AI"
+  },
+  "consent": {
+    "title": "Warunki i regulamin",
+    "description": "Korzystając z Lexora, akceptujesz nasze warunki korzystania z usługi i politykę prywatności.",
+    "accept": "Akceptuję",
+    "decline": "Odrzuć"
+  },
+  "privacy": {
+    "title": "Polityka prywatności",
+    "lastUpdated": "Ostatnia aktualizacja",
+    "backHome": "Powrót do strony głównej",
+    "controller": {
+      "title": "Administrator danych",
+      "text": "Administratorem danych jest Roberto Imbimbo, Mörikestraße 10, 72202 Nagold, Niemcy.",
+      "contact": "Kontakt"
+    },
+    "purpose": {
+      "title": "Cel przetwarzania",
+      "text": "Przetwarzamy Twoje dane w celu:",
+      "item1": "Świadczenia usługi Lexora (analiza pism i generowanie odpowiedzi)",
+      "item2": "Ulepszania naszych modeli AI i jakości usług",
+      "item3": "Komunikacji z Tobą dotyczącej Twojego konta"
+    },
+    "legalBasis": {
+      "title": "Podstawa prawna",
+      "text": "Przetwarzanie opiera się na art. 6(1)(b) RODO (wykonanie umowy) i art. 6(1)(a) RODO (zgoda na przetwarzanie AI)."
+    },
+    "dataTypes": {
+      "title": "Rodzaje zbieranych danych",
+      "item1": "Dane konta (email, imię)",
+      "item2": "Przesłane dokumenty i ich zawartość",
+      "item3": "Wygenerowane odpowiedzi i analizy",
+      "item4": "Dane użytkowania i logi"
+    },
+    "retention": {
+      "title": "Przechowywanie danych",
+      "text": "Dane są przechowywane przez okres istnienia konta. Możesz usunąć swoje dane w dowolnym momencie poprzez ustawienia."
+    },
+    "subprocessors": {
+      "title": "Podwykonawcy",
+      "item1": "Infrastruktura chmurowa: bezpieczne serwery",
+      "item2": "Przetwarzanie AI: Google AI (Gemini)"
+    },
+    "rights": {
+      "title": "Twoje prawa",
+      "text": "Na mocy RODO przysługują Ci następujące prawa:",
+      "access": "Prawo dostępu",
+      "accessDesc": "Żądanie kopii swoich danych",
+      "deletion": "Prawo do usunięcia",
+      "deletionDesc": "Żądanie usunięcia swoich danych"
+    },
+    "contact": {
+      "title": "Kontakt",
+      "text": "W sprawach dotyczących prywatności skontaktuj się z nami:"
+    }
+  },
+  "terms": {
+    "title": "Warunki korzystania",
+    "lastUpdated": "Ostatnia aktualizacja",
+    "backHome": "Powrót do strony głównej",
+    "intro": {
+      "title": "Wprowadzenie",
+      "text": "Witamy w Lexora. Korzystając z naszej usługi, akceptujesz te warunki."
+    },
+    "service": {
+      "title": "Opis usługi",
+      "text": "Lexora zapewnia analizę oficjalnych pism wspieraną przez AI i generuje projekty odpowiedzi. Nie stanowi to porady prawnej."
+    },
+    "disclaimer": {
+      "title": "Zastrzeżenie",
+      "text": "Lexora jest asystentem AI i nie zastępuje profesjonalnej porady prawnej. W skomplikowanych sprawach prawnych skonsultuj się z wykwalifikowanym prawnikiem."
+    },
+    "liability": {
+      "title": "Ograniczenie odpowiedzialności",
+      "text": "Nie ponosimy odpowiedzialności za szkody wynikające z korzystania z treści generowanych przez AI. Zawsze weryfikuj ważne informacje."
+    },
+    "termination": {
+      "title": "Rozwiązanie",
+      "text": "Możesz zamknąć konto w dowolnym momencie. Zastrzegamy sobie prawo do zawieszenia kont naruszających te warunki."
+    }
+  },
+  "legal": {
+    "title": "Informacje prawne",
+    "impressum": {
+      "title": "Impressum",
+      "according": "Informacje zgodnie z § 5 TMG",
+      "responsible": "Odpowiedzialny za treść zgodnie z § 55 Abs. 2 RStV"
+    },
+    "provider": {
+      "title": "Dostawca usług",
+      "name": "Roberto Imbimbo",
+      "address": "Mörikestraße 10",
+      "city": "72202 Nagold",
+      "country": "Niemcy",
+      "email": "Email",
+      "vat": "NIP"
+    },
+    "dispute": {
+      "title": "Rozstrzyganie sporów",
+      "text": "Komisja Europejska zapewnia platformę do rozstrzygania sporów online (ODR):",
+      "link": "https://ec.europa.eu/consumers/odr",
+      "note": "Nie jesteśmy zobowiązani ani nie chcemy uczestniczyć w postępowaniach rozstrzygania sporów przed komisją arbitrażową dla konsumentów."
+    },
+    "copyright": {
+      "title": "Prawa autorskie",
+      "text": "Treść tej strony internetowej jest chroniona prawem autorskim. Reprodukcja wymaga pisemnej zgody."
+    }
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "subtitle": "Zarządzaj kontem i preferencjami",
+    "credits": {
+      "title": "Kredyty i Użycie",
+      "desc": "Przegląd miesięcznych kredytów i użycia",
+      "viewDetails": "Zobacz szczegóły"
+    },
+    "account": {
+      "title": "Konto i Profil",
+      "desc": "Zarządzaj informacjami o koncie",
+      "firstName": "Imię",
+      "lastName": "Nazwisko",
+      "email": "Email",
+      "emailHint": "Email nie może być zmieniony",
+      "phone": "Telefon",
+      "address": "Adres",
+      "city": "Miasto",
+      "postalCode": "Kod pocztowy",
+      "country": "Kraj",
+      "language": "Język",
+      "save": "Zapisz profil"
+    },
+    "sender": {
+      "title": "Dane Nadawcy",
+      "desc": "Te dane będą używane w pismach i generowanych PDF-ach",
+      "fullName": "Pełne imię i nazwisko / Firma",
+      "address": "Adres",
+      "postalCode": "Kod pocztowy",
+      "city": "Miasto",
+      "country": "Kraj",
+      "location": "Miejsce sporządzenia",
+      "signature": "Podpis tekstowy",
+      "autoUse": "Automatycznie używaj tych danych w każdej nowej sprawie",
+      "save": "Zapisz dane nadawcy"
+    },
+    "practices": {
+      "title": "Sprawy i Dokumenty",
+      "desc": "Konfiguruj zachowanie spraw i dokumentów",
+      "autoSave": "Automatyczny zapis projektów",
+      "autoSaveDesc": "Automatycznie zapisuje projekty podczas edycji",
+      "autoUpdate": "Aktualizuj pismo przy przesyłaniu",
+      "autoUpdateDesc": "Automatycznie aktualizuje tekst przy przesyłaniu nowych dokumentów",
+      "formats": "Dozwolone formaty",
+      "save": "Zapisz ustawienia",
+      "downloadDocs": "Pobierz wszystkie moje dokumenty",
+      "deleteClosed": "Usuń zamknięte sprawy",
+      "deleteClosedConfirm": "Potwierdź usunięcie",
+      "deleteClosedDesc": "Ta akcja usunie wszystkie sprawy ze statusem \"Rozwiązana\", \"Zakończona\" lub \"Zarchiwizowana\". Powiązane dokumenty zostaną trwale usunięte.",
+      "deleteClosedDone": "Zamknięte sprawy usunięte"
+    },
+    "ai": {
+      "title": "AI i Automatyzacja",
+      "desc": "Dostosuj zachowanie asystenta AI",
+      "languageLevel": "Poziom języka",
+      "languageLevel.simple": "Prosty",
+      "languageLevel.formal": "Formalny",
+      "languageLevel.legal": "Zaawansowany prawny",
+      "tone": "Domyślny ton",
+      "tone.collaborative": "Współpracujący",
+      "tone.firm": "Stanowczy",
+      "tone.formalNotice": "Formalne wezwanie",
+      "defaultLanguage": "Domyślny język AI",
+      "autoUpdateDraft": "Automatyczna aktualizacja projektu",
+      "autoUpdateDraftDesc": "Aktualizuje projekt podczas interakcji z AI",
+      "suggestLegal": "Sugeruj odniesienia prawne",
+      "suggestLegalDesc": "RODO, ustawy i inne automatyczne odniesienia",
+      "save": "Zapisz ustawienia AI"
+    },
+    "security": {
+      "title": "Bezpieczeństwo",
+      "desc": "Zarządzaj bezpieczeństwem konta",
+      "lastLogin": "Ostatnie logowanie",
+      "resetPassword": "Zmień hasło",
+      "resetSent": "Email ze zmianą hasła wysłany",
+      "resetError": "Błąd wysyłania emaila",
+      "logoutAll": "Wyloguj ze wszystkich urządzeń",
+      "logoutAllConfirm": "Potwierdź globalne wylogowanie",
+      "logoutAllDesc": "Zostaniesz wylogowany ze wszystkich urządzeń. Będziesz musiał zalogować się ponownie.",
+      "logoutAllDone": "Wylogowano ze wszystkich urządzeń"
+    },
+    "usage": {
+      "title": "Użycie i Kredyty",
+      "desc": "Sprawdź swoje kredyty, użycie AI i historię transakcji.",
+      "viewButton": "Zobacz Użycie i Kredyty"
+    },
+    "subscription": {
+      "title": "Subskrypcja",
+      "desc": "Sprawdź swój plan, status płatności i zarządzaj płatnościami.",
+      "viewButton": "Subskrypcja"
+    },
+    "plan": {
+      "title": "Plan i Info",
+      "desc": "Informacje o Twoim planie i wsparciu",
+      "free": "Lexora jest darmowa.",
+      "freeDesc": "Bez subskrypcji. Bez karty kredytowej. Płacisz tylko za opcjonalne usługi premium.",
+      "info": "Info o planie",
+      "contact": "Skontaktuj się z pomocą"
+    },
+    "danger": {
+      "title": "Uwaga!",
+      "desc": "Nieodwracalne akcje na Twoim koncie",
+      "export": "Poproś o eksport danych (RODO)",
+      "exportDone": "Prośba o eksport wysłana. Otrzymasz dane emailem w ciągu 30 dni.",
+      "deleteAccount": "Usuń konto",
+      "deleteAccountConfirm": "Usunięcie konta",
+      "deleteAccountDesc": "Usunięcie konta jest nieodwracalne. Wszystkie Twoje dane, sprawy i dokumenty zostaną trwale usunięte. Aby kontynuować, skontaktuj się z support@lexora-law.com.",
+      "deleteAccountDone": "Aby usunąć konto, skontaktuj się z support@lexora-law.com",
+      "understand": "Rozumiem"
+    },
+    "saved": "Ustawienia zapisane ✅",
+    "saveError": "Błąd zapisywania"
+  },
+  "countries": {
+    "DE": "Niemcy",
+    "AT": "Austria",
+    "CH": "Szwajcaria",
+    "IT": "Włochy",
+    "FR": "Francja",
+    "ES": "Hiszpania",
+    "PL": "Polska",
+    "RO": "Rumunia",
+    "NL": "Holandia",
+    "BE": "Belgia",
+    "PT": "Portugalia",
+    "GR": "Grecja",
+    "CZ": "Czechy",
+    "HU": "Węgry",
+    "SE": "Szwecja",
+    "DK": "Dania",
+    "FI": "Finlandia",
+    "NO": "Norwegia",
+    "IE": "Irlandia",
+    "GB": "Wielka Brytania",
+    "TR": "Turcja",
+    "OTHER": "Inne"
+  },
+  "languages": {
+    "IT": "Włoski",
+    "DE": "Niemiecki",
+    "EN": "Angielski",
+    "FR": "Francuski",
+    "ES": "Hiszpański",
+    "PL": "Polski",
+    "RO": "Rumuński",
+    "TR": "Turecki"
+  },
+  "deadline": {
+    "title": "Termin",
+    "source": "Źródło",
+    "manual": "Ręcznie",
+    "detected": "Wykryty przez AI",
+    "addToCalendar": "Dodaj do kalendarza",
+    "calendarAdded": "Dodano do kalendarza",
+    "daysLeft": "dni pozostało",
+    "overdue": "Po terminie",
+    "today": "Dziś",
+    "tomorrow": "Jutro"
+  },
+  "upload": {
+    "title": "Prześlij dokument",
+    "dragDrop": "Przeciągnij i upuść plik tutaj",
+    "or": "lub",
+    "browse": "Przeglądaj pliki",
+    "hint": "PDF, JPG, PNG, WEBP - Maks 10MB",
+    "uploading": "Przesyłanie...",
+    "success": "Plik przesłany pomyślnie",
+    "error": "Błąd przesyłania",
+    "tooLarge": "Plik za duży (maks 10MB)",
+    "invalidType": "Nieprawidłowy typ pliku"
+  },
+  "scan": {
+    "title": "Prześlij swój dokument",
+    "subtitle": "Zrób zdjęcie lub prześlij plik, aby rozpocząć",
+    "nameTitle": "Nazwij swoją sprawę",
+    "nameSubtitle": "Wprowadź nazwę opisową, aby łatwo ją odnaleźć",
+    "nameLabel": "Nazwa sprawy",
+    "namePlaceholder": "Np.: Urząd skarbowy, Mandat, Zawiadomienie...",
+    "nameHint": "Wybierz nazwę, która pomoże Ci zidentyfikować ten dokument",
+    "nameRequired": "Proszę wprowadzić nazwę sprawy",
+    "camera": "Zrób zdjęcie",
+    "cameraDesc": "Użyj aparatu, aby sfotografować dokument",
+    "upload": "Prześlij plik",
+    "uploadDesc": "Wybierz plik PDF lub obraz z urządzenia",
+    "processing": "Przetwarzanie...",
+    "formats": "Obsługiwane formaty: JPG, PNG, PDF",
+    "success": "Dokument przeanalizowany pomyślnie!",
+    "error": "Błąd podczas przesyłania",
+    "addPhoto": "+ Zdjęcie",
+    "addFiles": "+ Plik",
+    "cameraDescMulti": "Zrób kilka zdjęć dokumentów po kolei",
+    "step": {
+      "creating": "Tworzenie sprawy...",
+      "uploading": "Przesyłanie pliku...",
+      "ocr": "Ekstrakcja tekstu (OCR)...",
+      "saving": "Zapisywanie dokumentu...",
+      "analyzing": "Analiza AI w toku..."
+    }
+  },
+  "proposal": {
+    "title": "Sugestia AI",
+    "preview": "Podgląd",
+    "apply": "Zastosuj zmiany",
+    "discard": "Odrzuć",
+    "regenerate": "Wygeneruj ponownie"
+  },
+  "admin": {
+    "backToDashboard": "Powrót do pulpitu"
+  },
+  "support": {
+    "title": "Wsparcie",
+    "intro": "Masz pytanie lub problem?\nJeśli coś jest niejasne lub utknąłeś, możesz skontaktować się z nami za pomocą tego formularza.\nOdpowiemy tak szybko, jak to możliwe.",
+    "formTitle": "Skontaktuj się z pomocą",
+    "fields": {
+      "name": "Imię",
+      "email": "Email",
+      "requestType": "Typ zgłoszenia",
+      "message": "Wiadomość",
+      "file": "Załącznik"
+    },
+    "placeholders": {
+      "name": "Twoje imię",
+      "email": "twoj@email.pl",
+      "message": "Opisz swój problem lub pytanie..."
+    },
+    "requestTypes": {
+      "technical": "Problem techniczny",
+      "document": "Pytanie o dokument",
+      "billing": "Konto / Płatności",
+      "other": "Inne"
+    },
+    "optional": "opcjonalne",
+    "emailHint": "Używany tylko do odpowiedzi na Twoje zgłoszenie",
+    "fileHint": "Prześlij zrzut ekranu lub dokument (maks. 10MB)",
+    "submit": "Wyślij zgłoszenie",
+    "sending": "Wysyłanie...",
+    "success": {
+      "title": "Dziękujemy!",
+      "message": "Twoja wiadomość została wysłana.\nOdpowiemy w ciągu 24-48 godzin."
+    },
+    "errors": {
+      "emailRequired": "Email jest wymagany",
+      "messageRequired": "Wiadomość jest wymagana",
+      "invalidEmail": "Nieprawidłowy adres email",
+      "fileTooLarge": "Plik za duży (maks. 10MB)",
+      "sendFailed": "Nie udało się wysłać. Spróbuj ponownie."
+    },
+    "problemHint": "Problem?",
+    "contactSupport": "Skontaktuj się z pomocą"
+  },
+  "nav": {
+    "home": "Strona główna",
+    "dashboard": "Pulpit",
+    "cases": "Sprawy",
+    "upload": "Prześlij",
+    "settings": "Ustawienia",
+    "logout": "Wyloguj",
+    "login": "Zaloguj",
+    "signup": "Zarejestruj",
+    "support": "Wsparcie"
+  },
+  "tryChat": {
+    "title": "Wypróbuj Lexora teraz",
+    "subtitle": "Opisz otrzymany list i uzyskaj jasne wyjaśnienie + następne kroki.",
+    "placeholder": "Wklej lub opisz list tutaj…",
+    "emptyState": "Wklej lub opisz oficjalny list, a pomogę ci go zrozumieć.",
+    "error": "Błąd podczas uzyskiwania odpowiedzi. Spróbuj ponownie.",
+    "emptyWarning": "Najpierw opisz swój list.",
+    "genericErrorToast": "Tymczasowy błąd. Spróbuj ponownie.",
+    "freeCaption": "Wypróbuj za darmo — 3 wiadomości/dzień",
+    "quickActions": {
+      "explain": "📄 Wyjaśnij ten list",
+      "draft": "✍️ Napisz moją odpowiedź",
+      "deadline": "⚠️ Sprawdź termin"
+    },
+    "starterPrompts": {
+      "explain": "Otrzymałem oficjalny list. Nadawca: [kto]. Temat: [co]. Treść: [wklej tutaj]. Proszę wyjaśnij prostymi słowami i podaj następne kroki.",
+      "draft": "Napisz formalną odpowiedź po polsku do nadawcy. Cel: [mój cel]. Kluczowe fakty: [fakty]. Ton: profesjonalny. Podaj gotowy do wysłania szkic.",
+      "deadline": "Czy to pilne? Jaki termin obowiązuje? Co się stanie, jeśli nic nie zrobię? Powiedz mi najbezpieczniejszy następny krok."
+    },
+    "limit": {
+      "title": "Osiągnięto limit bezpłatnego podglądu",
+      "body": "Utwórz bezpłatne konto, aby kontynuować i zapisać swoją sprawę.",
+      "signup": "Utwórz konto",
+      "login": "Zaloguj"
+    },
+    "lock": {
+      "title": "Chcesz kontynuować?",
+      "text": "Aby analizować pełne dokumenty, zapisywać wyniki i uzyskać działania krok po kroku, utwórz bezpłatne konto.",
+      "signup": "Utwórz bezpłatne konto",
+      "login": "Zaloguj się"
+    },
+    "disclaimer": "Lexora nie jest kancelarią prawną i nie udziela porad prawnych. AI może popełniać błędy. Proszę zweryfikować przed podjęciem działań."
+  },
+  "landingChat": {
+    "title": "Rozmawiaj z Lexora",
+    "subtitle": "Opisz swoją sytuację lub prześlij dokument, aby rozpocząć.",
+    "placeholder": "Opisz swoją sytuację lub wklej list...",
+    "emptyState": "Prześlij dokument lub opisz, co się stało. Pomogę Ci zrozumieć i odpowiedzieć.",
+    "error": "Tymczasowy błąd. Spróbuj ponownie.",
+    "limit": {
+      "title": "Bezpłatny podgląd zakończony",
+      "body": "Utwórz bezpłatne konto, aby kontynuować i zapisać swoją sprawę.",
+      "signup": "Utwórz konto",
+      "login": "Zaloguj"
+    },
+    "cameraPermission": {
+      "title": "Dostęp do kamery",
+      "body": "Potrzebujemy dostępu do kamery, aby zeskanować dokument. Zdjęcie zostanie użyte tylko do ekstrakcji tekstu.",
+      "allow": "Zezwól na kamerę"
+    },
+    "processingOCR": "Wyodrębnianie tekstu...",
+    "ocrSuccess": "Tekst wyodrębniony z dokumentu",
+    "ocrError": "Nie można odczytać dokumentu. Spróbuj ponownie.",
+    "disclaimer": "AI może popełniać błędy. Zweryfikuj przed działaniem."
+  },
+  "demoChat": {
+    "sectionTitle": "Wypróbuj Lexorę teraz",
+    "sectionSubtitle": "Prześlij dokument lub opisz swoją sytuację — zobacz, jak Lexora pomaga.",
+    "placeholder": "Opisz swoją sytuację lub wklej swój list...",
+    "emptyState": "Prześlij dokument lub opisz, co się stało.",
+    "freeMessages": "Pozostało {{remaining}} darmowych wiadomości",
+    "error": "Tymczasowy błąd. Spróbuj ponownie.",
+    "limit": {
+      "title": "Bezpłatny podgląd zakończony",
+      "body": "Utwórz darmowe konto, aby kontynuować i zapisać swoją sprawę.",
+      "signup": "Utwórz konto",
+      "login": "Zaloguj się"
+    },
+    "cameraPermission": {
+      "title": "Dostęp do kamery",
+      "body": "Potrzebujemy dostępu do kamery, aby zeskanować dokument. Zdjęcie zostanie użyte tylko do ekstrakcji tekstu.",
+      "allow": "Zezwól na kamerę"
+    },
+    "processingOCR": "Wyodrębnianie tekstu...",
+    "ocrSuccess": "Tekst wyodrębniony z dokumentu",
+    "ocrError": "Nie można odczytać dokumentu. Spróbuj ponownie.",
+    "scanDocument": "Skanuj dokument",
+    "uploadFile": "Prześlij plik",
+    "reset": "Resetuj",
+    "print": "Drukuj",
+    "email": "Email",
+    "chatCleared": "Czat wyczyszczony",
+    "nothingToPrint": "Brak wiadomości do wydrukowania",
+    "nothingToEmail": "Brak wiadomości do wysłania",
+    "emailSubject": "Transkrypcja Czatu Lexora",
+    "previewTitle": "Podgląd odpowiedzi",
+    "previewSubtitle": "W tym obszarze wyświetlana jest wygenerowana odpowiedź. Aby rozpocząć, użyj przycisków poniżej.",
+    "noDraft": "Nie ma jeszcze szkicu listu",
+    "draftReady": "Szkic gotowy",
+    "preview": "Podgląd",
+    "copyLetter": "Kopiuj list"
+  },
+  "landingSections": {
+    "howItWorks": {
+      "badge": "Jak to działa",
+      "title": "Twoja odpowiedź w 4 prostych krokach",
+      "subtitle": "Od oficjalnego pisma do profesjonalnej odpowiedzi - szybko, prosto i prawnie bezpiecznie.",
+      "timeIndicator": "⏱️ Średni czas: 5-10 minut",
+      "steps": {
+        "1": { "title": "Prześlij", "description": "Zeskanuj lub prześlij swoje oficjalne pismo. PDF, zdjęcie lub bezpośrednio aparatem." },
+        "2": { "title": "Analiza AI", "description": "Nasza AI analizuje dokument, identyfikuje nadawcę, wyodrębnia terminy i rozumie treść." },
+        "3": { "title": "Sprawdź i Dostosuj", "description": "Przejrzyj wygenerowaną odpowiedź i dostosuj ją do swoich potrzeb." },
+        "4": { "title": "Wyślij", "description": "Eksportuj jako PDF, wydrukuj lub wyślij bezpośrednio pocztą." }
+      }
+    },
+    "pricing": {
+      "badge": "Cennik",
+      "title": "Przejrzyste ceny, bez ukrytych kosztów",
+      "subtitle": "Wybierz plan odpowiadający Twoim potrzebom. Zacznij za darmo i ulepsz kiedy chcesz.",
+      "monthly": "Miesięcznie",
+      "yearly": "Rocznie",
+      "save": "2 miesiące gratis",
+      "perMonth": "/miesiąc",
+      "perYear": "/rok",
+      "free": "Za darmo",
+      "popular": "Popularny",
+      "trustNote": "Karta kredytowa nie jest wymagana dla planu darmowego. Anuluj w dowolnym momencie.",
+      "plans": {
+        "free": { "name": "Darmowy", "description": "Idealny do wypróbowania", "cta": "Zacznij za darmo", "features": ["1 sprawa w pakiecie", "Analiza dokumentów AI", "Automatyczne generowanie odpowiedzi", "Przechowywanie 30 dni"] },
+        "starter": { "name": "Starter", "description": "Do okazjonalnego użytku", "cta": "Wybierz Starter", "features": ["3 sprawy miesięcznie", "15 wiadomości AI na sprawę", "Eksport PDF", "Wysyłanie email", "Śledzenie terminów"] },
+        "pro": { "name": "Pro", "description": "Dla regularnych użytkowników", "cta": "Wybierz Pro", "features": ["10 spraw miesięcznie", "30 wiadomości AI na sprawę", "Wszystko ze Starter", "Wsparcie rodzinne", "Priorytetowe wsparcie"] },
+        "unlimited": { "name": "Unlimited", "description": "Dla profesjonalistów", "cta": "Wybierz Unlimited", "features": ["Nieograniczone sprawy", "Nieograniczone wiadomości AI", "Nieograniczone dokumenty", "Wszystko z Pro", "Wsparcie profesjonalne"] }
+      }
+    },
+    "testimonials": {
+      "badge": "Opinie",
+      "title": "Co mówią nasi użytkownicy",
+      "subtitle": "Tysiące ludzi ufa Lexora w odpowiadaniu na oficjalne pisma.",
+      "stats": {
+        "satisfaction": { "value": "98%", "label": "Wskaźnik zadowolenia" },
+        "rating": { "value": "4.8/5", "label": "Średnia ocena" },
+        "documents": { "value": "2 500+", "label": "Przeanalizowanych dokumentów" }
+      },
+      "users": [
+        { "name": "Thomas M.", "location": "Monachium, Niemcy", "text": "Otrzymałem pismo z urzędu skarbowego i nie wiedziałem jak odpowiedzieć. Lexora pomogła mi sformułować profesjonalną odpowiedź w 10 minut.", "useCase": "Zawiadomienie podatkowe" },
+        { "name": "Maria K.", "location": "Wiedeń, Austria", "text": "Jako obcokrajowiec często nie rozumiem języka urzędowego. Lexora wszystko jasno wyjaśnia i pomaga mi poprawnie odpowiadać. Gorąco polecam!", "useCase": "Pozwolenie na pobyt" },
+        { "name": "Stefan B.", "location": "Zurych, Szwajcaria", "text": "Mój właściciel chciał niesłusznie wysłać mi ostrzeżenie. Z Lexora udało mi się stworzyć prawnie uzasadniony sprzeciw. Sprawa została umorzona.", "useCase": "Prawo najmu" },
+        { "name": "Anna L.", "location": "Berlin, Niemcy", "text": "Otrzymałam mandat z fotoradaru, złożyłam odwołanie z Lexora - mandat został obniżony! AI naprawdę zna odpowiednie przepisy.", "useCase": "Prawo drogowe" }
+      ]
+    },
+    "faq": {
+      "badge": "FAQ",
+      "title": "Często Zadawane Pytania",
+      "subtitle": "Znajdź odpowiedzi na najważniejsze pytania dotyczące Lexora.",
+      "contactCta": "Masz jeszcze pytania?",
+      "contactLink": "Skontaktuj się z nami",
+      "items": [
+        { "question": "Czy moje dane są bezpieczne?", "answer": "Tak, Twoje dane są w pełni chronione. Używamy szyfrowania end-to-end i przechowujemy wszystkie dane na serwerach w UE. Nigdy nie udostępniamy Twoich danych stronom trzecim. Możesz całkowicie usunąć swoje konto i wszystkie dokumenty w dowolnym momencie." },
+        { "question": "Jakie kraje są obsługiwane?", "answer": "Lexora obecnie obsługuje Niemcy, Austrię i Szwajcarię z pełną adaptacją prawną. Podstawowe funkcje są również dostępne dla innych krajów europejskich. Stale rozszerzamy nasz zasięg." },
+        { "question": "Jak dokładna jest analiza AI?", "answer": "Nasza AI osiąga ponad 98% dokładności w rozpoznawaniu i analizie dokumentów. Jest specjalnie wytrenowana na niemieckojęzycznych pismach urzędowych i zna odpowiednie przepisy oraz terminy." },
+        { "question": "Czy mogę edytować wygenerowane odpowiedzi?", "answer": "Oczywiście! Wszystkie odpowiedzi wygenerowane przez Lexora można w pełni dostosować. Możesz zmieniać, dodawać lub usuwać tekst. AI może również pomóc w dalszych dostosowaniach." },
+        { "question": "Jakie formaty plików są obsługiwane?", "answer": "Lexora akceptuje pliki PDF, JPG, PNG, WEBP i HEIC do 10MB. Możesz również skanować dokumenty bezpośrednio aparatem smartfona." },
+        { "question": "Czy Lexora zastępuje prawnika?", "answer": "Lexora to asystent AI i nie jest zamiennikiem porady prawnej. W przypadku złożonych spraw prawnych, postępowań sądowych lub gdy w grę wchodzą duże kwoty, zawsze zalecamy konsultację z wykwalifikowanym prawnikiem." },
+        { "question": "Jak działa wersja darmowa?", "answer": "W wersji darmowej możesz przetworzyć jedną pełną sprawę - od analizy do gotowej odpowiedzi. Jest to idealne do testowania. Do regularnego użytku polecamy nasze plany Starter lub Pro." },
+        { "question": "Czy mogę anulować subskrypcję w dowolnym momencie?", "answer": "Tak, możesz anulować subskrypcję w dowolnym momencie. Nie ma minimalnego okresu. Po anulowaniu masz dostęp do wszystkich funkcji do końca okresu rozliczeniowego." }
+      ]
+    },
+    "documents": {
+      "badge": "Obsługiwane Dokumenty",
+      "title": "Jakie dokumenty może analizować Lexora?",
+      "subtitle": "Lexora rozumie różnorodne pisma urzędowe i pomaga sformułować właściwą odpowiedź.",
+      "formatsTitle": "Obsługiwane formaty plików:",
+      "types": [
+        { "title": "Zawiadomienia Podatkowe", "description": "Podatek dochodowy, VAT, podatek od nieruchomości" },
+        { "title": "Pisma Sądowe", "description": "Nakazy zapłaty, wezwania, wyroki" },
+        { "title": "Urząd Imigracyjny", "description": "Pozwolenia na pobyt, wizy, naturalizacja" },
+        { "title": "Ubezpieczenia", "description": "Zgłoszenia szkód, odmowy, wypowiedzenia" },
+        { "title": "Prawo Najmu", "description": "Podwyżki czynszu, ostrzeżenia, wypowiedzenia" },
+        { "title": "Prawo Pracy", "description": "Ostrzeżenia, zwolnienia, referencje" },
+        { "title": "Zawiadomienia o Mandatach", "description": "Fotoradary, naruszenia parkowania, wykroczenia" },
+        { "title": "Windykacja", "description": "Wezwania do zapłaty, procedury windykacyjne" },
+        { "title": "Pisma Urzędowe", "description": "Urząd pracy, opieka społeczna, świadczenia rodzinne" }
+      ]
+    },
+    "trust": {
+      "badge": "Bezpieczeństwo i Zaufanie",
+      "title": "Twoje dane są u nas bezpieczne",
+      "subtitle": "Bezpieczeństwo i prywatność to nasze najwyższe priorytety. Używamy najnowocześniejszych technologii do ochrony Twoich wrażliwych dokumentów.",
+      "countriesTitle": "Obsługiwane Kraje",
+      "countriesSubtitle": "Specjalnie dostosowane do wymogów prawnych w 11 krajach na całym świecie:",
+      "certifications": { "gdpr": "RODO" },
+      "countries": { "us": "USA", "de": "Niemcy", "at": "Austria", "ch": "Szwajcaria", "it": "Włochy", "fr": "Francja", "es": "Hiszpania", "uk": "Wielka Brytania", "ua": "Ukraina", "tr": "Turcja", "latam": "Ameryka Łacińska" },
+      "features": [
+        { "title": "Zgodność z RODO", "description": "W pełni zgodne z europejskimi przepisami o ochronie danych." },
+        { "title": "Szyfrowanie SSL", "description": "256-bitowe szyfrowanie SSL dla wszystkich transferów danych." },
+        { "title": "Serwery w UE", "description": "Wszystkie dane przechowywane wyłącznie na serwerach w UE." },
+        { "title": "Brak Udostępniania Danych", "description": "Twoje dokumenty nigdy nie są udostępniane ani sprzedawane stronom trzecim." }
+      ]
+    }
+  },
+  "pwa": {
+    "installPrompt": "Dodaj Lexora do ekranu głównego dla szybkiego dostępu",
+    "installButton": "Zainstaluj aplikację",
+    "installLater": "Później",
+    "installing": "Instalowanie...",
+    "installed": "Aplikacja zainstalowana!",
+    "alreadyInstalled": "Aplikacja już zainstalowana",
+    "updateApp": "Zaktualizuj aplikację",
+    "offlineTitle": "Jesteś offline",
+    "offlineMessage": "Niektóre funkcje są ograniczone. Zapisane dokumenty są dostępne.",
+    "online": "Online",
+    "offline": "Offline",
+    "iOSGuide": {
+      "title": "Zainstaluj Lexora na swoim iPhonie",
+      "step1": "Dotknij przycisku Udostępnij na dole",
+      "step2": "Wybierz \"Dodaj do ekranu początkowego\"",
+      "step3": "Potwierdź przez \"Dodaj\"",
+      "gotIt": "Rozumiem, nie pokazuj więcej"
+    },
+    "updateAvailable": "Dostępna nowa wersja. Odśwież, aby zaktualizować."
+  }
+}
