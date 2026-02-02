@@ -8,6 +8,9 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { useLogout } from '@/hooks/useLogout';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { LogOut, User, Settings, ChevronDown, CreditCard, Shield, LayoutDashboard, HeadsetIcon } from 'lucide-react';
+import { InstallAppButton } from '@/components/InstallAppButton';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { usePWA } from '@/hooks/usePWA';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +22,9 @@ import {
 export function AppHeader() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const { canInstall, isStandalone, isIOS } = usePWA();
+  const showInstallApp = isMobile && (canInstall || isIOS || isStandalone);
   const { entitlements, isLoading: entitlementsLoading, isAdmin } = useEntitlements();
   const navigate = useNavigate();
   const logout = useLogout();
@@ -130,6 +136,14 @@ export function AppHeader() {
                       <Shield className="mr-2 h-4 w-4" />
                       {t('header.adminPanel') || 'Admin Panel'}
                     </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Installa App - solo mobile/tablet quando installabile */}
+                {showInstallApp && (
+                  <>
+                    <DropdownMenuSeparator className="bg-navy/10" />
+                    <InstallAppButton />
                   </>
                 )}
 

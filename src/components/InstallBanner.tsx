@@ -1,50 +1,56 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePWA } from '@/hooks/usePWA';
+import { showIOSInstallGuide } from '@/components/IOSInstallGuide';
 import { Button } from '@/components/ui/button';
-import { X, Smartphone } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const DISMISSED_KEY = 'install-banner-dismissed';
-const DISMISS_DAYS = 7;
+const DISMISS_FOREVER_KEY = 'install-banner-dismissed-forever';
 
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || (window.navigator as Navigator & { standalone?: boolean }).standalone
-    || document.referrer.includes('android-app://');
+function shouldShowBanner(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (localStorage.getItem(DISMISS_FOREVER_KEY) === '1') return false;
+  const dismissedAt = localStorage.getItem(DISMISSED_KEY);
+  if (dismissedAt) {
+    const days = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+    if (days < 7) return false;
+  }
+  return true;
 }
 
 export function InstallBanner() {
   const { t } = useLanguage();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const { canInstall, isInstalled, isIOS, triggerInstall } = usePWA();
   const [visible, setVisible] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    if (isStandalone()) return;
+    if (isInstalled || !shouldShowBanner()) return;
 
-    const dismissedAt = localStorage.getItem(DISMISSED_KEY);
-    if (dismissedAt) {
-      const days = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
-      if (days < DISMISS_DAYS) return;
+    // Android: show when canInstall (beforeinstallprompt fired)
+    if (canInstall) {
+      setVisible(true);
+      return;
     }
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    // iOS: show banner that opens guide on click (IOSInstallGuide has its own auto-popup)
+    if (isIOS) {
       setVisible(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+    }
+  }, [canInstall, isInstalled, isIOS]);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (isIOS) {
+      showIOSInstallGuide();
+      setVisible(false);
+      return;
+    }
+    if (!canInstall) return;
     setInstalling(true);
     try {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setVisible(false);
-      }
+      const accepted = await triggerInstall();
+      if (accepted) setVisible(false);
     } finally {
       setInstalling(false);
     }
@@ -55,6 +61,11 @@ export function InstallBanner() {
     localStorage.setItem(DISMISSED_KEY, Date.now().toString());
   };
 
+  const handleDismissForever = () => {
+    setVisible(false);
+    localStorage.setItem(DISMISS_FOREVER_KEY, '1');
+  };
+
   const handleLater = () => {
     setVisible(false);
     localStorage.setItem(DISMISSED_KEY, Date.now().toString());
@@ -62,15 +73,23 @@ export function InstallBanner() {
 
   if (!visible) return null;
 
+  // Android: bottom banner with app icon + "Installa Lexora" + Install button
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-3 md:p-4 bg-navy border-t border-gold/20 shadow-lg">
       <div className="flex items-center gap-3 max-w-2xl mx-auto">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold/20 border border-gold/40">
-          <Smartphone className="h-6 w-6 text-gold" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold/20 border border-gold/40 overflow-hidden">
+          <img
+            src="/icons/icon-192x192.png"
+            alt="Lexora"
+            className="h-10 w-10 object-contain"
+          />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-ivory truncate">
+          <p className="text-sm font-medium text-ivory">
             {t('pwa.installPrompt')}
+          </p>
+          <p className="text-xs text-ivory/60 mt-0.5">
+            {isIOS ? t('pwa.iOSGuide.title') : t('pwa.installPrompt')}
           </p>
           <div className="flex gap-2 mt-2">
             <Button
@@ -93,23 +112,14 @@ export function InstallBanner() {
         </div>
         <button
           type="button"
-          onClick={handleDismiss}
-          className="p-1 text-ivory/60 hover:text-ivory shrink-0"
+          onClick={handleDismissForever}
+          className="p-1.5 text-ivory/60 hover:text-ivory shrink-0 rounded-full hover:bg-ivory/10 transition-colors"
           aria-label="Close"
+          title={t('pwa.installLater')}
         >
           <X className="h-5 w-5" />
         </button>
       </div>
     </div>
   );
-}
-
-declare global {
-  interface WindowEventMap {
-    beforeinstallprompt: BeforeInstallPromptEvent;
-  }
-}
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }

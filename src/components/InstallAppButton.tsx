@@ -1,5 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { usePWA } from '@/hooks/usePWA';
 import { showIOSInstallGuide } from '@/components/IOSInstallGuide';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Download, Check } from 'lucide-react';
@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 export function InstallAppButton({ variant = 'dropdown' }: { variant?: 'dropdown' | 'menu' }) {
   const { t } = useLanguage();
-  const { canInstall, isStandalone, isIOS, triggerInstall } = usePWAInstall();
+  const { canInstall, isStandalone, isIOS, triggerInstall } = usePWA();
   const [installing, setInstalling] = useState(false);
 
   const handleClick = async () => {
