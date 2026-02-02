@@ -1,6 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePWA } from '@/hooks/usePWA';
-import { showIOSInstallGuide } from '@/components/IOSInstallGuide';
+import { showIOSInstallGuide } from '@/components/PWAInstall';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Download, Check } from 'lucide-react';
 import { useState } from 'react';

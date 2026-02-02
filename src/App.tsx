@@ -37,8 +37,7 @@ import ResetPassword from "./pages/ResetPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import DemoLetterPreview from "./pages/DemoLetterPreview";
-import { InstallBanner } from "@/components/InstallBanner";
-import { IOSInstallGuide } from "@/components/IOSInstallGuide";
+import { PWAInstall } from "@/components/PWAInstall";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 // SEO Pages (DE only)
 import OffizielleBriefeVerstehen from "./pages/seo/OffizielleBriefeVerstehen";
@@ -106,8 +105,6 @@ const App = () => (
               <Toaster />
               <Sonner />
               <OfflineIndicator />
-              <InstallBanner />
-              <IOSInstallGuide />
               <BrowserRouter>
                 <Routes>
                   {/* Public routes */}
@@ -159,6 +156,7 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
+              <PWAInstall />
             </TooltipProvider>
             </GeoBlockWrapper>
           </GeoLocaleProvider>
