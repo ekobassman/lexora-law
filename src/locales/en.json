@@ -947,12 +947,16 @@
     "saveError": "Error saving settings"
   },
   "countries": {
+    "US": "USA",
     "DE": "Germany",
     "AT": "Austria",
     "CH": "Switzerland",
     "IT": "Italy",
     "FR": "France",
     "ES": "Spain",
+    "UK": "United Kingdom",
+    "UA": "Ukraine",
+    "LATAM": "Latin America",
     "PL": "Poland",
     "RO": "Romania",
     "NL": "Netherlands",

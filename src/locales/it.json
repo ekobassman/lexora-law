@@ -942,12 +942,17 @@
     "saveError": "Errore nel salvataggio"
   },
   "countries": {
+    "US": "Stati Uniti",
     "DE": "Germania",
     "AT": "Austria",
     "CH": "Svizzera",
     "IT": "Italia",
     "FR": "Francia",
     "ES": "Spagna",
+    "UK": "Regno Unito",
+    "UA": "Ucraina",
+    "TR": "Turchia",
+    "LATAM": "America Latina",
     "PL": "Polonia",
     "RO": "Romania",
     "NL": "Paesi Bassi",

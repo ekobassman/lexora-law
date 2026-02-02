@@ -881,12 +881,16 @@
     "saveError": "Error al guardar"
   },
   "countries": {
+    "US": "EE.UU.",
     "DE": "Alemania",
     "AT": "Austria",
     "CH": "Suiza",
     "IT": "Italia",
     "FR": "Francia",
     "ES": "España",
+    "UK": "Reino Unido",
+    "UA": "Ucrania",
+    "LATAM": "América Latina",
     "PL": "Polonia",
     "RO": "Rumanía",
     "NL": "Países Bajos",

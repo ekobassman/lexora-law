@@ -946,12 +946,17 @@
     "saveError": "Fehler beim Speichern"
   },
   "countries": {
+    "US": "USA",
     "DE": "Deutschland",
     "AT": "Österreich",
     "CH": "Schweiz",
     "IT": "Italien",
     "FR": "Frankreich",
     "ES": "Spanien",
+    "UK": "Vereinigtes Königreich",
+    "UA": "Ukraine",
+    "TR": "Türkei",
+    "LATAM": "Lateinamerika",
     "PL": "Polen",
     "RO": "Rumänien",
     "NL": "Niederlande",

@@ -881,12 +881,17 @@
     "saveError": "Erreur lors de l'enregistrement"
   },
   "countries": {
+    "US": "États-Unis",
     "DE": "Allemagne",
     "AT": "Autriche",
     "CH": "Suisse",
     "IT": "Italie",
     "FR": "France",
     "ES": "Espagne",
+    "UK": "Royaume-Uni",
+    "UA": "Ukraine",
+    "TR": "Turquie",
+    "LATAM": "Amérique latine",
     "PL": "Pologne",
     "RO": "Roumanie",
     "NL": "Pays-Bas",
