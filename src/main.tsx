@@ -5,6 +5,7 @@ import "./i18n"; // Initialize i18next
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
+    console.log('[SW] Tentativo registrazione /sw.js...');
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((reg) => {
