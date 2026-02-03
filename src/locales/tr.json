@@ -582,6 +582,10 @@
     "disclaimerText": "Lexora bir YZ asistanıdır ve hukuki danışmanlık sunmaz. Üretilen içerik yalnızca bilgilendirme amaçlıdır. Hukuki kararlar için bir avukata danışın.",
     "copyright": "© {year} LEXORA. Tüm hakları saklıdır."
   },
+  "pullToRefresh": {
+    "pull": "Yenilemek için aşağı çekin",
+    "release": "Yenilemek için bırakın"
+  },
   "pricing": {
     "localCurrencyNote": "Fiyatlar yerel para biriminizde gösterilir.",
     "free": "Ücretsiz",

@@ -39,6 +39,7 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import DemoLetterPreview from "./pages/DemoLetterPreview";
 import { PWAInstall } from "@/components/PWAInstall";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { PullToRefresh } from "@/components/PullToRefresh";
 // SEO Pages (DE only)
 import OffizielleBriefeVerstehen from "./pages/seo/OffizielleBriefeVerstehen";
 import SchufaBriefVerstehen from "./pages/seo/SchufaBriefVerstehen";
@@ -104,6 +105,7 @@ const App = () => (
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <PullToRefresh />
               <OfflineIndicator />
               <BrowserRouter>
                 <Routes>

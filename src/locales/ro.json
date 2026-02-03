@@ -597,6 +597,10 @@
     "disclaimerText": "Lexora este un asistent bazat pe IA și nu oferă consultanță juridică. Conținutul generat este doar informativ. Pentru decizii juridice, consultați un avocat calificat.",
     "copyright": "© {year} LEXORA. Toate drepturile rezervate."
   },
+  "pullToRefresh": {
+    "pull": "Trage pentru a actualiza",
+    "release": "Eliberează pentru a actualiza"
+  },
   "pricing": {
     "localCurrencyNote": "Prețurile sunt afișate în moneda dvs. locală.",
     "free": "Gratuit",

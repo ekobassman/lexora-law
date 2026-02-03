@@ -674,9 +674,13 @@
     "helpCenter": "Help Center",
     "impressum": "Legal Notice",
     "disclaimerText": "Lexora is an AI-based assistant and does not provide legal advice. Generated content is for informational purposes only. For legally binding decisions, please consult a qualified lawyer.",
-    "copyright": "© {year} LEXORA. All rights reserved."
+"copyright": "© {year} LEXORA. All rights reserved."
   },
-"pricing": {
+  "pullToRefresh": {
+    "pull": "Pull to refresh",
+    "release": "Release to refresh"
+  },
+  "pricing": {
     "localCurrencyNote": "Prices shown in your local currency.",
     "free": "Free",
     "title": "Lexora Plans",

@@ -597,6 +597,10 @@
     "disclaimerText": "Lexora to asystent oparty na AI i nie świadczy porad prawnych. Generowana treść ma charakter wyłącznie informacyjny. W sprawach prawnych skonsultuj się z prawnikiem.",
     "copyright": "© {year} LEXORA. Wszelkie prawa zastrzeżone."
   },
+  "pullToRefresh": {
+    "pull": "Pociągnij, aby odświeżyć",
+    "release": "Puść, aby odświeżyć"
+  },
   "pricing": {
     "localCurrencyNote": "Ceny wyświetlane w Twojej lokalnej walucie.",
     "free": "Bezpłatny",

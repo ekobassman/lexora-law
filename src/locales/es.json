@@ -610,6 +610,10 @@
     "disclaimerText": "Lexora es un asistente basado en IA y no proporciona asesoramiento legal. El contenido generado es solo informativo. Para decisiones legalmente vinculantes, consulte a un abogado cualificado.",
     "copyright": "© {year} LEXORA. Todos los derechos reservados."
   },
+  "pullToRefresh": {
+    "pull": "Tira para actualizar",
+    "release": "Suelta para actualizar"
+  },
   "pricing": {
     "localCurrencyNote": "Precios mostrados en tu moneda local.",
     "free": "Gratis",

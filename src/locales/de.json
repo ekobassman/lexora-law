@@ -675,6 +675,10 @@
     "disclaimerText": "Lexora ist ein KI-basierter Assistent und bietet keine Rechtsberatung. Die generierten Inhalte dienen ausschließlich zu Informationszwecken. Für rechtlich bindende Entscheidungen konsultieren Sie bitte einen qualifizierten Anwalt.",
     "copyright": "© {year} LEXORA. Alle Rechte vorbehalten."
   },
+  "pullToRefresh": {
+    "pull": "Ziehen zum Aktualisieren",
+    "release": "Loslassen zum Aktualisieren"
+  },
   "pricing": {
     "localCurrencyNote": "Preise werden in Ihrer lokalen Währung angezeigt.",
     "free": "Kostenlos",
