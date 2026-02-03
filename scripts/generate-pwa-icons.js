@@ -8,9 +8,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+const SIZES = [16, 32, 72, 96, 128, 144, 152, 192, 384, 512];
 const SRC = path.join(__dirname, '../src/assets/lexora-logo.png');
 const OUT = path.join(__dirname, '../public/icons');
+const PUBLIC = path.join(__dirname, '../public');
 
 if (!fs.existsSync(SRC)) {
   console.warn('Source logo not found at', SRC, '- create icons manually in public/icons/');
@@ -42,7 +43,8 @@ Promise.all(
     sharp(SRC).resize(512, 512).png().toFile(path.join(OUT, 'icon-maskable-512.png')),
   ]);
 }).then(() => {
-  console.log('PWA icons generated in public/icons/');
+  fs.copyFileSync(path.join(OUT, 'icon-32x32.png'), path.join(PUBLIC, 'favicon.ico'));
+  console.log('PWA icons + favicon.ico (Lexora) generated in public/');
 }).catch((err) => {
   console.error('Error generating icons:', err);
   process.exit(1);

@@ -1376,6 +1376,7 @@
     "updateApp": "App aktualisieren",
     "offlineTitle": "Sie sind offline",
     "offlineMessage": "Einige Funktionen sind eingeschränkt. Gespeicherte Dokumente sind verfügbar.",
+    "retry": "Erneut versuchen",
     "online": "Online",
     "offline": "Offline",
     "iOSGuide": {

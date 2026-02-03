@@ -1209,6 +1209,7 @@
     "updateApp": "Mettre à jour l'app",
     "offlineTitle": "Vous êtes hors ligne",
     "offlineMessage": "Certaines fonctionnalités sont limitées. Les documents sauvegardés sont disponibles.",
+    "retry": "Réessayer",
     "online": "En ligne",
     "offline": "Hors ligne",
     "iOSGuide": {

@@ -1233,6 +1233,7 @@
     "updateApp": "Actualizar App",
     "offlineTitle": "Estás desconectado",
     "offlineMessage": "Algunas funciones son limitadas. Los documentos guardados están disponibles.",
+    "retry": "Reintentar",
     "online": "En línea",
     "offline": "Desconectado",
     "iOSGuide": {

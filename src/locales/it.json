@@ -1340,6 +1340,7 @@
     "updateApp": "Aggiorna App",
     "offlineTitle": "Sei offline",
     "offlineMessage": "Alcune funzionalità sono limitate. I documenti salvati sono disponibili.",
+    "retry": "Riprova",
     "online": "Online",
     "offline": "Offline",
     "iOSGuide": {
