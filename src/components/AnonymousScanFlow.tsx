@@ -97,8 +97,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       setCurrentCase(newCase);
 
       // OCR via Vercel /api/ocr (Google Cloud Vision)
-      const text = await (await import('@/lib/ocrClient')).ocrWithBase64(base64, mimeType) ?? '';
-      if (!text) throw new Error('OCR failed');
+      const ocrResult = await (await import('@/lib/ocrClient')).ocrWithBase64(base64, mimeType);
+      if (!ocrResult.text) throw new Error(ocrResult.details || ocrResult.error || 'OCR failed');
+      const text = ocrResult.text;
       setExtractedText(text);
       updateAnonymousCase(newCase.id, { letterText: text, ocrResult: text });
 

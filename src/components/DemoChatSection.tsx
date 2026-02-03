@@ -861,35 +861,27 @@ export function DemoChatSection() {
     }
   };
 
-  const processOCRSingle = async (file: File, isDemo?: boolean): Promise<string | null> => {
-    if (isDemo) return null; // Blocca ogni chiamata API/OCR in demo
-    try {
-      return await ocrFromFile(file);
-    } catch {
-      return null;
-    }
+  const processOCRSingle = async (file: File, isDemo?: boolean) => {
+    if (isDemo) return { text: null as string | null } as import('@/lib/ocrClient').OcrResult;
+    return await ocrFromFile(file);
   };
 
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
     setProcessingStep('uploading');
     try {
-      // Step 1: Uploading (brief delay to show step)
       await new Promise(r => setTimeout(r, 300));
       setProcessingStep('extracting');
-      
-      // Step 2: Extracting text via OCR
       const result = await processOCRSingle(file, demoMode);
-      
-      if (result) {
+      if (result.text) {
         setProcessingStep('analyzing');
-        // Step 3: Brief pause to show analyzing step before AI processes
         await new Promise(r => setTimeout(r, 400));
         toast.success(txt.ocrSuccess);
-      } else {
-        toast.error(txt.ocrError);
+        return result.text;
       }
-      return result;
+      const errMsg = result.details || result.error || txt.ocrError;
+      toast.error(errMsg, { duration: 7000 });
+      return null;
     } finally {
       setProcessingStep('idle');
       setIsProcessingFile(false);
@@ -1220,12 +1212,11 @@ export function DemoChatSection() {
       // Step 2: Extracting text from each file
       for (const file of validFiles) {
         const isPDF = isLikelyPdf(file);
-        const extractedText = await processOCRSingle(file, demoMode);
-        
-        if (extractedText) {
-          extractedParts.push({ name: file.name, text: extractedText, isPDF });
+        const ocrResult = await processOCRSingle(file, demoMode);
+        if (ocrResult.text) {
+          extractedParts.push({ name: file.name, text: ocrResult.text, isPDF });
         } else {
-          toast.error(`${file.name}: ${txt.ocrError}`);
+          toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
         }
       }
 
@@ -1421,11 +1412,11 @@ export function DemoChatSection() {
 
             const extractedParts: { name: string; text: string }[] = [];
             for (const file of validFiles) {
-              const extractedText = await processOCRSingle(file, demoMode);
-              if (extractedText) {
-                extractedParts.push({ name: file.name, text: extractedText });
+              const ocrResult = await processOCRSingle(file, demoMode);
+              if (ocrResult.text) {
+                extractedParts.push({ name: file.name, text: ocrResult.text });
               } else {
-                toast.error(`${file.name}: ${txt.ocrError}`);
+                toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
               }
             }
 

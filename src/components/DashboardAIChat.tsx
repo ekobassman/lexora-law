@@ -887,21 +887,22 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   };
 
   // OCR via Vercel /api/ocr (Google Cloud Vision)
-  const processOCRSingle = async (file: File): Promise<string | null> => {
-    try {
-      return await ocrFromFile(file);
-    } catch {
-      return null;
-    }
+  const processOCRSingle = async (file: File) => {
+    const result = await ocrFromFile(file);
+    return result;
   };
 
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
     try {
       const result = await processOCRSingle(file);
-      if (result) toast.success(txt.ocrSuccess);
-      else toast.error(txt.ocrError);
-      return result;
+      if (result.text) {
+        toast.success(txt.ocrSuccess);
+        return result.text;
+      }
+      const errMsg = result.details || result.error || txt.ocrError;
+      toast.error(errMsg, { duration: 7000 });
+      return null;
     } finally {
       setIsProcessingFile(false);
     }
@@ -1078,16 +1079,19 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           return;
         }
 
-        // 500 or other: show user-facing message first (message > error code)
-        const serverMsg = errorData?.message || errorData?.details || (errorData?.error !== 'AI_PROVIDER_ERROR' ? errorData?.error : null) || response.statusText;
+        // 500 or other: show user-facing message; never show raw "AI_PROVIDER_ERROR" code
+        const rawMsg = errorData?.message || errorData?.details || response.statusText;
+        const serverMsg = (errorData?.error === 'AI_PROVIDER_ERROR' && !rawMsg)
+          ? (t('dashboardChat.aiUnavailable') || 'AI is temporarily unavailable. Please try again later.')
+          : (rawMsg || (errorData?.error !== 'AI_PROVIDER_ERROR' ? errorData?.error : null) || t('dashboardChat.aiUnavailable') || fallbackContent);
         setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-        toast.error(serverMsg || t('dashboardChat.aiUnavailable') || fallbackContent, { duration: 8000 });
+        toast.error(serverMsg, { duration: 8000 });
         return;
       }
 
-      // General mode can return { ok: false, error: "..." } with 200 in some setups; treat as failure
+      // General mode can return { ok: false, error: "AI_PROVIDER_ERROR", message: "..." } with 200/500; treat as failure
       if (data && data.ok === false) {
-        const errMsg = data.error || data.details || 'Chat temporarily unavailable';
+        const errMsg = data.message || data.details || (data.error !== 'AI_PROVIDER_ERROR' ? data.error : null) || t('dashboardChat.aiUnavailable') || 'Chat temporarily unavailable';
         setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
         toast.error(errMsg, { duration: 8000 });
         return;
@@ -1199,10 +1203,9 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       
       for (const file of validFiles) {
         const isPDF = isLikelyPdf(file);
-        const extractedText = await processOCRSingle(file);
-        
-        if (extractedText) extractedParts.push({ name: file.name, text: extractedText, isPDF });
-        else toast.error(`${file.name}: ${txt.ocrError}`);
+        const ocrResult = await processOCRSingle(file);
+        if (ocrResult.text) extractedParts.push({ name: file.name, text: ocrResult.text, isPDF });
+        else toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
       }
 
       if (extractedParts.length > 0) {

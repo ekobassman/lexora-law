@@ -13,6 +13,7 @@ interface InvokeParams {
 interface InvokeResult {
   text?: string;
   error?: string;
+  details?: string;
   success?: boolean;
 }
 
@@ -42,12 +43,12 @@ export async function invokeExtractText(params: InvokeParams): Promise<InvokeRes
   }
 
   // OCR via Vercel /api/ocr (Google Cloud Vision)
-  const text = await ocrWithBase64(base64, mimeType);
-  console.info("[ocr] fetch", { hasText: !!text });
+  const result = await ocrWithBase64(base64, mimeType);
+  console.info("[ocr] fetch", { hasText: !!result.text, error: result.error, details: result.details });
 
-  if (!text) {
-    return { error: "OCR_FAILED" };
+  if (!result.text) {
+    return { error: "OCR_FAILED", details: result.details || result.error };
   }
 
-  return { text, success: true };
+  return { text: result.text, success: true };
 }

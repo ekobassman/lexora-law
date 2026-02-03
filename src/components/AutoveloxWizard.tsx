@@ -98,8 +98,12 @@ export function AutoveloxWizard({ open, onOpenChange, praticaId }: AutoveloxWiza
       if (uploadError) throw uploadError;
 
       // OCR via Vercel /api/ocr (Google Cloud Vision)
-      const text = await (await import('@/lib/ocrClient')).ocrFromFile(file) ?? '';
+      const ocrResult = await (await import('@/lib/ocrClient')).ocrFromFile(file);
+      const text = ocrResult.text ?? '';
       setExtractedText(text);
+      if (!ocrResult.text && (ocrResult.details || ocrResult.error)) {
+        toast.error(ocrResult.details || ocrResult.error);
+      }
 
       // Try to auto-extract data from verbale
       if (text) {

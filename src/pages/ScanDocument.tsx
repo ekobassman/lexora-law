@@ -103,11 +103,11 @@ export default function ScanDocument() {
         setProcessingStep(`${t('analysis.extracting')} (${i + 1}/${files.length})`);
         
         // OCR via Vercel /api/ocr (Google Cloud Vision)
-        const text = await (await import('@/lib/ocrClient')).ocrFromFile(file);
-        if (text) {
-          combinedText += (combinedText ? '\n\n---\n\n' : '') + text;
+        const ocrResult = await (await import('@/lib/ocrClient')).ocrFromFile(file);
+        if (ocrResult.text) {
+          combinedText += (combinedText ? '\n\n---\n\n' : '') + ocrResult.text;
         } else {
-          toast.error(`${file.name}: ${t('demoChat.ocrError')}`);
+          toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || t('demoChat.ocrError')}`, { duration: 7000 });
         }
       }
       
@@ -217,6 +217,8 @@ export default function ScanDocument() {
           if (ocrResult.text) {
             extractedText = ocrResult.text;
             combinedText += (combinedText ? '\n\n---\n\n' : '') + extractedText;
+          } else if (ocrResult.error) {
+            toast.error(`${file.name}: ${ocrResult.details || ocrResult.error}`, { duration: 7000 });
           }
         }
 

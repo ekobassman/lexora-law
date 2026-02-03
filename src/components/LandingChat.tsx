@@ -203,10 +203,13 @@ export function LandingChat() {
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
     try {
-      const text = await (await import('@/lib/ocrClient')).ocrFromFile(file);
-      if (text) toast.success(txt.ocrSuccess);
-      else toast.error(txt.ocrError);
-      return text;
+      const result = await (await import('@/lib/ocrClient')).ocrFromFile(file);
+      if (result.text) {
+        toast.success(txt.ocrSuccess);
+        return result.text;
+      }
+      toast.error(result.details || result.error || txt.ocrError, { duration: 7000 });
+      return null;
     } catch (error) {
       console.error('[LandingChat] OCR failed:', error);
       toast.error(txt.ocrError);
