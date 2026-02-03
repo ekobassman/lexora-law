@@ -33,7 +33,7 @@ export function AppHeader() {
   const planSource = (entitlements as any)?.plan_source || 'unknown';
 
   return (
-    <header className="sticky top-0 z-50 w-full overflow-x-hidden bg-navy border-b border-gold/20">
+    <header className="sticky top-0 z-50 w-full overflow-x-hidden bg-navy border-b border-gold/20 safe-area-top">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-3 sm:h-20 sm:px-6">
         {/* Logo - Premium Legal Crest Style */}
         <Link to="/app" className="flex min-w-0 items-center gap-3 py-2">

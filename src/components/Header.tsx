@@ -42,7 +42,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-navy border-b border-gold/20">
+    <header className="sticky top-0 z-50 w-full bg-navy border-b border-gold/20 safe-area-top">
       <div className="flex h-16 items-center justify-between px-3 sm:px-4 md:px-6 lg:container md:h-20">
         {/* Logo - Premium Legal Style */}
         <Link to={user ? "/app" : "/"} className="flex items-center gap-2 py-2 shrink-0">
