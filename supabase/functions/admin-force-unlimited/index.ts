@@ -20,68 +20,55 @@ function checkGeoBlock(req: Request): { blocked: boolean; countryCode: string | 
   return { blocked: BLOCKED_COUNTRIES.includes(normalized), countryCode: normalized };
 }
 
+function json200(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
+  console.log("[admin-force-unlimited] entry");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // GEO-BLOCK CHECK
-  const geoCheck = checkGeoBlock(req);
-  if (geoCheck.blocked) {
-    console.log('[admin-force-unlimited] Jurisdiction blocked:', geoCheck.countryCode);
-    return new Response(
-      JSON.stringify({ code: 'JURISDICTION_BLOCKED', countryCode: geoCheck.countryCode }),
-      { status: 451, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   try {
+    const geoCheck = checkGeoBlock(req);
+    if (geoCheck.blocked) {
+      console.log('[admin-force-unlimited] Jurisdiction blocked:', geoCheck.countryCode);
+      return json200({ ok: false, reason: "jurisdiction_blocked", countryCode: geoCheck.countryCode });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    const envFingerprint = {
-      supabase_url_last6: supabaseUrl.slice(-6),
-      service_role_last6: serviceRoleKey.slice(-6),
-    };
-
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[admin-force-unlimited] Missing env", {
-        missing: [
-          !supabaseUrl ? "SUPABASE_URL" : null,
-          !serviceRoleKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
-        ].filter(Boolean),
-        envFingerprint,
-      });
-      return new Response(JSON.stringify({ error: "MISSING ENV: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY", code: "ENV_MISSING" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[admin-force-unlimited] Missing env");
+      return json200({ ok: false, reason: "error", message: "Service not configured" });
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : authHeader;
+    if (!token) {
+      console.log("[admin-force-unlimited] exit: no token");
+      return json200({ ok: false, reason: "unauthorized" });
+    }
 
-    // Admin client (service role) for JWT verification + privileged DB writes.
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData?.user) {
-      console.error("[admin-force-unlimited] Unauthorized", { error: userError?.message, envFingerprint });
-      return new Response(JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("[admin-force-unlimited] exit: invalid token", userError?.message);
+      return json200({ ok: false, reason: "unauthorized" });
     }
 
     const actorUserId = userData.user.id;
-    const actorEmail = userData.user.email ?? "";
-
+    const actorEmail = (userData.user.email ?? "").toLowerCase();
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === actorEmail.toLowerCase())) {
-      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === actorEmail)) {
+      console.log("[admin-force-unlimited] exit: not_admin");
+      return json200({ ok: false, reason: "not_admin" });
     }
 
     console.info("[admin-force-unlimited] Forcing self override", { actorUserId });
@@ -104,28 +91,14 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error("[admin-force-unlimited] Upsert failed", upsertError);
-      return new Response(JSON.stringify({ error: "Upsert failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json200({ ok: false, reason: "error", message: upsertError.message });
     }
 
-    console.info("[admin-force-unlimited] Upsert OK", {
-      override_id: upserted?.id,
-      plan_code: upserted?.plan_code,
-      is_active: upserted?.is_active,
-      expires_at: upserted?.expires_at,
-    });
-
-    return new Response(JSON.stringify({ ok: true, override: upserted }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log("[admin-force-unlimited] exit: success", { override_id: upserted?.id });
+    return json200({ ok: true, override: upserted });
   } catch (error) {
     console.error("[admin-force-unlimited] Unhandled error", error);
     const msg = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json200({ ok: false, reason: "error", message: msg });
   }
 });

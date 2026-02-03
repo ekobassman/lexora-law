@@ -23,9 +23,9 @@ const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
 const isAdminEmail = (email: string | undefined) =>
   ADMIN_EMAILS.some((e) => e.toLowerCase() === (email ?? "").toLowerCase());
 
-function jsonResponse(status: number, body: unknown) {
+function json200(body: unknown) {
   return new Response(JSON.stringify(body), {
-    status,
+    status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
@@ -43,27 +43,28 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // GEO-BLOCK CHECK
+  console.log("[admin-save-override] entry");
   const geoCheck = checkGeoBlock(req);
   if (geoCheck.blocked) {
     console.log('[admin-save-override] Jurisdiction blocked:', geoCheck.countryCode);
-    return jsonResponse(451, { code: 'JURISDICTION_BLOCKED', countryCode: geoCheck.countryCode });
+    return json200({ ok: false, reason: "jurisdiction_blocked", countryCode: geoCheck.countryCode });
   }
 
   try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // --- AUTH ---
-    const authHeader =
-      req.headers.get("authorization") || req.headers.get("Authorization") || "";
-
-    if (!authHeader.startsWith("Bearer ")) {
-      return jsonResponse(401, { error: "UNAUTHORIZED" });
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      console.error("[admin-save-override] missing env");
+      return json200({ ok: false, reason: "error", message: "Service not configured" });
     }
 
-    const authClient = createClient(SUPABASE_URL, ANON_KEY, {
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return json200({ ok: false, reason: "unauthorized" });
+    }
+
+    const authClient = createClient(SUPABASE_URL, ANON_KEY!, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
     });
@@ -72,23 +73,19 @@ Deno.serve(async (req: Request) => {
     const user = userData?.user;
 
     if (userError || !user) {
-      return jsonResponse(401, { error: "UNAUTHORIZED" });
+      return json200({ ok: false, reason: "unauthorized" });
     }
 
-    // --- ADMIN CHECK ---
     if (!isAdminEmail(user.email)) {
-      return jsonResponse(403, { error: "ADMIN_ONLY" });
+      console.log("[admin-save-override] exit: not_admin");
+      return json200({ ok: false, reason: "not_admin" });
     }
 
-    // --- BODY VALIDATION ---
     let body: any;
     try {
       body = await req.json();
     } catch {
-      return jsonResponse(400, {
-        error: "BAD_REQUEST",
-        details: ["invalid JSON body"],
-      });
+      return json200({ ok: false, reason: "error", message: "Invalid JSON body" });
     }
 
     const details: string[] = [];

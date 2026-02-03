@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function json200(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 // Blocked country codes
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
 
@@ -148,18 +155,17 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
+  console.log("[entitlements] entry");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // GEO-BLOCK CHECK (FAIL-CLOSED)
+  try {
+  // GEO-BLOCK CHECK (FAIL-CLOSED) — return 200 for UI-safe responses
   const geoCheck = await checkGeoBlock(req);
   if (geoCheck.blocked) {
     logStep('Jurisdiction blocked/unknown', { countryCode: geoCheck.countryCode, reason: geoCheck.reason });
-    return new Response(
-      JSON.stringify({ code: geoCheck.reason, countryCode: geoCheck.countryCode || 'unknown' }),
-      { status: 451, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json200({ ok: false, error: "Jurisdiction blocked", code: geoCheck.reason, countryCode: geoCheck.countryCode || 'unknown' });
   }
 
   // Environment (STRICT) — must be present or we fail loudly
@@ -200,10 +206,7 @@ serve(async (req) => {
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       logStep("No Bearer token");
-      return new Response(JSON.stringify({ error: "Missing Bearer token" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
-      });
+      return json200({ ok: false, error: "Missing Bearer token" });
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -423,6 +426,7 @@ serve(async (req) => {
       ...legacy,
     };
 
+    console.log("[entitlements] exit: success", { role: response.role, plan: response.plan });
     logStep("Returning entitlements", {
       role: response.role,
       plan: response.plan,
@@ -437,10 +441,14 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    logStep("Error", { message: error instanceof Error ? error.message : String(error) });
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    const msg = error instanceof Error ? error.message : String(error);
+    logStep("Error", { message: msg });
+    console.error("[entitlements] Unhandled error:", error);
+    return json200({ ok: false, error: "Internal server error", message: msg });
+  }
+  } catch (outerErr) {
+    const msg = outerErr instanceof Error ? outerErr.message : String(outerErr);
+    console.error("[entitlements] Uncaught error:", outerErr);
+    return json200({ ok: false, error: "Internal server error", message: msg });
   }
 });

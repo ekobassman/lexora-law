@@ -26,18 +26,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // GEO-BLOCK CHECK
+  function json200(body: unknown) {
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // GEO-BLOCK CHECK — return 200 for UI-safe responses
   const geoCheck = checkGeoBlock(req);
   if (geoCheck.blocked) {
     console.log('[admin-set-override] Jurisdiction blocked:', geoCheck.countryCode);
-    return new Response(
-      JSON.stringify({ code: 'JURISDICTION_BLOCKED', countryCode: geoCheck.countryCode }),
-      { status: 451, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json200({ ok: false, reason: "jurisdiction_blocked", countryCode: geoCheck.countryCode });
   }
 
-  // Immediate log to confirm function is reached
-  console.log("[admin-set-override] REQUEST RECEIVED", { method: req.method });
+  console.log("[admin-set-override] entry");
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -53,16 +56,8 @@ serve(async (req) => {
     console.log("[admin-set-override] ENV CHECK", envFingerprint);
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[admin-set-override] Missing env vars", {
-        missing: [
-          !supabaseUrl ? "SUPABASE_URL" : null,
-          !serviceRoleKey ? "SUPABASE_SERVICE_ROLE_KEY" : null,
-        ].filter(Boolean),
-      });
-      return new Response(JSON.stringify({ error: "MISSING ENV: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY", code: "ENV_MISSING" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[admin-set-override] Missing env vars");
+      return json200({ ok: false, reason: "error", message: "Service not configured" });
     }
 
     // Read Authorization header (check both cases)
@@ -74,11 +69,8 @@ serve(async (req) => {
     });
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error("[admin-set-override] Missing or invalid Authorization header");
-      return new Response(JSON.stringify({ error: "Missing Authorization header", code: "NO_AUTH" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("[admin-set-override] exit: no auth");
+      return json200({ ok: false, reason: "unauthorized" });
     }
 
     const token = authHeader.slice("Bearer ".length);
@@ -109,11 +101,8 @@ serve(async (req) => {
 
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
     if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === actorEmail.toLowerCase())) {
-      console.warn("[admin-set-override] Forbidden: not admin", { actorUserId, actorEmail });
-      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("[admin-set-override] exit: not_admin");
+      return json200({ ok: false, reason: "not_admin" });
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
@@ -147,10 +136,7 @@ serve(async (req) => {
 
     if (action === "apply") {
       if (!plan_code) {
-        return new Response(JSON.stringify({ error: "plan_code required for apply", code: "MISSING_PLAN_CODE" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json200({ ok: false, reason: "error", message: "plan_code required for apply" });
       }
 
       const overridePayload = {
@@ -171,10 +157,7 @@ serve(async (req) => {
 
       if (upsertError) {
         console.error("[admin-set-override] Upsert failed", upsertError);
-        return new Response(JSON.stringify({ error: "Failed to apply override", code: "UPSERT_FAILED" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json200({ ok: false, reason: "error", message: upsertError.message });
       }
 
       // Audit log
@@ -190,20 +173,11 @@ serve(async (req) => {
 
       console.info("[admin-set-override] Override applied", { override_id: upserted?.id });
 
-      return new Response(JSON.stringify({ 
-        ok: true, 
-        action: "applied",
-        override: upserted,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json200({ ok: true, action: "applied", override: upserted });
 
     } else if (action === "remove") {
       if (!currentOverride) {
-        return new Response(JSON.stringify({ error: "No override exists", code: "NO_OVERRIDE" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json200({ ok: false, reason: "error", message: "No override exists" });
       }
 
       const { error: updateError } = await supabaseAdmin
@@ -213,10 +187,7 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("[admin-set-override] Remove failed", updateError);
-        return new Response(JSON.stringify({ error: "Failed to remove override", code: "UPDATE_FAILED" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json200({ ok: false, reason: "error", message: updateError.message });
       }
 
       // Audit log
@@ -231,26 +202,13 @@ serve(async (req) => {
       });
 
       console.info("[admin-set-override] Override removed", { target_user_id });
-
-      return new Response(JSON.stringify({ 
-        ok: true, 
-        action: "removed",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json200({ ok: true, action: "removed" });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action", code: "UNKNOWN_ACTION" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return json200({ ok: false, reason: "error", message: "Unknown action" });
   } catch (error) {
-    console.error("[admin-set-override] Unhandled error", error);
     const msg = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: msg, code: "SERVER_ERROR" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[admin-set-override] Unhandled error", error);
+    return json200({ ok: false, reason: "error", message: msg });
   }
 });

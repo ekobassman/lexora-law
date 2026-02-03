@@ -150,6 +150,12 @@ export default function AdminPanel() {
   // Debug info from entitlements
   const debugInfo: EntitlementsDebug = (entitlements as any)?.debug || {};
 
+  // Debug: log when admin panel mounts
+  useEffect(() => {
+    console.log('[AdminPanel] mounted', { user: user?.email, authLoading, checkingAdmin });
+    return () => console.log('[AdminPanel] unmounted');
+  }, []);
+
   // Auth Debug (admin-only): show session/token proof on-screen
   useEffect(() => {
     const applySession = (session: any) => {
@@ -189,14 +195,15 @@ export default function AdminPanel() {
 
       try {
         const { data, error } = await supabase.rpc('is_admin');
+        console.log('[AdminPanel] admin-check response:', { data, error: error?.message });
         if (error) {
-          console.error('Admin check error:', error);
+          console.error('[AdminPanel] Admin check error:', error);
           setIsAdmin(false);
         } else {
           setIsAdmin(data === true);
         }
       } catch (err) {
-        console.error('Admin check failed:', err);
+        console.error('[AdminPanel] Admin check failed:', err);
         setIsAdmin(false);
       } finally {
         setCheckingAdmin(false);
@@ -208,16 +215,12 @@ export default function AdminPanel() {
     }
   }, [user, authLoading]);
 
-  // Redirect non-admins to app dashboard
+  // Only redirect to auth if not logged in; do NOT redirect non-admins — show message in panel instead (no white page)
   useEffect(() => {
-    if (!authLoading && !checkingAdmin) {
-      if (!user) {
-        navigate('/auth');
-      } else if (isAdmin === false) {
-        navigate('/app');
-      }
+    if (!authLoading && !checkingAdmin && !user) {
+      navigate('/auth');
     }
-  }, [user, authLoading, isAdmin, checkingAdmin, navigate]);
+  }, [user, authLoading, checkingAdmin, navigate]);
 
   // Fetch user metrics from edge function
   const fetchUserMetrics = useCallback(async (showToast = false) => {
@@ -238,14 +241,17 @@ export default function AdminPanel() {
         body: { windowMinutes: 10 },
       });
 
+      console.log('[AdminPanel] admin-user-metrics response:', { ok: data?.ok, reason: data?.reason, error, hasData: !!data });
+
       if (error) {
         const anyErr = error as any;
         const status = anyErr?.context?.status ?? anyErr?.status ?? '';
-        if (status === 403) {
-          setMetricsError('403 - Admin only');
-        } else {
-          setMetricsError(`Error: ${error.message}`);
-        }
+        setMetricsError(status === 403 ? 'Admin only' : `Error: ${error.message}`);
+        return;
+      }
+
+      if (data?.ok === false) {
+        setMetricsError(data.reason || data.message || 'Not authorized');
         return;
       }
 
@@ -455,7 +461,13 @@ export default function AdminPanel() {
         return;
       }
 
-      // Function returned 200 - check found flag
+      // Function returned 200 - check ok:false (not_admin, etc.) or found flag
+      if (result?.ok === false) {
+        const reason = result?.reason || result?.message || 'not_authorized';
+        console.log('[AdminPanel] API denied:', { reason, result });
+        toast.error(reason === 'not_admin' ? 'Solo admin' : String(reason));
+        return;
+      }
       if (!result?.found) {
         const reason = result?.reason || 'USER_NOT_FOUND';
         const detail = result?.detail || '';
@@ -623,18 +635,22 @@ export default function AdminPanel() {
       if (invokeError) {
         const anyErr = invokeError as any;
         const status = anyErr?.context?.status ?? anyErr?.status ?? 'N/A';
-        const context = anyErr?.context ?? {};
-        const details = `${invokeError.message} (status: ${status}) ${JSON.stringify(context)}`;
+        const details = `${invokeError.message} (status: ${status})`;
         console.error('[admin-remove-override] Invoke error:', details);
-        toast.error(`Errore rimozione (${status}): ${invokeError.message.slice(0, 150)}`);
+        toast.error(`Errore rimozione: ${invokeError.message.slice(0, 150)}`);
         setSaving(false);
         return;
       }
 
+      if (result?.ok === false) {
+        const msg = result?.reason || result?.message || 'Non autorizzato';
+        console.log('[admin-remove-override] API denied:', result);
+        toast.error(msg);
+        setSaving(false);
+        return;
+      }
       if (result?.error) {
-        const errDetails = `${result.error} (${result.code || 'UNKNOWN'})`;
-        console.error('[admin-remove-override] App error:', errDetails);
-        toast.error(`Errore: ${errDetails}`);
+        toast.error(`${result.error} (${result.code || 'UNKNOWN'})`);
         setSaving(false);
         return;
       }
@@ -660,8 +676,35 @@ export default function AdminPanel() {
     );
   }
 
-  if (!user || isAdmin !== true) {
+  // Always render panel (no white page). If not admin, show message instead of full content.
+  if (!user) {
     return null;
+  }
+
+  if (isAdmin !== true) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Admin Panel
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              {isAdmin === false
+                ? 'You are not authorized to view this page.'
+                : 'Could not verify admin access. Please try again or run the SQL script in Supabase to grant admin.'}
+            </p>
+            <Button onClick={() => navigate('/app', { replace: true })} className="w-full">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Frontend env fingerprint

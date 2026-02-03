@@ -86,13 +86,13 @@ serve(async (req) => {
   // DEBUG: Log lookup request
   console.info("[admin-user-lookup] LOOKUP_EMAIL", body?.email ?? "(none)");
 
-  // 401 ONLY if no auth token at all
   if (!authHeaderRaw || !token) {
-    console.error("[admin-user-lookup] NO_AUTH_TOKEN");
-    return jsonResponse({ found: false, reason: "MISSING_AUTH" }, 401);
+    console.log("[admin-user-lookup] exit: no token");
+    return jsonResponse({ ok: false, reason: "unauthorized" }, 200);
   }
 
   try {
+    console.log("[admin-user-lookup] entry");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -118,7 +118,8 @@ serve(async (req) => {
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
     const callerEmail = (userData.user.email ?? "").toLowerCase();
     if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail)) {
-      return jsonResponse({ error: "ADMIN_ONLY" }, 403);
+      console.log("[admin-user-lookup] exit: not_admin");
+      return jsonResponse({ ok: false, reason: "not_admin" }, 200);
     }
 
     // Validate email

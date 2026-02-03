@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { useTermsCheck } from '@/hooks/useTermsCheck';
 import { TermsReacceptDialog } from '@/components/TermsReacceptDialog';
-
-const ADMIN_EMAIL = 'imbimbo.bassman@gmail.com';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -151,9 +148,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  // ADMIN REQUIRED: wait for admin status
+  // ADMIN REQUIRED: do NOT redirect on error or not_admin — always render AdminPanel so page loads (no white page / redirect loop)
   if (requireAdmin) {
-    // Still checking admin status - show loader (NO REDIRECT YET)
     if (adminStatus === 'loading') {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background">
@@ -161,22 +157,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         </div>
       );
     }
-
-    // Error checking admin (e.g., 401) - redirect to auth
-    if (adminStatus === 'error') {
-      return <Navigate to="/auth" state={{ from: location }} replace />;
-    }
-
-    // Not admin - redirect to app; if admin email, show hint to run SQL in Supabase
-    if (adminStatus === 'not_admin') {
-      const isAdminEmail = userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      if (isAdminEmail) {
-        toast.error('Admin role not set in database. Run the SQL script in Supabase (SQL Editor) to unlock the Admin Panel.', { duration: 8000 });
-      }
-      return <Navigate to="/app" replace />;
-    }
-
-    // adminStatus === 'admin' - allow through
+    // error / not_admin: still render children; AdminPanel will show "Not authorized" or message
   }
 
   return <>{children}</>;
