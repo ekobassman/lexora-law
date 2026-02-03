@@ -110,7 +110,7 @@ const App = () => (
               <PullToRefresh />
               <OfflineIndicator />
               <BrowserRouter>
-                <AuthMigrationFix />
+                {/* <AuthMigrationFix /> */}
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
