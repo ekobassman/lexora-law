@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Server, Eye, CheckCircle, Globe } from 'lucide-react';
+import { Shield, Lock, Server, Eye, ShieldCheck, CheckCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TrustSecuritySectionProps {
