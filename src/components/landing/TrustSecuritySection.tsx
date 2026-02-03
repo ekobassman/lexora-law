@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Server, Eye, ShieldCheck, CheckCircle, Globe } from 'lucide-react';
+import { Shield, Lock, Server, Eye, ShieldCheck, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TrustSecuritySectionProps {
@@ -62,17 +62,17 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
           </p>
         </div>
 
-        {/* Security Features Grid */}
+        {/* Security Features Grid - explicit icon color for dark bg */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto mb-16">
           {securityFeatures.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div
                 key={index}
-                className="text-center p-6 rounded-xl border border-gold/20 bg-navy/50 hover:border-gold/40 transition-all"
+                className="text-center p-6 rounded-xl border border-amber-500/30 bg-slate-900/60 hover:border-amber-500/50 transition-all"
               >
-                <div className="h-14 w-14 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-4">
-                  <Icon className="h-7 w-7 text-gold" />
+                <div className="h-14 w-14 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 [&_svg]:text-amber-400">
+                  <Icon className="h-7 w-7 text-amber-400 shrink-0" strokeWidth={2} />
                 </div>
                 <h3 className="font-semibold text-ivory mb-2">{feature.title}</h3>
                 <p className="text-sm text-ivory/60">{feature.description}</p>
@@ -81,19 +81,19 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
           })}
         </div>
 
-        {/* Certifications - flex wrap, centrato, gap uniforme, badge stessa dimensione */}
+        {/* Certifications - high-contrast icons/text on dark bg (white/amber) */}
         <div className="flex flex-wrap justify-center items-center gap-4 mb-12">
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-green-500/10 border border-green-500/30 min-h-[2.75rem]">
-            <CheckCircle className="h-5 w-5 shrink-0 text-green-400" />
-            <span className="text-sm font-medium text-green-300">ISO 27001</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
+            <ShieldCheck className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
+            <span className="text-sm font-medium text-amber-200">ISO 27001</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-500/10 border border-blue-500/30 min-h-[2.75rem]">
-            <Shield className="h-5 w-5 shrink-0 text-blue-400" />
-            <span className="text-sm font-medium text-blue-300">{t('landingSections.trust.certifications.gdpr')}</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
+            <Shield className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
+            <span className="text-sm font-medium text-amber-200">{t('landingSections.trust.certifications.gdpr')}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-500/10 border border-purple-500/30 min-h-[2.75rem]">
-            <Lock className="h-5 w-5 shrink-0 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300">SOC 2 Type II</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
+            <Lock className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
+            <span className="text-sm font-medium text-amber-200">SOC 2 Type II</span>
           </div>
         </div>
 
