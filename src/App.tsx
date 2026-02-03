@@ -41,6 +41,7 @@ import { PWAInstall } from "@/components/PWAInstall";
 import { MobilePwaBanner } from "@/components/MobilePWAPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { AuthMigrationFix } from "@/components/AuthMigrationFix";
 // SEO Pages (DE only)
 import OffizielleBriefeVerstehen from "./pages/seo/OffizielleBriefeVerstehen";
 import SchufaBriefVerstehen from "./pages/seo/SchufaBriefVerstehen";
@@ -109,6 +110,7 @@ const App = () => (
               <PullToRefresh />
               <OfflineIndicator />
               <BrowserRouter>
+                <AuthMigrationFix />
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Landing />} />
