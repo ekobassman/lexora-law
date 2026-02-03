@@ -126,25 +126,25 @@ export default function Landing() {
       <section className="relative overflow-hidden bg-navy">
         {/* Premium framed hero image - FULL WIDTH */}
         <div className="relative w-full">
-          {/* Outer gold border frame */}
-          <div className="relative mx-0 md:mx-auto md:max-w-5xl">
-            {/* Gold frame decoration */}
-            <div className="absolute inset-0 border-4 border-gold/60 rounded-none md:rounded-xl md:m-4 pointer-events-none z-10" />
-            <div className="absolute inset-0 border-2 border-gold/30 rounded-none md:rounded-lg md:m-6 pointer-events-none z-10" />
+          {/* Outer gold border frame - on lg use inset for aligned frame, no overflow */}
+          <div className="relative mx-0 md:mx-auto md:max-w-5xl lg:overflow-hidden">
+            {/* Gold frame decoration - lg: explicit inset so frame stays inside and aligned */}
+            <div className="absolute inset-0 border-4 border-gold/60 rounded-none md:rounded-xl md:m-4 lg:inset-4 lg:m-0 pointer-events-none z-10" />
+            <div className="absolute inset-0 border-2 border-gold/30 rounded-none md:rounded-lg md:m-6 lg:inset-6 lg:m-0 pointer-events-none z-10" />
             
-            {/* Inner gold corner accents */}
-            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-gold z-20 md:m-4 md:rounded-tl-xl" />
-            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-gold z-20 md:m-4 md:rounded-tr-xl" />
-            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-gold z-20 md:m-4 md:rounded-bl-xl" />
-            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-gold z-20 md:m-4 md:rounded-br-xl" />
+            {/* Inner gold corner accents - lg: same inset as outer frame */}
+            <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-gold z-20 md:m-4 lg:top-4 lg:left-4 lg:m-0 md:rounded-tl-xl" />
+            <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-gold z-20 md:m-4 lg:top-4 lg:right-4 lg:m-0 md:rounded-tr-xl" />
+            <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-gold z-20 md:m-4 lg:bottom-4 lg:left-4 lg:m-0 md:rounded-bl-xl" />
+            <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-gold z-20 md:m-4 lg:bottom-4 lg:right-4 lg:m-0 md:rounded-br-xl" />
             
-            {/* Image container */}
-            <picture>
+            {/* Image container - lg: same inset so image aligns with frame */}
+            <picture className="block lg:p-4">
               <source media="(min-width: 768px)" srcSet={heroDesktop} />
               <img
                 src={heroMobile}
                 alt="Lexora KI-Assistent für Behördenschreiben"
-                className="w-full h-auto object-cover md:rounded-lg md:m-4 md:w-[calc(100%-2rem)]"
+                className="w-full h-auto object-cover md:rounded-lg md:m-4 md:w-[calc(100%-2rem)] lg:m-0 lg:w-full"
                 style={{ maxHeight: '70vh' }}
               />
             </picture>

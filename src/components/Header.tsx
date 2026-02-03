@@ -73,7 +73,7 @@ export function Header() {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium whitespace-nowrap truncate max-w-[140px] lg:max-w-[160px]"
+                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium whitespace-nowrap truncate max-w-[140px] lg:max-w-none lg:truncate-none"
                 title={navLabel(link.labelKey, link.fallback)}
               >
                 {navLabel(link.labelKey, link.fallback)}
