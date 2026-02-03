@@ -77,14 +77,14 @@ export function AppHeader() {
             </div>
           )}
 
-          {/* Admin Panel - visible in header when admin (Link so URL is /admin) */}
+          {/* Admin Panel - native <a> so click always goes to /admin */}
           {user && isAdmin && (
-            <Link to="/admin">
+            <a href="/admin" className="inline-flex">
               <Button type="button" variant="ghost" size="sm" className="gap-1 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 px-2">
                 <Shield className="h-4 w-4" />
                 <span className="hidden lg:inline text-xs font-medium">{t('header.adminPanel') || 'Admin'}</span>
               </Button>
-            </Link>
+            </a>
           )}
 
           {/* Support Link */}
@@ -142,15 +142,15 @@ export function AppHeader() {
                   {t('nav.support')}
                 </DropdownMenuItem>
 
-                {/* Admin Panel - only show for admins; use Link so navigation always works */}
+                {/* Admin Panel - native <a> so click always navigates to /admin (avoids Radix closing menu blocking navigation) */}
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator className="bg-navy/10" />
                     <DropdownMenuItem asChild>
-                      <Link to="/admin" className="flex cursor-pointer items-center text-purple-700 hover:bg-purple-50 focus:bg-purple-50">
+                      <a href="/admin" className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm text-purple-700 outline-none hover:bg-purple-50 focus:bg-purple-50">
                         <Shield className="mr-2 h-4 w-4" />
                         {t('header.adminPanel') || 'Admin Panel'}
-                      </Link>
+                      </a>
                     </DropdownMenuItem>
                   </>
                 )}
