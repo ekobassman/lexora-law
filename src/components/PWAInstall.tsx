@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { Share2, Plus, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Share2, X, Plus } from 'lucide-react';
 
 const SHOW_IOS_EVENT = 'pwa-install-show-ios-guide';
 const SNOOZE_KEY = 'pwa-snooze-last-dismissed';
@@ -84,6 +83,11 @@ export function PWAInstall() {
     localStorage.setItem(SNOOZE_KEY, String(Date.now()));
   };
 
+  const handleIOSOpenChange = (open: boolean) => {
+    setShowIOSModal(open);
+    if (!open) localStorage.setItem(SNOOZE_KEY, String(Date.now()));
+  };
+
   if (isInstalled) return null;
 
   // Android: bottom banner
@@ -134,53 +138,84 @@ export function PWAInstall() {
     );
   }
 
-  // iOS: modal guida
+  const handleIOSAddToHome = () => {
+    handleIOSDismiss();
+    toast(t('pwa.iOSGuide.hint'));
+  };
+
+  // iOS: modal guida (bottom sheet stile iOS nativo)
   return (
-    <Dialog open={showIOSModal} onOpenChange={setShowIOSModal}>
-      <DialogContent className="bg-white border-gray-200 max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-[#0f172a] font-display">
-            {t('pwa.iOSGuide.title')}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6 py-2">
-          <ol className="space-y-4 text-sm text-gray-800">
-            <li className="flex gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-600 font-semibold">
-                1
-              </span>
-              <span className="pt-0.5">
-                {t('pwa.iOSGuide.step1')}{' '}
-                <Share2 className="inline h-4 w-4 text-amber-600 align-middle" />
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-600 font-semibold">
-                2
-              </span>
-              <span className="pt-0.5">{t('pwa.iOSGuide.step2')}</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-600 font-semibold">
-                3
-              </span>
-              <span className="pt-0.5">{t('pwa.iOSGuide.step3')}</span>
-            </li>
-          </ol>
-          <div className="flex items-center gap-2 rounded-lg bg-[#0f172a]/5 p-3 text-xs text-gray-700">
-            <Plus className="h-4 w-4 shrink-0 text-amber-600" />
-            <span>
-              {t('pwa.iOSGuide.step2')} → {t('pwa.iOSGuide.step3')}
-            </span>
+    <Dialog open={showIOSModal} onOpenChange={handleIOSOpenChange}>
+      <DialogContent
+        className="fixed left-0 right-0 top-auto bottom-0 translate-x-0 translate-y-0 max-w-none w-full rounded-t-3xl rounded-b-none border-0 bg-white shadow-2xl p-0 gap-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom duration-300"
+        hideCloseButton
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-2">
+          <div className="w-10 h-1 rounded-full bg-gray-300" aria-hidden />
+        </div>
+
+        {/* X in alto a destra */}
+        <button
+          type="button"
+          onClick={handleIOSDismiss}
+          className="absolute right-4 top-4 z-10 p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          aria-label="Chiudi"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="p-6 space-y-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+          {/* Header */}
+          <div className="flex flex-col items-center text-center space-y-2">
+            <img
+              src="/icons/icon-192x192.png"
+              alt="Lexora"
+              className="h-14 w-14 rounded-2xl object-contain shrink-0"
+            />
+            <h2 className="text-2xl font-bold text-gray-900">
+              {t('pwa.iOSGuide.installTitle') || t('pwa.iOSGuide.title')}
+            </h2>
+            <p className="text-sm text-gray-500 max-w-[280px]">
+              {t('pwa.iOSGuide.subtitle')}
+            </p>
           </div>
-          <Button
-            variant="outline"
-            className="w-full border-gray-300 text-[#0f172a] hover:bg-amber-50"
-            onClick={handleIOSDismiss}
-          >
-            <Check className="mr-2 h-4 w-4" />
-            {t('pwa.iOSGuide.gotIt')}
-          </Button>
+
+          {/* Area principale: illustrazione Share */}
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="relative flex items-center justify-center">
+              <svg
+                className="absolute -left-8 top-1/2 -translate-y-1/2 w-10 h-6 text-gray-400"
+                viewBox="0 0 40 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 12h28M30 12l-6-5v3H2" />
+                <path d="M24 7l6 5-6 5" />
+              </svg>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 border border-gray-200">
+                <Share2 className="h-8 w-8 text-gray-600" strokeWidth={2} />
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-gray-500 text-center">
+              {t('pwa.iOSGuide.shareHint') || t('pwa.iOSGuide.hint')}
+            </p>
+          </div>
+
+          {/* Bottone Azione (stile iOS) */}
+          <div className="px-0 pb-0 pt-2">
+            <button
+              type="button"
+              onClick={handleIOSAddToHome}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-100 text-gray-900 p-4 font-medium hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            >
+              <Plus className="h-5 w-5 shrink-0" />
+              {t('pwa.iOSGuide.addToHomeButton')}
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
