@@ -10,8 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { Share2, Plus, Check, X } from 'lucide-react';
 
-const DISMISS_IOS_KEY = 'pwa-install-ios-dismissed';
-const DISMISS_ANDROID_KEY = 'pwa-install-android-dismissed';
 const SHOW_IOS_EVENT = 'pwa-install-show-ios-guide';
 
 export function showIOSInstallGuide() {
@@ -31,17 +29,14 @@ export function PWAInstall() {
     if (isIOS) {
       const onShow = () => setShowIOSModal(true);
       window.addEventListener(SHOW_IOS_EVENT, onShow);
-      if (!localStorage.getItem(DISMISS_IOS_KEY)) {
-        const timer = setTimeout(() => setShowIOSModal(true), 1500);
-        return () => {
-          window.removeEventListener(SHOW_IOS_EVENT, onShow);
-          clearTimeout(timer);
-        };
-      }
-      return () => window.removeEventListener(SHOW_IOS_EVENT, onShow);
+      const timer = setTimeout(() => setShowIOSModal(true), 1500);
+      return () => {
+        window.removeEventListener(SHOW_IOS_EVENT, onShow);
+        clearTimeout(timer);
+      };
     }
 
-    if (canInstall && !localStorage.getItem(DISMISS_ANDROID_KEY)) {
+    if (canInstall) {
       setShowAndroidBanner(true);
     }
   }, [canInstall, isInstalled, isIOS]);
@@ -59,12 +54,10 @@ export function PWAInstall() {
 
   const handleAndroidDismiss = () => {
     setShowAndroidBanner(false);
-    localStorage.setItem(DISMISS_ANDROID_KEY, '1');
   };
 
   const handleIOSDismiss = () => {
     setShowIOSModal(false);
-    localStorage.setItem(DISMISS_IOS_KEY, '1');
   };
 
   if (isInstalled) return null;
