@@ -74,25 +74,11 @@ serve(async (req) => {
     }
 
     const actorUserId = userData.user.id;
+    const actorEmail = userData.user.email ?? "";
 
-    const { data: roleRow, error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", actorUserId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (roleError) {
-      console.error("[admin-force-unlimited] Role check error", roleError);
-      return new Response(JSON.stringify({ error: "Role check failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!roleRow) {
-      console.warn("[admin-force-unlimited] Forbidden: not admin", { actorUserId });
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    if (!ADMIN_EMAILS.includes(actorEmail)) {
+      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

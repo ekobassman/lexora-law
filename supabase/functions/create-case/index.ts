@@ -81,13 +81,15 @@ serve(async (req) => {
     const userId = userData.user.id;
     logStep("User authenticated", { userId });
 
-    // Check admin role
+    // Check admin role (allowlist + user_roles)
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    const userEmail = userData.user.email ?? "";
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = roleData?.role === "admin";
+    const isAdmin = ADMIN_EMAILS.includes(userEmail) || roleData?.role === "admin";
     logStep("Admin check", { isAdmin, role: roleData?.role ?? "none" });
 
     // STEP 2: Parse case data

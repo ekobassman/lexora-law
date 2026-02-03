@@ -115,24 +115,10 @@ serve(async (req) => {
     const caller_uid = userData.user.id;
     console.info("[admin-user-lookup] CALLER_UID", caller_uid);
 
-    // Admin check
-    console.info("[admin-user-lookup] IS_ADMIN_CHECK_START");
-    const { data: roleRow, error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller_uid)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    const is_admin = Boolean(roleRow);
-    console.info("[admin-user-lookup] IS_ADMIN_CHECK_RESULT", { is_admin, roleError: roleError?.message });
-
-    if (roleError) {
-      return jsonResponse({ found: false, reason: "ROLE_CHECK_ERROR", detail: roleError.message }, 200);
-    }
-
-    if (!is_admin) {
-      return jsonResponse({ found: false, reason: "NOT_ADMIN" }, 200);
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    const callerEmail = userData.user.email ?? "";
+    if (!ADMIN_EMAILS.includes(callerEmail)) {
+      return jsonResponse({ error: "ADMIN_ONLY" }, 403);
     }
 
     // Validate email

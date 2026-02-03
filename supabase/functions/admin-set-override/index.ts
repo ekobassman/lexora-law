@@ -105,40 +105,18 @@ serve(async (req) => {
     }
 
     const actorUserId = userData.user.id;
-    const actorEmail = userData.user.email;
+    const actorEmail = userData.user.email ?? "";
 
-    // Check admin role using service role client (bypass RLS)
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-
-    const { data: roleRow, error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", actorUserId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    console.log("[admin-set-override] ROLE CHECK", { 
-      actor_id: actorUserId,
-      actor_email: actorEmail,
-      role_found: Boolean(roleRow),
-      role_error: roleError?.message
-    });
-
-    if (roleError) {
-      console.error("[admin-set-override] Role check error", roleError);
-      return new Response(JSON.stringify({ error: "Role check failed", code: "ROLE_CHECK_FAILED" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!roleRow) {
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    if (!ADMIN_EMAILS.includes(actorEmail)) {
       console.warn("[admin-set-override] Forbidden: not admin", { actorUserId, actorEmail });
-      return new Response(JSON.stringify({ error: "Forbidden (not admin)", code: "FORBIDDEN" }), {
+      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
     // Parse request body
     const body = await req.json();

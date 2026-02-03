@@ -228,14 +228,14 @@ serve(async (req) => {
       .eq("id", userId)
       .maybeSingle();
 
-    // Check admin role (both user_roles table AND hardcoded email fallback)
+    // Check admin role (allowlist + user_roles)
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    // Admin check: user_roles table OR hardcoded admin email
-    const isAdmin = roleData?.role === "admin" || userEmail === "imbimbo.bassman@gmail.com";
+    const isAdmin = ADMIN_EMAILS.includes(userEmail ?? "") || roleData?.role === "admin";
     logStep("Admin check", { isAdmin, role: roleData?.role ?? "none" });
 
     // PRIORITY 1: Check for active admin override FIRST

@@ -67,16 +67,9 @@ serve(async (req) => {
       });
     }
 
-    // Check admin role in user_roles table
-    const { data: adminRole } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!adminRole) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
+    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    if (!ADMIN_EMAILS.includes(caller.user.email ?? "")) {
+      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

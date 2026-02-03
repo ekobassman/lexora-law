@@ -32,21 +32,14 @@ serve(async (req) => {
       const { data: { user } } = await supabaseClient.auth.getUser();
       
       if (user) {
-        // Check if admin
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .single();
-        
-        isAuthorized = !!adminRole;
+        const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+        isAuthorized = ADMIN_EMAILS.includes(user.email ?? "");
       }
     }
 
     if (!isAuthorized) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

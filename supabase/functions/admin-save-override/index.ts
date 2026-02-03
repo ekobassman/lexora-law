@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
 
     // --- ADMIN CHECK ---
     if (!user.email || !ADMIN_EMAILS.includes(user.email)) {
-      return jsonResponse(403, { error: "NOT_ADMIN" });
+      return jsonResponse(403, { error: "ADMIN_ONLY" });
     }
 
     // --- BODY VALIDATION ---

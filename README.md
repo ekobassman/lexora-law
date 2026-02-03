@@ -60,6 +60,16 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Vercel – Environment variables (admin / server-side)
+
+For admin protection and server-side Supabase (e.g. API routes), set in Vercel:
+
+- `NEXT_PUBLIC_SUPABASE_URL` – Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase anon (publishable) key
+- `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key (**server-side only**, never expose to client)
+
+Admin is enforced via `profiles.is_admin = true` (no client trust). Use `requireAdmin(req)` in server-side endpoints.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
