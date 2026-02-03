@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { useTermsCheck } from '@/hooks/useTermsCheck';
 import { TermsReacceptDialog } from '@/components/TermsReacceptDialog';
+
+const ADMIN_EMAIL = 'imbimbo.bassman@gmail.com';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -18,6 +21,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('loading');
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('loading');
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
 
   // Terms check hook
   const { loading: termsLoading, termsOutdated, privacyOutdated, ageNotConfirmed, needsReaccept, refresh: refreshTerms } = useTermsCheck(userId);
@@ -40,6 +44,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
 
         setSessionStatus('authenticated');
         setUserId(session.user.id);
+        setUserEmail(session.user.email ?? '');
 
         // If admin is required, check admin status
         if (requireAdmin) {
@@ -162,9 +167,13 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
       return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
-    // Not admin - redirect to dashboard
+    // Not admin - redirect to app; if admin email, show hint to run SQL in Supabase
     if (adminStatus === 'not_admin') {
-      return <Navigate to="/dashboard" replace />;
+      const isAdminEmail = userEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      if (isAdminEmail) {
+        toast.error('Admin role not set in database. Run the SQL script in Supabase (SQL Editor) to unlock the Admin Panel.', { duration: 8000 });
+      }
+      return <Navigate to="/app" replace />;
     }
 
     // adminStatus === 'admin' - allow through

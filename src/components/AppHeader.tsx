@@ -77,10 +77,10 @@ export function AppHeader() {
             </div>
           )}
 
-          {/* Admin Panel - visible in header when admin */}
+          {/* Admin Panel - visible in header when admin (Link so URL is /admin) */}
           {user && isAdmin && (
             <Link to="/admin">
-              <Button variant="ghost" size="sm" className="gap-1 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 px-2">
+              <Button type="button" variant="ghost" size="sm" className="gap-1 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 px-2">
                 <Shield className="h-4 w-4" />
                 <span className="hidden lg:inline text-xs font-medium">{t('header.adminPanel') || 'Admin'}</span>
               </Button>
@@ -142,13 +142,15 @@ export function AppHeader() {
                   {t('nav.support')}
                 </DropdownMenuItem>
 
-                {/* Admin Panel - only show for admins */}
+                {/* Admin Panel - only show for admins; use Link so navigation always works */}
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator className="bg-navy/10" />
-                    <DropdownMenuItem onClick={() => navigate('/admin')} className="text-purple-700 hover:bg-purple-50">
-                      <Shield className="mr-2 h-4 w-4" />
-                      {t('header.adminPanel') || 'Admin Panel'}
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex cursor-pointer items-center text-purple-700 hover:bg-purple-50 focus:bg-purple-50">
+                        <Shield className="mr-2 h-4 w-4" />
+                        {t('header.adminPanel') || 'Admin Panel'}
+                      </Link>
                     </DropdownMenuItem>
                   </>
                 )}
