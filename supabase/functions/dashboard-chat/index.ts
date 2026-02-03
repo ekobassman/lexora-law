@@ -464,6 +464,40 @@ serve(async (req) => {
       );
     }
 
+    // =====================
+    // GENERAL MODE (no case): auth only, no DB, short helpful reply
+    // =====================
+    if (!caseId) {
+      const responseLanguage = userLanguage?.toUpperCase() || "EN";
+      const fullLanguageName = LANGUAGE_MAP[responseLanguage] || "English";
+      const generalSystemPrompt = `${UNIFIED_LEXORA_IDENTITY}
+
+Sei in modalità "chat generale" (nessun fascicolo selezionato). Rispondi nella lingua: ${fullLanguageName}.
+
+Dai una risposta breve e utile: come usare Lexora, come rispondere a lettere ufficiali, cosa fare (es. "Seleziona una pratica per salvare la conversazione e generare documenti", "Puoi caricare una lettera e ricevere un'analisi", "Crea un fascicolo per iniziare"). Non scrivere lettere formali in questa modalità; invita l'utente a selezionare o creare una pratica per documenti. Mantieni il tono professionale e conciso.`;
+
+      const openaiResult = await callOpenAI({
+        messages: [
+          { role: "system", content: generalSystemPrompt },
+          { role: "user", content: message.trim() },
+        ],
+        temperature: 0.4,
+        max_tokens: 600,
+      });
+
+      if (!openaiResult.ok) {
+        return new Response(
+          JSON.stringify({ ok: false, error: openaiResult.error || "AI error" }),
+          { status: openaiResult.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, reply: openaiResult.content || "", response: openaiResult.content || "" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get user's plan from entitlements edge function
     const entitlementsResponse = await fetch(
       `${Deno.env.get('SUPABASE_URL')}/functions/v1/entitlements`,

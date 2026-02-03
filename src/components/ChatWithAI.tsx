@@ -106,6 +106,17 @@ function extractLetterContent(content: string): string {
   return letterText;
 }
 
+// Fallback assistant message on API/network error – evita UI rotta e "temporary error" senza contesto
+const FALLBACK_REPLY_BY_LANG: Record<string, string> = {
+  IT: "Si è verificato un errore temporaneo. Riprova tra poco.",
+  EN: "Something went wrong. Please try again in a moment.",
+  DE: "Ein vorübergehender Fehler ist aufgetreten. Bitte versuche es gleich noch einmal.",
+  FR: "Une erreur temporaire s'est produite. Veuillez réessayer dans un instant.",
+  ES: "Ha ocurrido un error temporal. Por favor, inténtalo de nuevo en un momento.",
+  PL: "Wystąpił tymczasowy błąd. Spróbuj ponownie za chwilę.",
+};
+const FALLBACK_REPLY_DEFAULT = FALLBACK_REPLY_BY_LANG.EN;
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -663,6 +674,12 @@ export function ChatWithAI({
 
       if (data.error) {
         console.error('AI error:', data.error);
+        const lang = (language || 'en').slice(0, 2).toUpperCase();
+        const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+        const fallbackMessage: ChatMessage = { role: 'assistant', content: fallbackContent, created_at: new Date().toISOString() };
+        const updatedWithFallback = [...newHistory, fallbackMessage];
+        onChatHistoryUpdate(updatedWithFallback);
+        addCaseChatMessage('assistant', fallbackContent);
         if (data.error.includes('Rate limit')) {
           toast.error(t('pratica.detail.rateLimitError'));
         } else if (data.error.includes('credits')) {
@@ -718,6 +735,12 @@ export function ChatWithAI({
         return;
       }
       console.error('Unexpected error:', err);
+      const lang = (language || 'en').slice(0, 2).toUpperCase();
+      const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+      const fallbackMessage: ChatMessage = { role: 'assistant', content: fallbackContent, created_at: new Date().toISOString() };
+      const updatedWithFallback = [...newHistory, fallbackMessage];
+      onChatHistoryUpdate(updatedWithFallback);
+      addCaseChatMessage('assistant', fallbackContent);
       toast.error(t('chat.error'));
     } finally {
       setIsLoading(false);

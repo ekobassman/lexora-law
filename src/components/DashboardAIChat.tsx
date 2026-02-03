@@ -65,6 +65,17 @@ interface SuggestedAction {
   };
 }
 
+// Fallback assistant message on API/network error – evita UI rotta e "temporary error" senza contesto
+const FALLBACK_REPLY_BY_LANG: Record<string, string> = {
+  IT: "Si è verificato un errore temporaneo. Riprova tra poco.",
+  EN: "Something went wrong. Please try again in a moment.",
+  DE: "Ein vorübergehender Fehler ist aufgetreten. Bitte versuche es gleich noch einmal.",
+  FR: "Une erreur temporaire s'est produite. Veuillez réessayer dans un instant.",
+  ES: "Ha ocurrido un error temporal. Por favor, inténtalo de nuevo en un momento.",
+  PL: "Wystąpił tymczasowy błąd. Spróbuj ponownie za chwilę.",
+};
+const FALLBACK_REPLY_DEFAULT = FALLBACK_REPLY_BY_LANG.EN;
+
 // Hardening: ensure we never store "next steps" / chatty CTAs in the case draft.
 function sanitizeDraftForCase(raw: string): string {
   let text = (raw || '').trim();
@@ -387,7 +398,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   // No case selected state - IMPORTANT: Dashboard chat does NOT require a case!
   // Users must be able to start new conversations without selecting a case first.
   const isCaseRequired = false;
-  const noCaseSelected = false; // Always allow chatting
+  const hasCase = Boolean(selectedCaseId);
+  const noCaseSelected = false; // Always allow chatting (general mode when !hasCase)
   
   const MIN_DRAFT_LENGTH = 200;
   
@@ -504,6 +516,21 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     RU: 'Выберите дело, чтобы продолжить чат',
   };
 
+  // General mode badge (no case selected): chat not saved, invite to select a practice
+  const generalModeBadgeByLang: Record<string, string> = {
+    IT: 'Chat generale (non salvata). Seleziona una pratica per salvare.',
+    DE: 'Allgemeiner Chat (nicht gespeichert). Wählen Sie eine Praxis, um zu speichern.',
+    EN: 'General chat (not saved). Select a practice to save.',
+    FR: 'Chat général (non enregistré). Sélectionnez une pratique pour enregistrer.',
+    ES: 'Chat general (no guardado). Selecciona una práctica para guardar.',
+    PL: 'Czat ogólny (nie zapisany). Wybierz sprawę, aby zapisać.',
+    RO: 'Chat general (nesalvat). Selectați o practică pentru a salva.',
+    TR: 'Genel sohbet (kaydedilmedi). Kaydetmek için bir dosya seçin.',
+    AR: 'محادثة عامة (غير محفوظة). اختر ملفًا للحفظ.',
+    UK: 'Загальний чат (не збережено). Виберіть справу для збереження.',
+    RU: 'Общий чат (не сохранён). Выберите дело для сохранения.',
+  };
+
   const txt = useMemo(() => ({
     sectionTitle: getSafeText(t, 'dashboardChat.title', 'AI Legal Assistant'),
     placeholder: noCaseSelected 
@@ -529,6 +556,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     preview: getSafeText(t, 'demoChat.preview', 'Preview'),
     print: getSafeText(t, 'demoChat.print', 'Print'),
     selectCase: selectCaseByLang[language] || 'Select a case to continue chatting',
+    generalModeBadge: generalModeBadgeByLang[language] || generalModeBadgeByLang.EN,
     email: getSafeText(t, 'demoChat.email', 'Email'),
     noDraft: getSafeText(t, 'demoChat.noDraft', 'No letter draft available yet'),
     processingOCR: getSafeText(t, 'demoChat.processingOCR', 'Extracting text...'),
@@ -901,18 +929,13 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     const content = messageContent || input.trim();
     if (!content || isLoading) return;
 
-    // Guardrail: block non-legal/administrative queries before sending
-    if (!isLegalAdministrativeQuery(content)) {
+    // Guardrail: block non-legal/administrative queries only when a case is selected (case mode)
+    if (hasCase && !isLegalAdministrativeQuery(content)) {
       toast.error(txt.outOfScopeRefusal);
       return;
     }
 
-    // CASE-SCOPED: Block if no case selected
-    if (noCaseSelected) {
-      toast.info(txt.selectCase);
-      onCaseSelect?.();
-      return;
-    }
+    // No block when no case: general mode is allowed (no "select case" required)
 
     // Payment enforcement: blocked users cannot use AI chat
     if ((entitlements as any)?.access_state === 'blocked') {
@@ -1000,18 +1023,20 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('No session token (user not authenticated)');
-      
-      const payload = {
-        message: userMessage.content,
-        userLanguage: language?.toUpperCase() || 'DE',
-        isFirstMessage: nextHistory.length === 1,
-        chatHistory: nextHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
-        caseId: selectedCaseId,
-        // AUTO-CONTEXT: Pass user profile and case context
-        userProfile: effectiveUserProfile || undefined,
-        caseContext: caseContext || undefined,
-        legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
-      };
+
+      // General mode (!hasCase): minimal payload, no DB writes, edge returns { ok, reply }
+      const payload = hasCase
+        ? {
+            message: userMessage.content,
+            userLanguage: language?.toUpperCase() || 'DE',
+            isFirstMessage: nextHistory.length === 1,
+            chatHistory: nextHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
+            caseId: selectedCaseId,
+            userProfile: effectiveUserProfile || undefined,
+            caseContext: caseContext || undefined,
+            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+          }
+        : { message: userMessage.content, userLanguage: language?.toUpperCase() || 'DE' };
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dashboard-chat`,
@@ -1034,85 +1059,97 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           errorBody = await response.text();
           errorData = errorBody ? JSON.parse(errorBody) : null;
         } catch {}
-        
+        const lang = (language || 'en').slice(0, 2).toUpperCase();
+        const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+
         if (response.status === 503 || errorData?.error === 'SYSTEM_CREDITS_EXHAUSTED') {
+          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           toast.error(errorData?.message || "System AI temporarily unavailable.", { duration: 8000 });
           return;
         }
-        
+
         if (response.status === 402 || errorData?.error === 'AI_CREDITS_EXHAUSTED') {
+          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           setShowUpgradeModal(true);
           return;
         }
-        
+
         if (response.status === 429) {
+          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           if (errorData?.error === 'limit_reached') {
             setMessagesUsed(errorData.messagesUsed);
             setMessagesLimit(errorData.messagesLimit);
             toast.error(t('dashboardChat.limitReached'));
-            return;
+          } else {
+            toast.error(t('dashboardChat.rateLimitError'));
           }
-          toast.error(t('dashboardChat.rateLimitError'));
           return;
         }
-        
+
         if (response.status === 401) {
+          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           toast.error(`Auth error: ${response.status}`, { duration: 8000 });
           return;
         }
-        
+
         const errMsg = errorData?.error || errorData?.message || response.statusText;
         throw new Error(`dashboard-chat failed: ${response.status} ${errMsg}`);
       }
 
       const data = await response.json();
-      
-       const assistantMessage: ChatMessage = {
+      const replyText = data.reply ?? data.response ?? '';
+
+      const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: data.response,
+        content: replyText,
         timestamp: new Date(),
       };
 
-       // OPTIMISTIC UI: show assistant immediately (no waiting on DB)
-       setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
 
-       // Persist only when a case is selected
-       if (selectedCaseId) {
-         void addCaseChatMessage('assistant', data.response);
-       }
-      
-      setMessagesUsed(data.messagesUsed);
-      setMessagesLimit(data.messagesLimit);
-      
-      const backendDraft = (data?.suggestedAction?.payload?.draftResponse ?? data?.draftResponse ?? null) as string | null;
-      const backendDraftReady = Boolean(data?.draftReady) && Boolean(backendDraft);
+      if (hasCase) {
+        void addCaseChatMessage('assistant', replyText);
+      }
+      if (data.messagesUsed != null) setMessagesUsed(data.messagesUsed);
+      if (data.messagesLimit != null) setMessagesLimit(data.messagesLimit);
 
-      if (data.suggestedAction && data.suggestedAction.type === 'CREATE_CASE_FROM_CHAT') {
-        setSuggestedAction(data.suggestedAction);
-        setChatTopic(data.suggestedAction.payload?.title || null);
+      // Case-only: draft, suggested action, case naming dialog (not in general mode)
+      if (hasCase) {
+        const backendDraft = (data?.suggestedAction?.payload?.draftResponse ?? data?.draftResponse ?? null) as string | null;
+        const backendDraftReady = Boolean(data?.draftReady) && Boolean(backendDraft);
+
+        if (data.suggestedAction && data.suggestedAction.type === 'CREATE_CASE_FROM_CHAT') {
+          setSuggestedAction(data.suggestedAction);
+          setChatTopic(data.suggestedAction.payload?.title || null);
+        } else {
+          setSuggestedAction(null);
+        }
+
+        setLastDraftText(backendDraft);
+        setDraftReady(backendDraftReady);
+
+        if (backendDraftReady && backendDraft && !containsPlaceholders(backendDraft) && !hasPromptedForName) {
+          setHasPromptedForName(true);
+          setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
+          setShowCaseNameDialog(true);
+        }
       } else {
         setSuggestedAction(null);
-      }
-
-      setLastDraftText(backendDraft);
-      setDraftReady(backendDraftReady);
-      
-      // Auto-show case naming dialog when document is ready
-      if (backendDraftReady && backendDraft && !containsPlaceholders(backendDraft) && !hasPromptedForName) {
-        setHasPromptedForName(true);
-        setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
-        setShowCaseNameDialog(true);
+        setLastDraftText(null);
+        setDraftReady(false);
       }
      } catch (error: any) {
       if (error?.name === 'AbortError') return;
       console.error('[DashboardAIChat] Chat error:', error);
-      toast.error(`Error: ${error?.message || 'Unknown'}`, { duration: 10000 });
-      // Keep the user's message visible; no rollback in PRE-CASE or slow network scenarios.
+      const lang = (language || 'en').slice(0, 2).toUpperCase();
+      const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+      setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
+      toast.error(t('dashboardChat.error') || fallbackContent, { duration: 5000 });
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [input, isLoading, isLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements]);
+  }, [input, isLoading, isLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements, hasCase, selectedCaseId, userProfile, caseContext, user?.id]);
 
   // Camera handlers - redirect to /scan page with camera + upload buttons
   const handleCameraClick = () => {
@@ -1429,13 +1466,19 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           <span className="dashboard-title">{txt.sectionTitle}</span>
           <span className="dashboard-fleur">❧</span>
           
-          {/* Context Badge */}
-          {caseContext && (
+          {/* Context Badge: case selected vs general mode (not saved) */}
+          {hasCase && caseContext && (
             <div className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-primary/20 rounded-full text-xs">
               <FolderOpen className="h-3 w-3" />
               <span className="truncate max-w-[120px]" title={caseContext.title}>
                 {caseContext.title}
               </span>
+            </div>
+          )}
+          {!hasCase && (
+            <div className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-800 dark:text-amber-200 rounded-full text-xs" title={txt.generalModeBadge}>
+              <MessageCircle className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[200px]">{txt.generalModeBadge}</span>
             </div>
           )}
         </div>
