@@ -902,8 +902,11 @@ User has confirmed document generation. You may now generate the final letter wi
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      const userMessage = aiResult.error === "AI service not configured"
+        ? "AI service not configured. Please set OPENAI_API_KEY in Supabase Edge Function secrets."
+        : aiResult.error || "AI temporarily unavailable";
       return new Response(
-        JSON.stringify({ error: "AI_PROVIDER_ERROR", message: "AI temporarily unavailable" }),
+        JSON.stringify({ error: "AI_PROVIDER_ERROR", message: userMessage }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -1078,10 +1078,10 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           return;
         }
 
-        // 500 or other: show backend error in toast so it can be debugged
-        const serverMsg = errorData?.error || errorData?.details || errorData?.message || response.statusText;
+        // 500 or other: show user-facing message first (message > error code)
+        const serverMsg = errorData?.message || errorData?.details || (errorData?.error !== 'AI_PROVIDER_ERROR' ? errorData?.error : null) || response.statusText;
         setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-        toast.error(serverMsg || fallbackContent, { duration: 8000 });
+        toast.error(serverMsg || t('dashboardChat.aiUnavailable') || fallbackContent, { duration: 8000 });
         return;
       }
 
