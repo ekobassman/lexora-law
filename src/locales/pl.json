@@ -1219,6 +1219,11 @@
     "offline": "Offline",
     "iOSGuide": {
       "title": "Zainstaluj Lexora na swoim iPhonie",
+      "installTitle": "Zainstaluj Lexora",
+      "subtitle": "Dodaj do ekranu głównego dla natychmiastowego dostępu",
+      "shareHint": "Dotknij przycisku Udostępnij",
+      "addToHomeButton": "Dodaj do ekranu początkowego",
+      "hint": "Udostępnij → Dodaj do ekranu początkowego",
       "step1": "Dotknij przycisku Udostępnij na dole",
       "step2": "Wybierz \"Dodaj do ekranu początkowego\"",
       "step3": "Potwierdź przez \"Dodaj\"",

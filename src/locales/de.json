@@ -1380,6 +1380,11 @@
     "offline": "Offline",
     "iOSGuide": {
       "title": "Lexora auf Ihrem iPhone installieren",
+      "installTitle": "Lexora installieren",
+      "subtitle": "App zum Home-Bildschirm hinzufügen für Offline-Nutzung",
+      "addToHomeButton": "Zum Home-Bildschirm",
+      "hint": "Tippen Sie auf Teilen → Zum Home-Bildschirm",
+      "shareHint": "Tippen Sie auf die Teilen-Schaltfläche in Safari",
       "step1": "Tippen Sie unten auf die Teilen-Schaltfläche",
       "step2": "Wählen Sie \"Zum Startbildschirm hinzufügen\"",
       "step3": "Bestätigen Sie mit \"Hinzufügen\"",

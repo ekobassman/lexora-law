@@ -1219,6 +1219,11 @@
     "offline": "Offline",
     "iOSGuide": {
       "title": "Instalează Lexora pe iPhone",
+      "installTitle": "Instalează Lexora",
+      "subtitle": "Adaugă la ecranul principal pentru acces instant",
+      "shareHint": "Atinge butonul Partajare",
+      "addToHomeButton": "Adaugă la ecranul principal",
+      "hint": "Partajare → Adaugă la ecranul principal",
       "step1": "Atinge butonul Partajare jos",
       "step2": "Selectează \"Adaugă pe ecranul de start\"",
       "step3": "Confirmă cu \"Adaugă\"",

@@ -1344,6 +1344,11 @@
     "offline": "Offline",
     "iOSGuide": {
       "title": "Installa Lexora sul tuo iPhone",
+      "installTitle": "Installa Lexora",
+      "subtitle": "Aggiungi alla Home per accesso istantaneo",
+      "addToHomeButton": "Aggiungi alla Home",
+      "hint": "Tocca Condividi → Aggiungi alla Home",
+      "shareHint": "Tocca il tasto Condividi in Safari",
       "step1": "Tocca il pulsante Condividi in basso",
       "step2": "Seleziona \"Aggiungi a Home\"",
       "step3": "Conferma con \"Aggiungi\"",

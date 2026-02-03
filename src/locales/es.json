@@ -1237,6 +1237,11 @@
     "offline": "Desconectado",
     "iOSGuide": {
       "title": "Instalar Lexora en tu iPhone",
+      "installTitle": "Instalar Lexora",
+      "subtitle": "Añade la app a Inicio para usarla sin conexión",
+      "addToHomeButton": "Añadir a Inicio",
+      "hint": "Toca Compartir → Añadir a Inicio",
+      "shareHint": "Toca el botón Compartir en Safari",
       "step1": "Toca el botón Compartir abajo",
       "step2": "Selecciona \"Añadir a pantalla de inicio\"",
       "step3": "Confirma con \"Añadir\"",

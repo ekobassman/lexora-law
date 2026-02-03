@@ -1213,6 +1213,11 @@
     "offline": "Hors ligne",
     "iOSGuide": {
       "title": "Installer Lexora sur votre iPhone",
+      "installTitle": "Installer Lexora",
+      "subtitle": "Ajoutez l'app à l'écran d'accueil pour l'utiliser hors ligne",
+      "addToHomeButton": "Ajouter à l'écran d'accueil",
+      "hint": "Appuyez sur Partager → Ajouter à l'écran d'accueil",
+      "shareHint": "Appuyez sur le bouton Partager dans Safari",
       "step1": "Appuyez sur le bouton Partager en bas",
       "step2": "Sélectionnez \"Sur l'écran d'accueil\"",
       "step3": "Confirmez avec \"Ajouter\"",
