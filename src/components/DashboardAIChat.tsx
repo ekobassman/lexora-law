@@ -700,9 +700,11 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const isUnlimitedPlan = isUnlimited;
   const shouldBypassLimits = isAdmin || isUnlimitedPlan || isPaid;
   const isLimitReached = !shouldBypassLimits && messagesUsed >= messagesLimit;
+  // In general mode (!hasCase) the backend does not count messages; do not block send or camera/file
+  const effectiveLimitReached = hasCase && isLimitReached;
 
   const toggleListening = useCallback(() => {
-    if (isLimitReached) {
+    if (effectiveLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
@@ -711,15 +713,15 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     } else {
       startRecording();
     }
-  }, [isLimitReached, isListening, stopRecording, startRecording]);
+  }, [effectiveLimitReached, isListening, stopRecording, startRecording]);
 
   const handleLimitedInteraction = useCallback(() => {
-    if (isLimitReached) {
+    if (effectiveLimitReached) {
       setShowUpgradeModal(true);
       return true;
     }
     return false;
-  }, [isLimitReached]);
+  }, [effectiveLimitReached]);
 
   // Load chat history and usage on mount
   useEffect(() => {
@@ -923,7 +925,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       return;
     }
     
-    if (isLimitReached) {
+    if (effectiveLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
@@ -1032,16 +1034,20 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         }
       );
 
-      if (!response.ok) {
-        let errorBody = '';
-        let errorData: any = null;
-        try {
-          errorBody = await response.text();
-          errorData = errorBody ? JSON.parse(errorBody) : null;
-        } catch {}
-        const lang = (language || 'en').slice(0, 2).toUpperCase();
-        const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+      let data: any = null;
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : null;
+      } catch (parseErr) {
+        console.error('[DashboardAIChat] Response parse error', parseErr);
+        throw new Error('Invalid response from chat service');
+      }
 
+      const lang = (language || 'en').slice(0, 2).toUpperCase();
+      const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
+      const errorData = data && typeof data === 'object' ? data : null;
+
+      if (!response.ok) {
         if (response.status === 503 || errorData?.error === 'SYSTEM_CREDITS_EXHAUSTED') {
           setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           toast.error(errorData?.message || "System AI temporarily unavailable.", { duration: 8000 });
@@ -1072,12 +1078,27 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           return;
         }
 
-        const errMsg = errorData?.error || errorData?.message || response.statusText;
-        throw new Error(`dashboard-chat failed: ${response.status} ${errMsg}`);
+        // 500 or other: show backend error in toast so it can be debugged
+        const serverMsg = errorData?.error || errorData?.details || errorData?.message || response.statusText;
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
+        toast.error(serverMsg || fallbackContent, { duration: 8000 });
+        return;
       }
 
-      const data = await response.json();
-      const replyText = data.reply ?? data.response ?? '';
+      // General mode can return { ok: false, error: "..." } with 200 in some setups; treat as failure
+      if (data && data.ok === false) {
+        const errMsg = data.error || data.details || 'Chat temporarily unavailable';
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
+        toast.error(errMsg, { duration: 8000 });
+        return;
+      }
+
+      const replyText = (data?.reply ?? data?.response ?? '').trim();
+      if (!replyText) {
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
+        toast.error(t('dashboardChat.error') || fallbackContent, { duration: 5000 });
+        return;
+      }
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -1120,34 +1141,36 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       }
      } catch (error: any) {
       if (error?.name === 'AbortError') return;
-      console.error('[DashboardAIChat] Chat error:', error);
+      console.error('[DashboardAIChat] Chat error:', error?.message || error);
       const lang = (language || 'en').slice(0, 2).toUpperCase();
       const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
       setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-      toast.error(t('dashboardChat.error') || fallbackContent, { duration: 5000 });
+      // Prefer server/network hint for debugging; avoid double generic message
+      const hint = error?.message?.includes('fetch') || error?.message?.includes('Network')
+        ? (t('dashboardChat.networkError') || 'Network error. Check connection and try again.')
+        : (t('dashboardChat.error') || fallbackContent);
+      toast.error(hint, { duration: 6000 });
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [input, isLoading, isLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements, hasCase, selectedCaseId, userProfile, caseContext, user?.id]);
+  }, [input, isLoading, effectiveLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements, hasCase, selectedCaseId, userProfile, caseContext, user?.id]);
 
   // Camera handlers - redirect to /scan page with camera + upload buttons
   const handleCameraClick = () => {
-    if (isLimitReached) {
+    if (effectiveLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
-    // Navigate to the ScanDocument page which has both camera and file upload buttons
     navigate('/scan');
   };
 
   // File handlers - redirect to /scan page with camera + upload buttons
   const handleFileClick = () => {
-    if (isLimitReached) {
+    if (effectiveLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
-    // Navigate to the ScanDocument page which has both camera and file upload buttons
     navigate('/scan');
   };
 
@@ -1409,7 +1432,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   if (!user) return null;
 
   const handleInputClick = () => {
-    if (isLimitReached) setShowUpgradeModal(true);
+    if (effectiveLimitReached) setShowUpgradeModal(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1609,7 +1632,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 finalTranscriptRef.current = '';
               }
               
-              if (isLimitReached) {
+              if (effectiveLimitReached) {
                 setShowUpgradeModal(true);
                 return;
               }
@@ -1618,7 +1641,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 sendMessage(textToSend);
               }
             }}
-            disabled={(!input.trim() && !isListening) || isLoading || isProcessingFile}
+            disabled={(!input.trim() && !isListening) || isLoading || isProcessingFile || effectiveLimitReached}
             className="dashboard-send-btn"
             aria-label="Send"
           >
@@ -1631,7 +1654,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           {/* Row 1 */}
           <button 
             onClick={handleCameraClick} 
-            disabled={isLoading || isProcessingFile || isLimitReached} 
+            disabled={isLoading || isProcessingFile || effectiveLimitReached} 
             className="dashboard-action-btn"
           >
             <Camera className="h-5 w-5" />
@@ -1639,7 +1662,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           </button>
           <button 
             onClick={handleFileClick} 
-            disabled={isLoading || isProcessingFile || isLimitReached} 
+            disabled={isLoading || isProcessingFile || effectiveLimitReached} 
             className="dashboard-action-btn"
           >
             <Paperclip className="h-5 w-5" />

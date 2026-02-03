@@ -69,6 +69,7 @@
     "continueInCase": "Continue conversation in this case",
     "caseMemoryInfo": "Conversation is saved to your case",
     "error": "Error sending message. Please try again.",
+    "networkError": "Network error. Check your connection and try again.",
     "rateLimitError": "Too many requests. Please try again later.",
     "limitReached": "You have reached your plan's limit.",
     "limitReachedHint": "Upgrade to Starter or Pro to continue chatting.",
