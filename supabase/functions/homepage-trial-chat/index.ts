@@ -227,7 +227,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [] } = await req.json();
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [] } = await req.json();
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return json(400, {
@@ -315,6 +315,20 @@ serve(async (req) => {
         ).join('\n\n');
         webSearchContext = `\n\n📌 WEB SEARCH RESULTS (verify before using):\n${resultsText}\n\nIMPORTANT: Confidence is ${(intelligentSearchResult.confidence * 100).toFixed(0)}%. If using this info, propose it to user and ask for confirmation first.`;
       }
+    }
+    
+    // =====================
+    // CLIENT-PROVIDED LEGAL SEARCH CONTEXT (from webSearch.ts)
+    // =====================
+    const legalSources: SearchResult[] = Array.isArray(legalSearchContext) ? legalSearchContext.map((r: { title?: string; snippet?: string; link?: string; url?: string; date?: string }) => ({
+      title: r.title ?? '',
+      snippet: r.snippet ?? '',
+      url: r.link ?? r.url ?? '',
+    })).filter((r: SearchResult) => r.url) : [];
+    if (legalSources.length > 0) {
+      const sourcesBlock = legalSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.url}`).join('\n\n');
+      webSearchContext += `\n\nFONTI UFFICIALI CONSULTATE (use to inform your answer, cite when relevant):\n${sourcesBlock}\n\n`;
+      webSearchResults = [...webSearchResults, ...legalSources];
     }
     
     // =====================

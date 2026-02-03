@@ -444,6 +444,7 @@ serve(async (req) => {
       caseId,
       userProfile,
       caseContext,
+      legalSearchContext = [],
     } = await req.json() as {
       message: string;
       userLanguage?: string;
@@ -453,6 +454,7 @@ serve(async (req) => {
       caseId?: string;
       userProfile?: UserProfileContext;
       caseContext?: CaseContext;
+      legalSearchContext?: Array<{ title?: string; snippet?: string; link?: string; url?: string; date?: string }>;
     };
 
     if (!message || message.trim().length === 0) {
@@ -810,6 +812,20 @@ REGOLE CONTESTO FASCICOLO:
         webSearchContext = `\n\n📌 WEB SEARCH RESULTS (verify before using):\n${resultsText}\n\nWARNING: Confidence is ${(intelligentSearchResult.confidence * 100).toFixed(0)}%. Propose to user and ask for confirmation before using in documents.`;
         messages[0].content += webSearchContext;
       }
+    }
+    
+    // =====================
+    // CLIENT-PROVIDED LEGAL SEARCH CONTEXT (from webSearch.ts)
+    // =====================
+    const legalSources: SearchResult[] = Array.isArray(legalSearchContext) ? legalSearchContext.map((r: { title?: string; snippet?: string; link?: string; url?: string; date?: string }) => ({
+      title: r.title ?? '',
+      snippet: r.snippet ?? '',
+      url: r.link ?? r.url ?? '',
+    })).filter((r: SearchResult) => r.url) : [];
+    if (legalSources.length > 0) {
+      const sourcesBlock = legalSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.url}`).join('\n\n');
+      messages[0].content += `\n\nFONTI UFFICIALI CONSULTATE (use to inform your answer, cite when relevant):\n${sourcesBlock}\n\n`;
+      webSearchResults = [...webSearchResults, ...legalSources];
     }
     
     // =====================

@@ -516,6 +516,7 @@
     "send": "Enviar",
     "thinking": "Pensando...",
     "outOfScopeRefusal": "Lo siento, solo puedo ayudarte con asuntos legales y administrativos. Puedo asistirte con contratos, cartas formales, asesoramiento legal o trámites burocráticos. ¿Necesitas ayuda con alguno de estos temas?",
+    "searchingLegalSources": "🔍 Buscando fuentes jurídicas actualizadas...",
     "error": "Error al enviar el mensaje",
     "welcome": "¡Hola! ¿Cómo puedo ayudarte con esta carta?",
     "regenerate": "Regenerar respuesta",

@@ -12,6 +12,7 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 import { useCaseChatMessages } from '@/hooks/useCaseChatMessages';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 // ═══════════════════════════════════════════════════════════════════════════
 // LETTER EXTRACTION UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -137,6 +138,7 @@ const getLocalizedText = (language: Language) => {
     inputTitle: string;
     inputPlaceholder: string;
     thinking: string;
+    searchingLegalSources: string;
     stop: string;
     copyMessage: string;
     copied: string;
@@ -149,6 +151,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Chiedi alla IA di modificare il testo',
       inputPlaceholder: 'Scrivi qui cosa vuoi modificare...',
       thinking: 'Sto pensando...',
+      searchingLegalSources: '🔍 Sto consultando fonti ufficiali...',
       stop: 'Stop',
       copyMessage: 'Copia messaggio',
       copied: 'Copiato!',
@@ -161,6 +164,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Bitte die KI, den Entwurf zu ändern',
       inputPlaceholder: 'Schreiben Sie hier, was Sie ändern möchten...',
       thinking: 'Ich denke nach...',
+      searchingLegalSources: '🔍 Aktuelle Rechtsquellen werden abgefragt...',
       stop: 'Stop',
       copyMessage: 'Nachricht kopieren',
       copied: 'Kopiert!',
@@ -173,6 +177,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Ask the AI to modify the text',
       inputPlaceholder: 'Write here what you want to change...',
       thinking: 'Thinking...',
+      searchingLegalSources: '🔍 Searching for updated legal sources...',
       stop: 'Stop',
       copyMessage: 'Copy message',
       copied: 'Copied!',
@@ -185,6 +190,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Demandez à l\'IA de modifier le texte',
       inputPlaceholder: 'Écrivez ici ce que vous souhaitez modifier...',
       thinking: 'Je réfléchis...',
+      searchingLegalSources: '🔍 Recherche de sources juridiques à jour...',
       stop: 'Stop',
       copyMessage: 'Copier le message',
       copied: 'Copié!',
@@ -197,6 +203,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Pide a la IA que modifique el texto',
       inputPlaceholder: 'Escribe aquí lo que quieres cambiar...',
       thinking: 'Pensando...',
+      searchingLegalSources: '🔍 Buscando fuentes jurídicas actualizadas...',
       stop: 'Detener',
       copyMessage: 'Copiar mensaje',
       copied: '¡Copiado!',
@@ -209,6 +216,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Poproś AI o modyfikację tekstu',
       inputPlaceholder: 'Napisz, co chcesz zmienić...',
       thinking: 'Myślę...',
+      searchingLegalSources: '🔍 Szukam zaktualizowanych źródeł prawnych...',
       stop: 'Stop',
       copyMessage: 'Kopiuj wiadomość',
       copied: 'Skopiowano!',
@@ -221,6 +229,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Cere AI-ului să modifice textul',
       inputPlaceholder: 'Scrie aici ce vrei să schimbi...',
       thinking: 'Mă gândesc...',
+      searchingLegalSources: '🔍 Căutare surse juridice actualizate...',
       stop: 'Stop',
       copyMessage: 'Copiază mesajul',
       copied: 'Copiat!',
@@ -233,6 +242,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'AI\'dan metni değiştirmesini isteyin',
       inputPlaceholder: 'Neyi değiştirmek istediğinizi yazın...',
       thinking: 'Düşünüyorum...',
+      searchingLegalSources: '🔍 Güncel hukuki kaynaklar aranıyor...',
       stop: 'Dur',
       copyMessage: 'Mesajı kopyala',
       copied: 'Kopyalandı!',
@@ -245,6 +255,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'اطلب من الذكاء الاصطناعي تعديل النص',
       inputPlaceholder: 'اكتب هنا ما تريد تغييره...',
       thinking: 'أفكر...',
+      searchingLegalSources: '🔍 جاري البحث عن مصادر قانونية محدثة...',
       stop: 'إيقاف',
       copyMessage: 'نسخ الرسالة',
       copied: 'تم النسخ!',
@@ -257,6 +268,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Попросіть ШІ змінити текст',
       inputPlaceholder: 'Напишіть тут, що ви хочете змінити...',
       thinking: 'Думаю...',
+      searchingLegalSources: '🔍 Пошук актуальних правових джерел...',
       stop: 'Стоп',
       copyMessage: 'Копіювати повідомлення',
       copied: 'Скопійовано!',
@@ -269,6 +281,7 @@ const getLocalizedText = (language: Language) => {
       inputTitle: 'Попросите ИИ изменить текст',
       inputPlaceholder: 'Напишите здесь, что вы хотите изменить...',
       thinking: 'Думаю...',
+      searchingLegalSources: '🔍 Поиск актуальных правовых источников...',
       stop: 'Стоп',
       copyMessage: 'Копировать сообщение',
       copied: 'Скопировано!',
@@ -348,6 +361,7 @@ export function ChatWithAI({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showPaymentBlockedPopup, setShowPaymentBlockedPopup] = useState(false);
   const [hasShownAutoAsk, setHasShownAutoAsk] = useState(false);
+  const [isSearchingLegal, setIsSearchingLegal] = useState(false);
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -582,6 +596,21 @@ export function ChatWithAI({
     setMessage('');
     setIsLoading(true);
 
+    // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
+    let legalSearchContext: LegalSearchResult[] = [];
+    if (shouldSearchLegalInfo(textToSend)) {
+      setIsSearchingLegal(true);
+      try {
+        legalSearchContext = await searchLegalInfoWithTimeout(
+          buildLegalSearchQuery(textToSend),
+          language.toLowerCase().slice(0, 2),
+          3
+        );
+      } finally {
+        setIsSearchingLegal(false);
+      }
+    }
+
     // Save to unified case_chat_messages
     addCaseChatMessage('user', userMessage.content);
 
@@ -619,6 +648,7 @@ export function ChatWithAI({
             userLanguage: language,
             mode,
             praticaId, // Pass pratica ID for context isolation
+            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
           }),
           signal: abortControllerRef.current.signal,
         }
@@ -792,7 +822,7 @@ export function ChatWithAI({
                   </div>
                   <div className="ai-bubble edit-message-bubble flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{txt.thinking}</span>
+                    <span>{isSearchingLegal ? txt.searchingLegalSources : txt.thinking}</span>
                     <button
                       onClick={stopGeneration}
                       className="ml-2 px-2 py-1 text-xs bg-destructive/20 text-destructive rounded hover:bg-destructive/30"

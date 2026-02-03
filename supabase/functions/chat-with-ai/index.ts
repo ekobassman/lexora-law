@@ -114,7 +114,7 @@ serve(async (req) => {
       );
     }
 
-    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId } = await req.json();
+    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId, legalSearchContext = [] } = await req.json();
 
     if (!userMessage || userMessage.trim().length === 0) {
       return new Response(
@@ -304,6 +304,18 @@ But NEVER refuse to answer or replace your response with this note.`;
       }
     }
 
+    // CLIENT-PROVIDED LEGAL SEARCH CONTEXT (from webSearch.ts)
+    const legalSources: SearchResult[] = Array.isArray(legalSearchContext) ? legalSearchContext.map((r: { title?: string; snippet?: string; link?: string; url?: string; date?: string }) => ({
+      title: r.title ?? '',
+      snippet: r.snippet ?? '',
+      url: r.link ?? r.url ?? '',
+    })).filter((r: SearchResult) => r.url) : [];
+    if (legalSources.length > 0) {
+      const sourcesBlock = legalSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.url}`).join('\n\n');
+      openaiMessages[0].content += `\n\nFONTI UFFICIALI CONSULTATE (use to inform your answer, cite when relevant):\n${sourcesBlock}\n\n`;
+      webSearchResults = [...webSearchResults, ...legalSources];
+    }
+
     // Use OpenAI API directly
     const aiResult = await callOpenAI({
       messages: openaiMessages,
@@ -331,7 +343,7 @@ But NEVER refuse to answer or replace your response with this note.`;
       throw new Error("No response from AI");
     }
 
-    // WEB ASSIST: Append sources section if web search was performed
+    // WEB ASSIST: Append sources section if web search or legal search was performed
     if (webSearchResults.length > 0) {
       content += formatSourcesSection(webSearchResults, langCode);
     }

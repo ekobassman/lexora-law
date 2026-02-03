@@ -508,6 +508,7 @@
     "send": "Invia",
     "thinking": "Sto pensando...",
     "outOfScopeRefusal": "Mi dispiace, posso aiutarti solo con questioni legali e amministrative. Posso assisterti con contratti, lettere formali, consulenza legale o pratiche burocratiche. Hai bisogno di aiuto con uno di questi argomenti?",
+    "searchingLegalSources": "Sto cercando normative aggiornate da fonti ufficiali...",
     "error": "Errore nell'invio del messaggio",
     "welcome": "Ciao! Come posso aiutarti con questa lettera?",
     "regenerate": "Rigenera risposta",

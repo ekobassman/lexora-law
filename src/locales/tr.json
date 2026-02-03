@@ -488,6 +488,7 @@
     "send": "Gönder",
     "thinking": "Düşünüyor...",
     "outOfScopeRefusal": "Üzgünüm, yalnızca hukuki ve idari konularda yardımcı olabilirim. Sözleşmeler, resmi yazılar, hukuki danışmanlık veya bürokratik işlemler konusunda size yardımcı olabilirim. Bu konulardan biriyle ilgili yardıma ihtiyacınız var mı?",
+    "searchingLegalSources": "🔍 Güncel hukuki kaynaklar aranıyor...",
     "error": "Mesaj gönderme hatası",
     "welcome": "Merhaba! Bu mektupla nasıl yardımcı olabilirim?",
     "regenerate": "Yanıtı yeniden oluştur",

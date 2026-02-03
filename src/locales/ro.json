@@ -503,6 +503,7 @@
     "send": "Trimite",
     "thinking": "Gândesc...",
     "outOfScopeRefusal": "Îmi pare rău, vă pot ajuta doar în materie juridică și administrativă. Vă pot asista la contracte, scrisori formale, consultanță juridică sau proceduri birocratice. Aveți nevoie de ajutor pentru unul dintre aceste subiecte?",
+    "searchingLegalSources": "🔍 Căutare surse juridice actualizate...",
     "error": "Eroare la trimiterea mesajului",
     "welcome": "Bună! Cum te pot ajuta cu această scrisoare?",
     "regenerate": "Regenerează răspunsul",

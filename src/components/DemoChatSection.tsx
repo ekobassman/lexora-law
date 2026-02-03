@@ -45,6 +45,7 @@ import { RegistrationGate } from '@/components/RegistrationGate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -494,6 +495,7 @@ export function DemoChatSection() {
   const isRecordingRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isSearchingLegal, setIsSearchingLegal] = useState(false);
   
   const openLetterOnlyPreviewWithText = (text: string) => {
     const trimmed = (text || '').trim();
@@ -569,6 +571,8 @@ export function DemoChatSection() {
     placeholder: placeholderByLang[language] || 'Write here...',
     emptyState: getSafeText(t, 'demoChat.emptyState', 'Upload a document or describe what happened.'),
     thinking: getSafeText(t, 'chat.thinking', 'Thinking...'),
+    outOfScopeRefusal: getSafeText(t, 'chat.outOfScopeRefusal', 'I can only assist with legal and administrative matters.'),
+    searchingLegalSources: getSafeText(t, 'chat.searchingLegalSources', '🔍 Searching for updated legal sources...'),
     limitTitle: getSafeText(t, 'demoChat.limit.title', 'Free preview ended'),
     limitBody: getSafeText(t, 'demoChat.limit.body', 'Create a free account to continue and save your case.'),
     limitSignup: getSafeText(t, 'demoChat.limit.signup', 'Create account'),
@@ -897,6 +901,21 @@ export function DemoChatSection() {
     setInput('');
     setIsLoading(true);
 
+    // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
+    let legalSearchContext: LegalSearchResult[] = [];
+    if (shouldSearchLegalInfo(messageContent.trim())) {
+      setIsSearchingLegal(true);
+      try {
+        legalSearchContext = await searchLegalInfoWithTimeout(
+          buildLegalSearchQuery(messageContent.trim()),
+          language.toLowerCase().slice(0, 2),
+          3
+        );
+      } finally {
+        setIsSearchingLegal(false);
+      }
+    }
+
     // Build AI context from a "fresh" point onward.
     // Include conversation history AND the current draft so AI can remember it for follow-up requests.
     const sliced = [...messages.slice(aiContextStart), userMessage];
@@ -944,6 +963,7 @@ export function DemoChatSection() {
             language,
             isFirstMessage,
             conversationHistory,
+            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
           }),
         }
       );
@@ -1502,7 +1522,7 @@ export function DemoChatSection() {
                     <div className="demo-message-bubble ai-bubble">
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm opacity-70">{txt.thinking}</span>
+                        <span className="text-sm opacity-70">{isSearchingLegal ? txt.searchingLegalSources : txt.thinking}</span>
                       </div>
                     </div>
                   </div>

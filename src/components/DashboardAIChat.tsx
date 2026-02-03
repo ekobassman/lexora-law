@@ -20,6 +20,7 @@ import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
   AlertDialog,
@@ -268,6 +269,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const [speechSupported, setSpeechSupported] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showPaymentBlockedPopup, setShowPaymentBlockedPopup] = useState(false);
+  const [isSearchingLegal, setIsSearchingLegal] = useState(false);
   
   // =====================
   // FETCH USER PROFILE (once on mount)
@@ -544,6 +546,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     cancel: getSafeText(t, 'common.cancel', 'Cancel'),
     clearConversation: clearConversationByLang[language] || 'Clear conversation',
     outOfScopeRefusal: getSafeText(t, 'chat.outOfScopeRefusal', 'I can only assist with legal and administrative matters. Do you need help with contracts, formal letters or bureaucratic procedures?'),
+    searchingLegalSources: getSafeText(t, 'chat.searchingLegalSources', '🔍 Searching for updated legal sources...'),
   }), [t, language]);
 
   // Check speech recognition support
@@ -947,6 +950,21 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     
     abortControllerRef.current = new AbortController();
     
+    // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
+    let legalSearchContext: LegalSearchResult[] = [];
+    if (shouldSearchLegalInfo(content)) {
+      setIsSearchingLegal(true);
+      try {
+        legalSearchContext = await searchLegalInfoWithTimeout(
+          buildLegalSearchQuery(content),
+          language?.toLowerCase().slice(0, 2) || 'de',
+          3
+        );
+      } finally {
+        setIsSearchingLegal(false);
+      }
+    }
+    
     try {
       // Ensure we have profile context for logged-in users to avoid re-asking name/surname.
       // This is intentionally awaited BEFORE calling the backend, but AFTER optimistic UI.
@@ -992,6 +1010,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         // AUTO-CONTEXT: Pass user profile and case context
         userProfile: effectiveUserProfile || undefined,
         caseContext: caseContext || undefined,
+        legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
       };
 
       const response = await fetch(
@@ -1488,7 +1507,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                     <div className="dashboard-message-bubble ai-bubble">
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm opacity-70">{txt.thinking}</span>
+                        <span className="text-sm opacity-70">{isSearchingLegal ? txt.searchingLegalSources : txt.thinking}</span>
                       </div>
                     </div>
                   </div>
