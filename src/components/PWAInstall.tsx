@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePWA } from '@/hooks/usePWA';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,6 +30,7 @@ export function showIOSInstallGuide() {
 export function PWAInstall() {
   const { t } = useLanguage();
   const { canInstall, isInstalled, isIOS, triggerInstall } = usePWA();
+  const isMobile = useIsMobile();
   const [showAndroidBanner, setShowAndroidBanner] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -44,6 +46,7 @@ export function PWAInstall() {
     if (isInstalled) return;
     if (isSnoozeActive()) return;
 
+    // iOS (iPhone/iPad): modal dopo 1.5s
     if (isIOS) {
       const onShow = () => setShowIOSModal(true);
       window.addEventListener(SHOW_IOS_EVENT, onShow);
@@ -54,10 +57,11 @@ export function PWAInstall() {
       };
     }
 
-    if (canInstall) {
+    // Android mobile: banner in fondo solo su dispositivo mobile (mai su desktop)
+    if (canInstall && isMobile) {
       setShowAndroidBanner(true);
     }
-  }, [canInstall, isInstalled, isIOS]);
+  }, [canInstall, isInstalled, isIOS, isMobile]);
 
   const handleAndroidInstall = async () => {
     if (!canInstall) return;
