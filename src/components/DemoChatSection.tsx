@@ -42,6 +42,8 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -411,6 +413,8 @@ export function DemoChatSection() {
   // This prevents action buttons from being enabled when draftText is restored from localStorage
   // but no document was actually generated in this conversation
   const [generatedInSession, setGeneratedInSession] = useState<boolean>(false);
+  const [showSaveDocumentPWA, setShowSaveDocumentPWA] = useState(false);
+  const isMobile = useIsMobile();
 
   // Keep full UI history, but do NOT allow old sessions/drafts to pollute AI context.
   // Default behavior: start AI context at the end of any restored history.
@@ -973,6 +977,8 @@ export function DemoChatSection() {
         draftTextRef.current = newDraft;
         // BUG FIX: Mark that a document was generated in this session
         setGeneratedInSession(true);
+        // Mobile-only: show PWA install prompt after generating a document
+        if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
         // IMPORTANT: Do NOT reset AI context after document generation.
         // Keep full context so user can ask follow-up questions like "translate to German".
         // The AI needs to remember the conversation and the generated draft.
@@ -1026,6 +1032,7 @@ export function DemoChatSection() {
     txt.errorToast,
     letterGeneratedByLang,
     scrollToBottom,
+    isMobile,
   ]);
 
   const handleSend = () => {
@@ -1716,6 +1723,12 @@ export function DemoChatSection() {
           }}
         />
       )}
+
+      {/* Mobile-only: PWA install prompt after generating a document */}
+      <MobileDocumentPrompt
+        isOpen={showSaveDocumentPWA}
+        onClose={() => setShowSaveDocumentPWA(false)}
+      />
 
       {/* Save Case Popup - shown after export actions */}
       <AlertDialog open={showSaveCasePopup} onOpenChange={setShowSaveCasePopup}>

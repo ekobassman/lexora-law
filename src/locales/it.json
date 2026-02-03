@@ -1373,5 +1373,14 @@
       "gotIt": "Ho capito, non mostrare più"
     },
     "updateAvailable": "Nuova versione disponibile. Ricarica per aggiornare."
+  },
+  "mobileInstall": {
+    "bannerText": "Installa Lexora per salvare i tuoi documenti",
+    "installBtn": "Installa",
+    "dismiss": "Chiudi",
+    "saveDocumentTitle": "Documento generato!",
+    "saveDocumentDesc": "Installa l'app per salvarlo e accedervi offline.",
+    "installApp": "Installa App",
+    "continueWeb": "Continua sul web"
   }
 }

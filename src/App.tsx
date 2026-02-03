@@ -38,6 +38,7 @@ import UpdatePassword from "./pages/UpdatePassword";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import DemoLetterPreview from "./pages/DemoLetterPreview";
 import { PWAInstall } from "@/components/PWAInstall";
+import { MobilePwaBanner } from "@/components/MobilePWAPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PullToRefresh } from "@/components/PullToRefresh";
 // SEO Pages (DE only)
@@ -159,6 +160,7 @@ const App = () => (
                 </Routes>
               </BrowserRouter>
               <PWAInstall />
+              <MobilePwaBanner />
             </TooltipProvider>
             </GeoBlockWrapper>
           </GeoLocaleProvider>

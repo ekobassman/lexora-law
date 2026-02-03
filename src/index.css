@@ -400,3 +400,17 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* Slide-up animation (e.g. bottom sheets, modals) */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
