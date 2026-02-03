@@ -89,7 +89,7 @@ export default function ScanDocument() {
     fileInputRef.current?.click();
   }, [isAtLimit, isAnonymous]);
 
-  // Anonymous OCR processing - uses anonymous-ocr endpoint
+  // OCR via Vercel /api/ocr (Google Cloud Vision)
   const processFilesAnonymous = async (files: File[]) => {
     if (files.length === 0) return;
     setIsProcessing(true);
@@ -102,34 +102,10 @@ export default function ScanDocument() {
         const file = files[i];
         setProcessingStep(`${t('analysis.extracting')} (${i + 1}/${files.length})`);
         
-        // Convert file to base64
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-          reader.readAsDataURL(file);
-        });
-        
-        // Use anonymous OCR endpoint
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ 
-              base64, 
-              mimeType: file.type || 'image/jpeg', 
-              language 
-            }),
-          }
-        );
-        
-        const data = await response.json().catch(() => null);
-        
-        if (response.ok && data?.ok && data.text) {
-          combinedText += (combinedText ? '\n\n---\n\n' : '') + data.text;
+        // OCR via Vercel /api/ocr (Google Cloud Vision)
+        const text = await (await import('@/lib/ocrClient')).ocrFromFile(file);
+        if (text) {
+          combinedText += (combinedText ? '\n\n---\n\n' : '') + text;
         } else {
           toast.error(`${file.name}: ${t('demoChat.ocrError')}`);
         }

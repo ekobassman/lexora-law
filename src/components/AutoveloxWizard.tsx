@@ -97,19 +97,8 @@ export function AutoveloxWizard({ open, onOpenChange, praticaId }: AutoveloxWiza
       
       if (uploadError) throw uploadError;
 
-      // Extract text via OCR
-      const base64 = await fileToBase64(file);
-      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('extract-text', {
-        body: {
-          base64,
-          mimeType: file.type,
-          userLanguage: 'it',
-        },
-      });
-
-      if (ocrError) throw ocrError;
-
-      const text = ocrData?.text || '';
+      // OCR via Vercel /api/ocr (Google Cloud Vision)
+      const text = await (await import('@/lib/ocrClient')).ocrFromFile(file) ?? '';
       setExtractedText(text);
 
       // Try to auto-extract data from verbale
@@ -125,19 +114,6 @@ export function AutoveloxWizard({ open, onOpenChange, praticaId }: AutoveloxWiza
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = (error) => reject(error);
-    });
   };
 
   const analyzeVerbale = async (text: string) => {

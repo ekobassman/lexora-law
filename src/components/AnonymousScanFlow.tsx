@@ -96,26 +96,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       });
       setCurrentCase(newCase);
 
-      // Call OCR endpoint
-      const ocrResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ base64, mimeType, language }),
-        }
-      );
-
-      const ocrData = await ocrResponse.json();
-
-      if (!ocrResponse.ok || !ocrData.ok) {
-        throw new Error(ocrData.error || 'OCR failed');
-      }
-
-      const text = ocrData.text || '';
+      // OCR via Vercel /api/ocr (Google Cloud Vision)
+      const text = await (await import('@/lib/ocrClient')).ocrWithBase64(base64, mimeType) ?? '';
+      if (!text) throw new Error('OCR failed');
       setExtractedText(text);
       updateAnonymousCase(newCase.id, { letterText: text, ocrResult: text });
 

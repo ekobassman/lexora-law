@@ -20,6 +20,7 @@ import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { ocrFromFile } from '@/lib/ocrClient';
 import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
@@ -883,31 +884,10 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     }
   };
 
-  // OCR processing
+  // OCR via Vercel /api/ocr (Google Cloud Vision)
   const processOCRSingle = async (file: File): Promise<string | null> => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      
-      const base64 = await fileToBase64(file);
-      const mimeType = guessMimeType(file);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ base64, mimeType, language }),
-        }
-      );
-
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.text) return null;
-      return data.text || '';
+      return await ocrFromFile(file);
     } catch {
       return null;
     }

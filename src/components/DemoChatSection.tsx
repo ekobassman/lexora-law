@@ -45,6 +45,7 @@ import { RegistrationGate } from '@/components/RegistrationGate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { ocrFromFile } from '@/lib/ocrClient';
 import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 
 interface ChatMessage {
@@ -863,28 +864,7 @@ export function DemoChatSection() {
   const processOCRSingle = async (file: File, isDemo?: boolean): Promise<string | null> => {
     if (isDemo) return null; // Blocca ogni chiamata API/OCR in demo
     try {
-      const base64 = await fileToBase64(file);
-      const mimeType = guessMimeType(file);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ base64, mimeType, language }),
-        }
-      );
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.ok) {
-        return null;
-      }
-
-      return data.text || '';
+      return await ocrFromFile(file);
     } catch {
       return null;
     }

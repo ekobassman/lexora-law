@@ -199,36 +199,14 @@ export function LandingChat() {
     el.style.height = `${Math.min(el.scrollHeight, maxPx)}px`;
   }, [input]);
 
-  // OCR processing
+  // OCR via Vercel /api/ocr (Google Cloud Vision)
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
-    
     try {
-      const base64 = await fileToBase64(file);
-      const mimeType = file.type || 'image/jpeg';
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ base64, mimeType, language }),
-        }
-      );
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.ok) {
-        console.error('[LandingChat] OCR error:', data);
-        toast.error(txt.ocrError);
-        return null;
-      }
-
-      toast.success(txt.ocrSuccess);
-      return data.text || '';
+      const text = await (await import('@/lib/ocrClient')).ocrFromFile(file);
+      if (text) toast.success(txt.ocrSuccess);
+      else toast.error(txt.ocrError);
+      return text;
     } catch (error) {
       console.error('[LandingChat] OCR failed:', error);
       toast.error(txt.ocrError);

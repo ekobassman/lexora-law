@@ -67,8 +67,20 @@ For admin protection and server-side Supabase (e.g. API routes), set in Vercel:
 - `NEXT_PUBLIC_SUPABASE_URL` – Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase anon (publishable) key
 - `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key (**server-side only**, never expose to client)
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` – Full JSON string of the Google Cloud service account key for OCR (**server-side only**). Used by `/api/ocr` and `/api/ocr/ping`. Do not put the JSON file in the repo.
 
 Admin is enforced via `profiles.is_admin = true` (no client trust). Use `requireAdmin(req)` in server-side endpoints.
+
+## OCR (Google Cloud Vision)
+
+OCR runs on Vercel serverless (Node runtime) using **Google Cloud Vision** and credentials from `GOOGLE_APPLICATION_CREDENTIALS_JSON` only (no file path, no other env vars).
+
+**Verification:**
+
+1. **Ping:** Open `GET /api/ocr/ping`. You should see `ok: true`, `hasKey: true`, and `projectIdFromKey` matching your GCP project ID. If `hasKey` is false, the env var is missing or invalid.
+2. **OCR:** `POST /api/ocr` with body `{ "base64": "<raw base64 string>", "mimeType": "image/jpeg" }` (or `image/png`, `image/webp`, `application/pdf`) returns `{ "text": "...", "pages"?: number }`. On error: `{ "error": "OCR failed", "details": "..." }`.
+
+The frontend uses a single OCR client (`src/lib/ocrClient.ts`) that calls `/api/ocr`. On Vercel, `/api/ocr` is served by the same origin. For **local dev** (Vite only, no Vercel dev), set `VITE_OCR_API_ORIGIN` in `.env` to your deployed Vercel URL (e.g. `https://your-app.vercel.app`) so OCR requests go to the deployed API.
 
 ## How can I deploy this project?
 
