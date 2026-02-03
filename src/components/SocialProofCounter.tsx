@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const BASE_COUNT = 2450;
+const BASE_COUNT = 8746;
 const ANIMATION_DURATION = 2000; // 2 seconds
 
 // Translations for the counter section
