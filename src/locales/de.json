@@ -1371,7 +1371,7 @@
       "countriesTitle": "Unterstützte Länder",
       "countriesSubtitle": "Speziell angepasst an die rechtlichen Anforderungen in 11 Ländern weltweit:",
       "certifications": { "gdpr": "DSGVO" },
-      "countries": { "us": "USA", "de": "Deutschland", "at": "Österreich", "ch": "Schweiz", "it": "Italien", "fr": "Frankreich", "es": "Spanien", "uk": "Vereinigtes Königreich", "ua": "Ukraine", "tr": "Türkei", "latam": "Lateinamerika" },
+      "countries": { "us": "USA", "de": "Deutschland", "at": "Österreich", "ch": "Schweiz", "it": "Italien", "fr": "Frankreich", "es": "Spanien", "uk": "UK", "ua": "Ukraine", "tr": "Türkei", "latam": "Lateinamerika" },
       "features": [
         { "title": "DSGVO-konform", "description": "Vollständig konform mit der europäischen Datenschutz-Grundverordnung." },
         { "title": "SSL-Verschlüsselung", "description": "256-bit SSL-Verschlüsselung für alle Datenübertragungen." },

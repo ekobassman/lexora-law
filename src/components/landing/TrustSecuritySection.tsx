@@ -69,13 +69,13 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
             return (
               <div
                 key={index}
-                className="text-center p-6 rounded-xl border border-amber-500/30 bg-slate-900/60 hover:border-amber-500/50 transition-all"
+                className="text-center p-6 rounded-xl border border-amber-500/30 bg-slate-900/60 hover:border-amber-500/50 transition-all overflow-hidden min-h-0"
               >
                 <div className="h-14 w-14 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 [&_svg]:text-amber-400">
                   <Icon className="h-7 w-7 text-amber-400 shrink-0" strokeWidth={2} />
                 </div>
-                <h3 className="font-semibold text-ivory mb-2">{feature.title}</h3>
-                <p className="text-sm text-ivory/60">{feature.description}</p>
+                <h3 className="font-semibold text-ivory mb-2 line-clamp-2 break-words">{feature.title}</h3>
+                <p className="text-sm text-ivory/60 line-clamp-3 break-words">{feature.description}</p>
               </div>
             );
           })}
@@ -97,7 +97,7 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
           </div>
         </div>
 
-        {/* Supported Countries */}
+        {/* Supported Countries - 3 cols desktop (3+3+3+2), no orphan; clamp long names */}
         <div className="border-t border-gold/10 pt-12">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
@@ -108,15 +108,16 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
               {t('landingSections.trust.countriesSubtitle')}
             </p>
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-items-center max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 max-w-4xl mx-auto justify-items-stretch">
             {countries.map((country) => (
               <div
                 key={country.code}
-                className="flex items-center gap-3 px-6 py-3 rounded-lg bg-ivory/5 border border-gold/20 hover:border-gold/40 transition-all w-full min-w-0"
+                className="flex items-center justify-center gap-3 p-4 min-h-[80px] rounded-xl bg-ivory/5 border border-gold/20 hover:border-gold/40 transition-all overflow-hidden min-w-0"
               >
-                <span className="text-3xl">{country.flag}</span>
-                <span className="font-medium text-ivory">{country.name}</span>
+                <span className="text-2xl md:text-3xl shrink-0" aria-hidden>{country.flag}</span>
+                <span className="font-medium text-ivory text-center text-sm md:text-base line-clamp-2 break-words leading-tight min-w-0 flex-1">
+                  {country.name}
+                </span>
               </div>
             ))}
           </div>
