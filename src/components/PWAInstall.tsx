@@ -33,6 +33,11 @@ export function PWAInstall() {
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [installing, setInstalling] = useState(false);
 
+  // Test: verifica che il componente sia montato
+  useEffect(() => {
+    console.log('PWAInstall mounted');
+  }, []);
+
   // Pulizia snooze quando l'utente installa l'app
   useEffect(() => {
     if (isInstalled) {
@@ -80,12 +85,33 @@ export function PWAInstall() {
     localStorage.setItem(SNOOZE_KEY, String(Date.now()));
   };
 
-  if (isInstalled) return null;
+  const testBanner = (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'red',
+        color: 'white',
+        padding: '10px',
+        zIndex: 9999,
+      }}
+    >
+      TEST PWA COMPONENT
+    </div>
+  );
+
+  if (isInstalled) {
+    return <>{testBanner}</>;
+  }
 
   // Android: bottom banner
   if (showAndroidBanner) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[#0f172a] border-t border-white/20 shadow-lg">
+      <>
+        {testBanner}
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-[#0f172a] border-t border-white/20 shadow-lg" style={{ marginBottom: '48px' }}>
         <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/40 overflow-hidden">
             <img
@@ -127,12 +153,15 @@ export function PWAInstall() {
           </button>
         </div>
       </div>
+      </>
     );
   }
 
   // iOS: modal guida
   return (
-    <Dialog open={showIOSModal} onOpenChange={setShowIOSModal}>
+    <>
+      {testBanner}
+      <Dialog open={showIOSModal} onOpenChange={setShowIOSModal}>
       <DialogContent className="bg-white border-gray-200 max-w-md">
         <DialogHeader>
           <DialogTitle className="text-[#0f172a] font-display">
@@ -180,5 +209,6 @@ export function PWAInstall() {
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
