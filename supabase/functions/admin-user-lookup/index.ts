@@ -116,8 +116,8 @@ serve(async (req) => {
     console.info("[admin-user-lookup] CALLER_UID", caller_uid);
 
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    const callerEmail = userData.user.email ?? "";
-    if (!ADMIN_EMAILS.includes(callerEmail)) {
+    const callerEmail = (userData.user.email ?? "").toLowerCase();
+    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail)) {
       return jsonResponse({ error: "ADMIN_ONLY" }, 403);
     }
 

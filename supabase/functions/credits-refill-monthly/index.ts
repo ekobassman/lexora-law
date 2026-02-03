@@ -33,7 +33,7 @@ serve(async (req) => {
       
       if (user) {
         const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-        isAuthorized = ADMIN_EMAILS.includes(user.email ?? "");
+        isAuthorized = ADMIN_EMAILS.some((e) => e.toLowerCase() === (user.email ?? "").toLowerCase());
       }
     }
 

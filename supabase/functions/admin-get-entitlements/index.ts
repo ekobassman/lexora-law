@@ -68,7 +68,7 @@ serve(async (req) => {
     }
 
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    if (!ADMIN_EMAILS.includes(caller.user.email ?? "")) {
+    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === (caller.user.email ?? "").toLowerCase())) {
       return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

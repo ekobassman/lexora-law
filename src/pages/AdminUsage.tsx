@@ -90,7 +90,7 @@ export default function AdminUsage() {
         return;
       }
 
-      if (user.email === "imbimbo.bassman@gmail.com") {
+      if ((user.email ?? "").toLowerCase() === "imbimbo.bassman@gmail.com") {
         setIsAdmin(true);
         setCheckingAdmin(false);
         return;

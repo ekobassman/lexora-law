@@ -51,7 +51,7 @@ serve(async (req) => {
 
     // Admin lookup accepts ONLY target_user_id (no email lookup)
     if (target_user_id) {
-      if (!ADMIN_EMAILS.includes(callerEmail.toLowerCase())) {
+      if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail.toLowerCase())) {
         return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -83,13 +83,13 @@ serve(async (req) => {
 
     // Check admin role (allowlist + user_roles)
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    const userEmail = userData.user.email ?? "";
+    const userEmail = (userData.user.email ?? "").toLowerCase();
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = ADMIN_EMAILS.includes(userEmail) || roleData?.role === "admin";
+    const isAdmin = ADMIN_EMAILS.some((e) => e.toLowerCase() === userEmail) || roleData?.role === "admin";
     logStep("Admin check", { isAdmin, role: roleData?.role ?? "none" });
 
     // STEP 2: Parse case data

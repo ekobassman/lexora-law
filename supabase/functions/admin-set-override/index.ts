@@ -108,7 +108,7 @@ serve(async (req) => {
     const actorEmail = userData.user.email ?? "";
 
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    if (!ADMIN_EMAILS.includes(actorEmail)) {
+    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === actorEmail.toLowerCase())) {
       console.warn("[admin-set-override] Forbidden: not admin", { actorUserId, actorEmail });
       return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,

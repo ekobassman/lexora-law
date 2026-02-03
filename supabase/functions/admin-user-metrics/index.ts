@@ -19,6 +19,8 @@ function checkGeoBlock(req: Request): { blocked: boolean; countryCode: string | 
 }
 
 const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+const isAdminEmail = (email: string | undefined) =>
+  ADMIN_EMAILS.some((e) => e.toLowerCase() === (email ?? "").toLowerCase());
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -61,7 +63,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!ADMIN_EMAILS.includes(user.email ?? "")) {
+    if (!isAdminEmail(user.email)) {
       return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

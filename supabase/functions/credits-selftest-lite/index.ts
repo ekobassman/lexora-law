@@ -50,8 +50,8 @@ serve(async (req) => {
         });
       }
 
-      const callerEmail = user.email ?? "";
-      const isCallerAdmin = ADMIN_EMAILS.includes(callerEmail.toLowerCase());
+      const callerEmail = (user.email ?? "").toLowerCase();
+      const isCallerAdmin = ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail);
       
       if (!isCallerAdmin) {
         return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
