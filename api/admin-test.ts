@@ -1,27 +1,24 @@
-import { requireAdmin, HttpError } from "./_lib/requireAdmin";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { requireAdminNode } from "./_lib/requireAdmin";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
-};
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "authorization, content-type");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
 
-export async function GET(request: Request) {
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "METHOD_NOT_ALLOWED" });
+
   try {
-    const { user } = await requireAdmin(request);
-    return new Response(
-      JSON.stringify({ ok: true, email: user.email, message: "Admin access granted" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    if (err instanceof HttpError) {
-      return new Response(
-        JSON.stringify({ error: err.message }),
-        { status: err.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(503).json({ error: "ENV_MISSING" });
     }
-    return new Response(
-      JSON.stringify({ error: "INTERNAL_ERROR" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+
+    const { user } = await requireAdminNode(req);
+    return res.status(200).json({ ok: true, email: user.email, message: "Admin access granted" });
+  } catch (e: any) {
+    const status = e?.status || 500;
+    const msg = e?.message || "SERVER_ERROR";
+    return res.status(status).json({ error: msg });
   }
 }
