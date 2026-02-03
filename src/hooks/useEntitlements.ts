@@ -94,17 +94,17 @@ export function useEntitlements(): UseEntitlementsReturn {
 
   const isPaid = entitlements.plan !== "free" && (entitlements.status === "active" || entitlements.status === "trialing");
 
-  // Derive isAdmin from entitlements debug info (server-side role verification)
+  // Derive isAdmin: role from API (primary) or debug.is_admin (entitlements edge function)
   const computeIsAdmin = useCallback(() => {
-    return entitlements?.debug?.is_admin === true;
-  }, [entitlements?.debug?.is_admin]);
+    return entitlements?.role === 'admin' || entitlements?.debug?.is_admin === true;
+  }, [entitlements?.role, entitlements?.debug?.is_admin]);
 
   const isAdmin = computeIsAdmin();
   
   // Log admin status changes for debugging
   useEffect(() => {
-    console.log('[useEntitlements] isAdmin computed:', isAdmin, 'from debug:', entitlements?.debug?.is_admin);
-  }, [isAdmin, entitlements?.debug?.is_admin]);
+    console.log('[useEntitlements] isAdmin:', isAdmin, 'role:', entitlements?.role, 'debug.is_admin:', entitlements?.debug?.is_admin);
+  }, [isAdmin, entitlements?.role, entitlements?.debug?.is_admin]);
 
   return {
     entitlements,

@@ -228,15 +228,16 @@ serve(async (req) => {
       .eq("id", userId)
       .maybeSingle();
 
-    // Check admin role (allowlist + user_roles)
+    // Check admin role (allowlist + user_roles). Allowlist is case-insensitive.
     const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
+    const emailLower = (userEmail ?? "").toLowerCase();
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = ADMIN_EMAILS.includes(userEmail ?? "") || roleData?.role === "admin";
-    logStep("Admin check", { isAdmin, role: roleData?.role ?? "none" });
+    const isAdmin = ADMIN_EMAILS.some((e) => e.toLowerCase() === emailLower) || roleData?.role === "admin";
+    logStep("Admin check", { isAdmin, role: roleData?.role ?? "none", email: userEmail });
 
     // PRIORITY 1: Check for active admin override FIRST
     const { data: override, error: overrideError } = await supabase

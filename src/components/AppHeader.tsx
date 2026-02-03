@@ -77,6 +77,16 @@ export function AppHeader() {
             </div>
           )}
 
+          {/* Admin Panel - visible in header when admin */}
+          {user && isAdmin && (
+            <Link to="/admin">
+              <Button variant="ghost" size="sm" className="gap-1 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 px-2">
+                <Shield className="h-4 w-4" />
+                <span className="hidden lg:inline text-xs font-medium">{t('header.adminPanel') || 'Admin'}</span>
+              </Button>
+            </Link>
+          )}
+
           {/* Support Link */}
           <Link to="/support">
             <Button variant="ghost" size="sm" className="gap-1 text-ivory/70 hover:text-gold hover:bg-transparent px-2">
