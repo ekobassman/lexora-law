@@ -486,8 +486,11 @@ Dai una risposta breve e utile: come usare Lexora, come rispondere a lettere uff
       });
 
       if (!openaiResult.ok) {
+        const userMsg = openaiResult.error === "AI service not configured"
+          ? "AI is temporarily unavailable. (Service not configured.)"
+          : openaiResult.error || "AI temporarily unavailable";
         return new Response(
-          JSON.stringify({ ok: false, error: openaiResult.error || "AI error" }),
+          JSON.stringify({ ok: false, error: "AI_PROVIDER_ERROR", message: userMsg }),
           { status: openaiResult.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

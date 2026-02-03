@@ -29,7 +29,11 @@ export function AppHeader() {
   const navigate = useNavigate();
   const logout = useLogout();
 
-  const planLabel = entitlementsLoading ? null : (entitlements.plan || 'free').toUpperCase();
+  const planLabel = entitlementsLoading
+    ? null
+    : isAdmin
+      ? 'ADMIN'
+      : (entitlements.plan || 'free').toUpperCase();
   const planSource = (entitlements as any)?.plan_source || 'unknown';
 
   return (
@@ -101,7 +105,7 @@ export function AppHeader() {
                     <p className="text-xs text-navy/60">
                       Plan: <span className="font-bold">{planLabel}</span>
                       <span className="ml-1 text-[10px]">
-                        ({planSource === 'override' ? '🛡️ override' : planSource === 'stripe' ? '💳 stripe' : '🆓 free'})
+                        ({isAdmin ? '🛡️ admin' : planSource === 'override' ? '🛡️ override' : planSource === 'stripe' ? '💳 stripe' : '🆓 free'})
                       </span>
                     </p>
                   )}
