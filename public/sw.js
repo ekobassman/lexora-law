@@ -1,5 +1,5 @@
-/* Lexora PWA Service Worker - Stale-while-revalidate static, Network-first API */
-const CACHE_NAME = 'lexora-v1';
+/* Lexora PWA Service Worker - Stale-while-revalidate static, Network-first API (post-migrazione Vercel) */
+const CACHE_NAME = 'lexora-v2';
 const PRECACHE = ['/', '/index.html', '/manifest.json', '/favicon.ico', '/offline.html'];
 const OFFLINE_URL = '/offline.html';
 
@@ -19,10 +19,11 @@ self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
+// Activate: clear ALL old caches (inclusi vecchi domini/Lovable), poi claim
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
