@@ -76,3 +76,4 @@ export async function searchLegalInfo(
     return [];
   }
 }
+// Web search service for legal sources
