@@ -3,32 +3,29 @@ export const config = { runtime: "nodejs" };
 import { requireAdmin, HttpError } from "../_lib/requireAdmin";
 import { supabaseServer } from "../_lib/supabaseServer";
 
-export default async function handler(req: Request) {
-  // CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+export async function POST(request: Request) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: "ENV_MISSING" }), {
+      status: 503,
+      headers: { "content-type": "application/json", ...corsHeaders },
     });
   }
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
-      status: 405,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
   try {
     // 1) ADMIN CHECK (NON BYPASSABILE)
-    await requireAdmin(req);
+    await requireAdmin(request);
 
     // 2) PARSE + VALIDATE PAYLOAD
-    const body = await req.json();
+    const body = await request.json();
 
     const {
       user_id,
@@ -65,22 +62,15 @@ export default async function handler(req: Request) {
       JSON.stringify({ ok: true, updated: update }),
       {
         status: 200,
-        headers: {
-          "content-type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        headers: { "content-type": "application/json", ...corsHeaders },
       }
     );
-
   } catch (e: any) {
     const status = e?.status || 500;
     const msg = e?.message || "SERVER_ERROR";
     return new Response(JSON.stringify({ error: msg }), {
       status,
-      headers: {
-        "content-type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { "content-type": "application/json", ...corsHeaders },
     });
   }
 }
