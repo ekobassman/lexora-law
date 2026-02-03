@@ -396,11 +396,14 @@ export function DemoChatSection() {
   const { user } = useAuth();
 
   /** Demo mode: no auth, no backend, no Supabase, no rate limit – chat always works */
-  const demoMode = Boolean(
-    !user ||
-    location.pathname.includes('/demo') ||
-    import.meta.env.VITE_DEMO_MODE === 'true'
-  );
+  const qsDemo = new URLSearchParams(location.search).get('demo') === '1';
+  const envDemo = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_DEMO_MODE === true;
+  const pathDemo = location.pathname.includes('/demo');
+  const demoMode = Boolean(qsDemo || pathDemo || envDemo || !user);
+
+  /** Normalizza lingua per mock (evita undefined) */
+  const normalizeLang = useCallback((l?: string) => (l || 'en').slice(0, 2).toUpperCase(), []);
+  const lang = normalizeLang(language);
   
   const { isPaid, isUnlimited } = usePlanState();
   const { isAdmin } = useEntitlements();
@@ -857,7 +860,8 @@ export function DemoChatSection() {
     }
   };
 
-  const processOCRSingle = async (file: File): Promise<string | null> => {
+  const processOCRSingle = async (file: File, isDemo?: boolean): Promise<string | null> => {
+    if (isDemo) return null; // Blocca ogni chiamata API/OCR in demo
     try {
       const base64 = await fileToBase64(file);
       const mimeType = guessMimeType(file);
@@ -895,7 +899,7 @@ export function DemoChatSection() {
       setProcessingStep('extracting');
       
       // Step 2: Extracting text via OCR
-      const result = await processOCRSingle(file);
+      const result = await processOCRSingle(file, demoMode);
       
       if (result) {
         setProcessingStep('analyzing');
@@ -914,14 +918,6 @@ export function DemoChatSection() {
 
   const sendMessage = useCallback(async (messageContent: string, attachmentType?: 'image' | 'pdf' | null) => {
     if (isLoading || !messageContent.trim()) return;
-    
-    // Check terms before allowing interaction (no-op in demo mode)
-    if (!checkTermsBeforeInteraction()) return;
-
-    if (!demoMode && isLimitReached) {
-      setShowUpgradePopup(true);
-      return;
-    }
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -930,20 +926,31 @@ export function DemoChatSection() {
       attachmentType,
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    // ——— DEMO MODE: no auth, no backend, no Supabase – always return mock reply ———
+    // ——— DEMO MODE: short-circuit PRIMA di terms/limits/API – sempre mock, mai "temporary error" ———
     if (demoMode) {
-      const mockReply = DEMO_MOCK_REPLY_BY_LANG[language] || DEMO_MOCK_REPLY_FALLBACK;
+      setMessages(prev => [...prev, userMessage]);
+      setInput('');
+      setIsLoading(true);
+      const reply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
       setTimeout(() => {
-        setMessages(prev => [...prev, { role: 'assistant', content: mockReply, timestamp: new Date() }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }]);
         setIsLoading(false);
         scrollToBottom();
       }, 80);
       return;
     }
+
+    // Check terms before allowing interaction
+    if (!checkTermsBeforeInteraction()) return;
+
+    if (isLimitReached) {
+      setShowUpgradePopup(true);
+      return;
+    }
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
 
     // Guardrail: block non-legal/administrative queries before sending (only when not demo)
     if (!isLegalAdministrativeQuery(messageContent.trim())) {
@@ -1004,6 +1011,14 @@ export function DemoChatSection() {
     }
 
     try {
+      // Hard guard: in demo non chiamare mai API/Edge/Supabase
+      if (demoMode) {
+        const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
+        scrollToBottom();
+        return;
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
         {
@@ -1025,8 +1040,14 @@ export function DemoChatSection() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.ok) {
-        toast.error(txt.errorToast);
-        setMessages(prev => prev.slice(0, -1));
+        if (demoMode) {
+          const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
+          setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
+          scrollToBottom();
+        } else {
+          toast.error(txt.errorToast);
+          setMessages(prev => prev.slice(0, -1));
+        }
         return;
       }
 
@@ -1101,8 +1122,8 @@ export function DemoChatSection() {
 
       setTimeout(scrollToBottom, 100);
     } catch {
-      // Fallback di sicurezza: non rompere la UI, restituire sempre risposta demo mock
-      const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[language] || DEMO_MOCK_REPLY_FALLBACK;
+      // Fallback: mai "temporary error" in demo; sempre append mock e non rompere la UI
+      const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
       setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
       scrollToBottom();
     } finally {
@@ -1112,6 +1133,7 @@ export function DemoChatSection() {
     isLoading,
     isLimitReached,
     demoMode,
+    lang,
     messages,
     aiContextStart,
     draftText,
@@ -1218,7 +1240,7 @@ export function DemoChatSection() {
       // Step 2: Extracting text from each file
       for (const file of validFiles) {
         const isPDF = isLikelyPdf(file);
-        const extractedText = await processOCRSingle(file);
+        const extractedText = await processOCRSingle(file, demoMode);
         
         if (extractedText) {
           extractedParts.push({ name: file.name, text: extractedText, isPDF });
@@ -1419,7 +1441,7 @@ export function DemoChatSection() {
 
             const extractedParts: { name: string; text: string }[] = [];
             for (const file of validFiles) {
-              const extractedText = await processOCRSingle(file);
+              const extractedText = await processOCRSingle(file, demoMode);
               if (extractedText) {
                 extractedParts.push({ name: file.name, text: extractedText });
               } else {
@@ -1481,7 +1503,7 @@ export function DemoChatSection() {
         </div>
         {demoMode && (
           <div className="text-center py-1.5 px-2 text-xs font-medium text-muted-foreground bg-muted/50 rounded-b-md border-b border-border/50">
-            {DEMO_BADGE_BY_LANG[language] || DEMO_BADGE_FALLBACK}
+            {DEMO_BADGE_BY_LANG[lang] || DEMO_BADGE_FALLBACK}
           </div>
         )}
 
