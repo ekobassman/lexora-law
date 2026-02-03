@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, ChangeEvent, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -67,6 +67,38 @@ const DEMO_BUFFER_KEY = 'lexora_demo_chat_buffer_v1';
 const DEMO_AI_CONTEXT_KEY = 'lexora_demo_ai_context_start_v1';
 // Key to migrate demo chat to dashboard after registration
 export const DEMO_PENDING_MIGRATION_KEY = 'lexora_demo_pending_migration_v1';
+
+/** Mock AI reply in demo mode – no backend, no auth, works in all UI languages */
+const DEMO_MOCK_REPLY_BY_LANG: Record<string, string> = {
+  IT: "Questa è una demo di Lexora. Nella versione completa puoi caricare una lettera ufficiale, ricevere un'analisi dei rischi e una risposta pronta da inviare.",
+  EN: "This is a Lexora demo. In the full version you can upload an official letter, get a risk analysis and a ready-to-send response.",
+  DE: "Dies ist eine Lexora-Demo. In der Vollversion können Sie ein offizielles Schreiben hochladen, eine Risikoanalyse und eine versandfertige Antwort erhalten.",
+  FR: "Ceci est une démo Lexora. Dans la version complète vous pouvez télécharger une lettre officielle, recevoir une analyse des risques et une réponse prête à envoyer.",
+  ES: "Esta es una demo de Lexora. En la versión completa puedes subir una carta oficial, recibir un análisis de riesgos y una respuesta lista para enviar.",
+  PL: "To jest demo Lexora. W pełnej wersji możesz przesłać oficjalny list, uzyskać analizę ryzyka i gotową odpowiedź.",
+  RO: "Aceasta este o demonstrație Lexora. În versiunea completă poți încărca o scrisoare oficială, primi o analiză a riscurilor și un răspuns gata de trimis.",
+  TR: "Bu bir Lexora demosudur. Tam sürümde resmi bir mektup yükleyebilir, risk analizi ve gönderilmeye hazır yanıt alabilirsiniz.",
+  AR: "هذا عرض تجريبي لـ Lexora. في النسخة الكاملة يمكنك تحميل خطاب رسمي والحصول على تحليل للمخاطر ورد جاهز للإرسال.",
+  UK: "Це демо Lexora. У повній версії ви можете завантажити офіційний лист, отримати аналіз ризикіv та готову відповідь.",
+  RU: "Это демо Lexora. В полной версии вы можете загрузить официальное письмо, получить анализ рисков и готовый ответ.",
+};
+const DEMO_MOCK_REPLY_FALLBACK = DEMO_MOCK_REPLY_BY_LANG.EN;
+
+/** Badge text: "Demo gratuita – nessun login richiesto" in all UI languages */
+const DEMO_BADGE_BY_LANG: Record<string, string> = {
+  IT: "Demo gratuita – nessun login richiesto",
+  EN: "Free demo – no login required",
+  DE: "Kostenlose Demo – keine Anmeldung",
+  FR: "Démo gratuite – pas de connexion",
+  ES: "Demo gratuita – sin registro",
+  PL: "Darmowe demo – bez logowania",
+  RO: "Demo gratuit – fără autentificare",
+  TR: "Ücretsiz demo – giriş gerekmez",
+  AR: "عرض تجريبي مجاني – لا حاجة لتسجيل الدخول",
+  UK: "Безкоштовна демо – без входу",
+  RU: "Бесплатная демо – без входа",
+};
+const DEMO_BADGE_FALLBACK = DEMO_BADGE_BY_LANG.EN;
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
@@ -360,25 +392,34 @@ function cleanLetterTags(text: string): string {
 export function DemoChatSection() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  /** Demo mode: no auth, no backend, no Supabase, no rate limit – chat always works */
+  const demoMode = Boolean(
+    !user ||
+    location.pathname.includes('/demo') ||
+    import.meta.env.VITE_DEMO_MODE === 'true'
+  );
   
   const { isPaid, isUnlimited } = usePlanState();
   const { isAdmin } = useEntitlements();
 
-  // Anonymous terms acceptance - only for non-logged-in users
+  // Anonymous terms acceptance - only for non-logged-in users (disabled in demo mode)
   const { needsAcceptance: anonNeedsTerms, acceptTerms: acceptAnonTerms } = useAnonymousTermsCheck();
   
   // Track if user attempted to interact - only show terms dialog on interaction, not on page load
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   
-  // Helper to check terms before interaction
+  // Helper to check terms before interaction – never block in demo mode
   const checkTermsBeforeInteraction = useCallback(() => {
+    if (demoMode) return true; // No auth/terms check in demo
     if (!user && anonNeedsTerms) {
       setShowTermsDialog(true);
       return false; // Block interaction
     }
     return true; // Allow interaction
-  }, [user, anonNeedsTerms]);
+  }, [demoMode, user, anonNeedsTerms]);
   
   // Handle terms acceptance
   const handleTermsAccept = useCallback(() => {
@@ -760,8 +801,8 @@ export function DemoChatSection() {
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
   // Limit is reached ONLY if: limit exceeded AND a document was already generated
-  // This ensures users can always complete at least one document before being blocked
-  const isLimitReached = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft;
+  // In demo mode: no limit (chat always works)
+  const isLimitReached = demoMode ? false : (!shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft);
   const showDisclaimer = sessionCount >= DISCLAIMER_TRIGGER;
   const trimmedInput = input.trim();
   
@@ -874,21 +915,13 @@ export function DemoChatSection() {
   const sendMessage = useCallback(async (messageContent: string, attachmentType?: 'image' | 'pdf' | null) => {
     if (isLoading || !messageContent.trim()) return;
     
-    // Guardrail: block non-legal/administrative queries before sending
-    if (!isLegalAdministrativeQuery(messageContent.trim())) {
-      toast.error(txt.outOfScopeRefusal);
-      return;
-    }
-    
-    // Check terms before allowing interaction
+    // Check terms before allowing interaction (no-op in demo mode)
     if (!checkTermsBeforeInteraction()) return;
 
-    if (isLimitReached) {
+    if (!demoMode && isLimitReached) {
       setShowUpgradePopup(true);
       return;
     }
-
-    const isFirstMessage = messages.length === 0;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -900,6 +933,27 @@ export function DemoChatSection() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    // ——— DEMO MODE: no auth, no backend, no Supabase – always return mock reply ———
+    if (demoMode) {
+      const mockReply = DEMO_MOCK_REPLY_BY_LANG[language] || DEMO_MOCK_REPLY_FALLBACK;
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'assistant', content: mockReply, timestamp: new Date() }]);
+        setIsLoading(false);
+        scrollToBottom();
+      }, 80);
+      return;
+    }
+
+    // Guardrail: block non-legal/administrative queries before sending (only when not demo)
+    if (!isLegalAdministrativeQuery(messageContent.trim())) {
+      toast.error(txt.outOfScopeRefusal);
+      setMessages(prev => prev.slice(0, -1));
+      setIsLoading(false);
+      return;
+    }
+
+    const isFirstMessage = messages.length === 0;
 
     // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
     let legalSearchContext: LegalSearchResult[] = [];
@@ -1047,14 +1101,17 @@ export function DemoChatSection() {
 
       setTimeout(scrollToBottom, 100);
     } catch {
-      toast.error(txt.errorToast);
-      setMessages(prev => prev.slice(0, -1));
+      // Fallback di sicurezza: non rompere la UI, restituire sempre risposta demo mock
+      const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[language] || DEMO_MOCK_REPLY_FALLBACK;
+      setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
+      scrollToBottom();
     } finally {
       setIsLoading(false);
     }
   }, [
     isLoading,
     isLimitReached,
+    demoMode,
     messages,
     aiContextStart,
     draftText,
@@ -1064,6 +1121,7 @@ export function DemoChatSection() {
     letterGeneratedByLang,
     scrollToBottom,
     isMobile,
+    checkTermsBeforeInteraction,
   ]);
 
   const handleSend = () => {
@@ -1115,6 +1173,22 @@ export function DemoChatSection() {
     if (selected.length === 0) return;
 
     if (fileInputRef.current) fileInputRef.current.value = '';
+
+    // Demo mode: no backend/OCR – simulate steps and send mock reply
+    if (demoMode) {
+      setIsProcessingFile(true);
+      setProcessingStep('uploading');
+      await new Promise(r => setTimeout(r, 300));
+      setProcessingStep('extracting');
+      await new Promise(r => setTimeout(r, 400));
+      setProcessingStep('analyzing');
+      await new Promise(r => setTimeout(r, 400));
+      setProcessingStep('idle');
+      setIsProcessingFile(false);
+      const uploadPlaceholder = language === 'IT' ? '[Documento caricato in demo]' : '[Document uploaded in demo]';
+      await sendMessage(uploadPlaceholder);
+      return;
+    }
 
     const validFiles = selected.filter((file) => {
       if (isHeicLike(file)) {
@@ -1405,6 +1479,11 @@ export function DemoChatSection() {
           <span className="demo-title">{txt.sectionTitle}</span>
           <span className="demo-fleur">❧</span>
         </div>
+        {demoMode && (
+          <div className="text-center py-1.5 px-2 text-xs font-medium text-muted-foreground bg-muted/50 rounded-b-md border-b border-border/50">
+            {DEMO_BADGE_BY_LANG[language] || DEMO_BADGE_FALLBACK}
+          </div>
+        )}
 
         {/* Inner content area (parchment look) */}
         <div className="demo-inner-content">
@@ -1829,7 +1908,7 @@ export function DemoChatSection() {
       {/* Anonymous Terms Acceptance Dialog - only shown when user attempts to interact */}
       {!user && (
         <AnonymousTermsDialog
-          open={showTermsDialog}
+          open={showTermsDialog && !demoMode}
           onAccept={handleTermsAccept}
         />
       )}
