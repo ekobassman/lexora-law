@@ -413,6 +413,7 @@ export function DemoChatSection() {
   // This prevents action buttons from being enabled when draftText is restored from localStorage
   // but no document was actually generated in this conversation
   const [generatedInSession, setGeneratedInSession] = useState<boolean>(false);
+  const hasIncrementedCounterThisSession = useRef(false);
   const [showSaveDocumentPWA, setShowSaveDocumentPWA] = useState(false);
   const isMobile = useIsMobile();
 
@@ -997,14 +998,17 @@ export function DemoChatSection() {
         setMessages((prev) => [...prev, confirmation]);
         toast.success(confirmation.content);
         
-        // Increment global document counter (fire and forget)
-        (async () => {
-          try {
-            await supabase.rpc('increment_documents_processed');
-          } catch {
-            // Silently ignore errors - counter is not critical
-          }
-        })();
+        // Increment global document counter once per session (avoid spam from multiple drafts)
+        if (!hasIncrementedCounterThisSession.current) {
+          hasIncrementedCounterThisSession.current = true;
+          (async () => {
+            try {
+              await supabase.rpc('increment_documents_processed');
+            } catch {
+              // Silently ignore errors - counter is not critical
+            }
+          })();
+        }
       }
 
       const nextCount = incrementSessionCount();
