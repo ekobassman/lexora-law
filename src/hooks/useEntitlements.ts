@@ -94,10 +94,13 @@ export function useEntitlements(): UseEntitlementsReturn {
 
   const isPaid = entitlements.plan !== "free" && (entitlements.status === "active" || entitlements.status === "trialing");
 
-  // Derive isAdmin: role from API (primary) or debug.is_admin (entitlements edge function)
+  // Derive isAdmin: API role/debug first, then fallback by email (so UI shows Admin even if DB/API not synced yet)
+  const ADMIN_EMAIL = "imbimbo.bassman@gmail.com";
   const computeIsAdmin = useCallback(() => {
-    return entitlements?.role === 'admin' || entitlements?.debug?.is_admin === true;
-  }, [entitlements?.role, entitlements?.debug?.is_admin]);
+    if (entitlements?.role === 'admin' || entitlements?.debug?.is_admin === true) return true;
+    const email = (session?.user?.email ?? "").toLowerCase();
+    return email === ADMIN_EMAIL.toLowerCase();
+  }, [entitlements?.role, entitlements?.debug?.is_admin, session?.user?.email]);
 
   const isAdmin = computeIsAdmin();
   
