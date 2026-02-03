@@ -11,6 +11,16 @@ import {
 import { Share2, Plus, Check, X } from 'lucide-react';
 
 const SHOW_IOS_EVENT = 'pwa-install-show-ios-guide';
+const SNOOZE_KEY = 'pwa-snooze-last-dismissed';
+const SNOOZE_MS = 24 * 60 * 60 * 1000; // 24 ore
+
+function isSnoozeActive(): boolean {
+  const raw = localStorage.getItem(SNOOZE_KEY);
+  if (!raw) return false;
+  const last = parseInt(raw, 10);
+  if (Number.isNaN(last)) return false;
+  return Date.now() - last < SNOOZE_MS;
+}
 
 export function showIOSInstallGuide() {
   window.dispatchEvent(new CustomEvent(SHOW_IOS_EVENT));
@@ -23,8 +33,16 @@ export function PWAInstall() {
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [installing, setInstalling] = useState(false);
 
+  // Pulizia snooze quando l'utente installa l'app
+  useEffect(() => {
+    if (isInstalled) {
+      localStorage.removeItem(SNOOZE_KEY);
+    }
+  }, [isInstalled]);
+
   useEffect(() => {
     if (isInstalled) return;
+    if (isSnoozeActive()) return;
 
     if (isIOS) {
       const onShow = () => setShowIOSModal(true);
@@ -54,10 +72,12 @@ export function PWAInstall() {
 
   const handleAndroidDismiss = () => {
     setShowAndroidBanner(false);
+    localStorage.setItem(SNOOZE_KEY, String(Date.now()));
   };
 
   const handleIOSDismiss = () => {
     setShowIOSModal(false);
+    localStorage.setItem(SNOOZE_KEY, String(Date.now()));
   };
 
   if (isInstalled) return null;
