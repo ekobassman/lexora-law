@@ -44,6 +44,7 @@ import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -868,6 +869,12 @@ export function DemoChatSection() {
 
   const sendMessage = useCallback(async (messageContent: string, attachmentType?: 'image' | 'pdf' | null) => {
     if (isLoading || !messageContent.trim()) return;
+    
+    // Guardrail: block non-legal/administrative queries before sending
+    if (!isLegalAdministrativeQuery(messageContent.trim())) {
+      toast.error(txt.outOfScopeRefusal);
+      return;
+    }
     
     // Check terms before allowing interaction
     if (!checkTermsBeforeInteraction()) return;

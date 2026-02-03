@@ -559,6 +559,7 @@
     "modifyButton": "Modify Draft",
     "send": "Send",
     "thinking": "Thinking...",
+    "outOfScopeRefusal": "I'm sorry, I can only assist with legal and administrative matters. I can help with contracts, formal letters, legal advice or bureaucratic procedures. Do you need help with any of these?",
     "error": "Error sending message",
     "welcome": "Hello! How can I help you with this letter?",
     "regenerate": "Regenerate response",

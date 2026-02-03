@@ -558,6 +558,7 @@
     "modifyButton": "Entwurf anpassen",
     "send": "Senden",
     "thinking": "Denke nach...",
+    "outOfScopeRefusal": "Es tut mir leid, ich kann nur bei rechtlichen und administrativen Angelegenheiten helfen. Ich kann Sie bei Verträgen, formellen Schreiben, Rechtsberatung oder bürokratischen Verfahren unterstützen. Benötigen Sie Hilfe zu einem dieser Themen?",
     "error": "Fehler beim Senden der Nachricht",
     "welcome": "Hallo! Wie kann ich Ihnen bei diesem Brief helfen?",
     "regenerate": "Antwort neu generieren",

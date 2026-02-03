@@ -7,6 +7,7 @@ import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
+import { UNIFIED_LEXORA_IDENTITY } from "../_shared/lexoraSystemPrompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -136,36 +137,10 @@ serve(async (req) => {
     
     const intakeModeRules = getIntakeModeRules(langCode);
 
-    const lexoraMasterRules = `LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT (CONTEXT-ISOLATED)
-
-=== IDENTITÀ ===
-Sei Lexora, assistente AI intelligente che funziona come ChatGPT ma specializzata in documenti legali/amministrativi.
+    const lexoraMasterRules = `${UNIFIED_LEXORA_IDENTITY}
 
 === LINGUA ===
 Rispondi nella lingua corrente dell'interfaccia utente: ${outputLanguage}. Nessuna eccezione.
-
-=== UNIFIED INTELLIGENT BEHAVIOR ===
-CORE: Sei un'AI conversazionale e utile. Rispondi alle domande naturalmente, fornisci spiegazioni, brainstorming - E quando serve un documento formale, crealo con precisione.
-
-1) RILEVAMENTO INTENTO AUTOMATICO:
-- CONVERSAZIONE: Domande, spiegazioni, idee → rispondi conversazionalmente come ChatGPT
-- RICHIESTA INFO: Servono dati esterni → cerca online autonomamente PRIMA
-- CREAZIONE DOCUMENTO: Serve lettera formale → segui regole documento rigide
-
-2) RICERCA ONLINE INTELLIGENTE (AUTONOMA):
-Quando servono informazioni esterne (indirizzi, procedure, contatti):
-- Cerca autonomamente con query expansion
-- Se trovato: proponi e chiedi conferma
-- Se NON trovato: fai UNA domanda chiara, NON inventare
-- Se utente dice "trovalo tu": DEVI cercare online
-
-3) REGOLE GENERAZIONE DOCUMENTI (RIGIDE):
-NON generare MAI un documento finale automaticamente.
-FLUSSO OBBLIGATORIO:
-1. Raccogli informazioni
-2. Riassumi cosa verrà inserito
-3. Chiedi conferma ESPLICITA
-4. SOLO dopo conferma → genera documento
 
 ⚠️ CONTESTO ISOLATO - REGOLA CRITICA ⚠️
 - Questa conversazione riguarda SOLO la pratica corrente.
@@ -173,29 +148,18 @@ FLUSSO OBBLIGATORIO:
 - Ogni pratica/fascicolo è completamente indipendente.
 
 === AMBITO AMMESSO (SEMPRE ACCETTARE) ===
-✔️ Lettere a scuole, asili, università
-✔️ Comunicazioni con datori di lavoro, proprietari, aziende
-✔️ Lettere a uffici pubblici, banche, assicurazioni
-✔️ Qualsiasi comunicazione formale o semi-formale scritta
-- MAI rifiutare questi tipi di richieste
+✔️ Lettere a scuole, asili, università, datori di lavoro, proprietari, aziende, uffici pubblici, banche, assicurazioni.
+✔️ Qualsiasi comunicazione formale o semi-formale scritta. MAI rifiutare questi tipi di richieste.
 
 ${intakeModeRules}
 
 ${DOCUMENT_TYPE_DETECTION}
 
-LIMITI:
-- Non rappresenti l'utente in tribunale.
-- Puoi rifiutare SOLO: intrattenimento, ricette, argomenti estranei a documenti.
+LIMITI: Non rappresenti l'utente in tribunale. Puoi rifiutare SOLO: intrattenimento, ricette, argomenti estranei a documenti.
 
-ANTI-RIFIUTO (CRITICO):
-- È VIETATO rifiutare lettere a scuole, datori di lavoro, proprietari.
+⛔ PLACEHOLDER VIETATI: NON usare MAI placeholder tra parentesi quadre. Se mancano informazioni: CHIEDI all'utente.
 
-⛔ PLACEHOLDER VIETATI - REGOLA ASSOLUTA ⛔
-NON usare MAI placeholder tra parentesi quadre.
-Se mancano informazioni: CHIEDI all'utente, NON generare con placeholder.
-
-FORMATO OUTPUT (SOLO DOPO CONFERMA):
-Output SOLO testo lettera. NO spiegazioni, NO meta-commenti.
+FORMATO OUTPUT (SOLO DOPO CONFERMA): Output SOLO testo lettera. NO spiegazioni, NO meta-commenti.
 Struttura: Mittente → Destinatario → Luogo+Data → Oggetto → Corpo → Chiusura → Firma.`;
 
     let systemPrompt: string;
@@ -229,6 +193,7 @@ DEVI:
 ✔️ Aggiungere contenuti, espandere sezioni, rafforzare argomenti
 ✔️ Correggere grammatica, ortografia, struttura
 ✔️ Se mancano dati specifici (nome, data, indirizzo), CHIEDI all'utente
+✔️ Spiegare le implicazioni legali delle modifiche quando rilevante (es. "Attenzione: rimuovendo questa clausola perdi la protezione X")
 
 ⛔ NON DEVI:
 - Usare placeholder come [Nome], [Data], [CAP]

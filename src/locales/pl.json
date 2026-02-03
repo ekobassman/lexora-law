@@ -502,6 +502,7 @@
     "modifyButton": "Modyfikuj szkic",
     "send": "Wyślij",
     "thinking": "Myślę...",
+    "outOfScopeRefusal": "Przepraszam, mogę pomagać tylko w sprawach prawnych i administracyjnych. Mogę pomóc w zakresie umów, pism formalnych, porad prawnych lub procedur urzędowych. Czy potrzebujesz pomocy w którymś z tych obszarów?",
     "error": "Błąd wysyłania wiadomości",
     "welcome": "Cześć! Jak mogę Ci pomóc z tym pismem?",
     "regenerate": "Wygeneruj ponownie odpowiedź",

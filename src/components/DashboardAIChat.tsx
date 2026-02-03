@@ -19,6 +19,7 @@ import { PlanLimitPopup } from '@/components/PlanLimitPopup';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
   AlertDialog,
@@ -542,6 +543,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     saveCase: getSafeText(t, 'dashboardChat.saveCase', 'Save case'),
     cancel: getSafeText(t, 'common.cancel', 'Cancel'),
     clearConversation: clearConversationByLang[language] || 'Clear conversation',
+    outOfScopeRefusal: getSafeText(t, 'chat.outOfScopeRefusal', 'I can only assist with legal and administrative matters. Do you need help with contracts, formal letters or bureaucratic procedures?'),
   }), [t, language]);
 
   // Check speech recognition support
@@ -895,6 +897,12 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const sendMessage = useCallback(async (messageContent?: string, attachmentType?: 'image' | 'pdf' | null) => {
     const content = messageContent || input.trim();
     if (!content || isLoading) return;
+
+    // Guardrail: block non-legal/administrative queries before sending
+    if (!isLegalAdministrativeQuery(content)) {
+      toast.error(txt.outOfScopeRefusal);
+      return;
+    }
 
     // CASE-SCOPED: Block if no case selected
     if (noCaseSelected) {

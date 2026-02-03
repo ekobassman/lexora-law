@@ -515,6 +515,7 @@
     "modifyButton": "Modifier le brouillon",
     "send": "Envoyer",
     "thinking": "Réflexion...",
+    "outOfScopeRefusal": "Je suis désolé, je ne peux vous aider qu'en matière juridique et administrative. Je peux vous assister pour les contrats, lettres formelles, conseil juridique ou démarches administratives. Avez-vous besoin d'aide sur l'un de ces sujets ?",
     "error": "Erreur lors de l'envoi du message",
     "welcome": "Bonjour ! Comment puis-je vous aider avec cette lettre ?",
     "regenerate": "Régénérer la réponse",

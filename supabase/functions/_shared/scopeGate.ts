@@ -1,17 +1,17 @@
 import { normLang, SupportedLang } from "./lang.ts";
 
 export const SCOPE_REFUSAL_MESSAGES: Record<SupportedLang, string> = {
-  IT: "Posso aiutarti solo con documenti e burocrazia (lettere, uffici, scadenze, moduli). Se hai bisogno di assistenza con un ufficio o un documento, dimmi pure!",
-  DE: "Ich kann dir nur bei Dokumenten und Behördenangelegenheiten helfen (Briefe, Ämter, Fristen, Formulare). Wenn du Hilfe bei einem Amt oder Dokument brauchst, sag mir Bescheid!",
-  EN: "I can only help with documents and bureaucratic matters (letters, offices, deadlines, forms). If you need help with an office or document, let me know!",
-  FR: "Je ne peux vous aider qu'avec les documents et les démarches administratives (lettres, bureaux, délais, formulaires). Si vous avez besoin d'aide avec un bureau ou un document, dites-le moi!",
-  ES: "Solo puedo ayudarte con documentos y trámites burocráticos (cartas, oficinas, plazos, formularios). Si necesitas ayuda con una oficina o documento, ¡dímelo!",
-  PL: "Mogę Ci pomóc tylko w sprawach dokumentów i biurokracji (listy, urzędy, terminy, formularze). Jeśli potrzebujesz pomocy z urzędem lub dokumentem, daj mi znać!",
-  RO: "Pot să te ajut doar cu documente și chestiuni birocratice (scrisori, birouri, termene, formulare). Dacă ai nevoie de ajutor cu un birou sau document, spune-mi!",
-  TR: "Size yalnızca belgeler ve bürokratik konularda yardımcı olabilirim (mektuplar, ofisler, son tarihler, formlar). Bir ofis veya belge ile ilgili yardıma ihtiyacınız varsa, bana söyleyin!",
-  AR: "يمكنني مساعدتك فقط في المستندات والأمور البيروقراطية (الرسائل، المكاتب، المواعيد النهائية، النماذج). إذا كنت بحاجة إلى مساعدة في مكتب أو مستند، أخبرني!",
-  UK: "Я можу допомогти лише з документами та бюрократичними питаннями (листи, офіси, терміни, форми). Якщо вам потрібна допомога з офісом або документом, скажіть!",
-  RU: "Я могу помочь только с документами и бюрократическими вопросами (письма, офисы, сроки, формы). Если вам нужна помощь с офисом или документом, скажите!",
+  IT: "Mi dispiace, posso aiutarti solo con questioni legali e amministrative. Posso assisterti con contratti, lettere formali, consulenza legale o pratiche burocratiche. Hai bisogno di aiuto con uno di questi argomenti?",
+  DE: "Es tut mir leid, ich kann nur bei rechtlichen und administrativen Angelegenheiten helfen. Ich kann Sie bei Verträgen, formellen Schreiben, Rechtsberatung oder bürokratischen Verfahren unterstützen. Benötigen Sie Hilfe zu einem dieser Themen?",
+  EN: "I'm sorry, I can only assist with legal and administrative matters. I can help with contracts, formal letters, legal advice or bureaucratic procedures. Do you need help with any of these?",
+  FR: "Je suis désolé, je ne peux vous aider qu'en matière juridique et administrative. Je peux vous assister pour les contrats, lettres formelles, conseil juridique ou démarches administratives. Avez-vous besoin d'aide sur l'un de ces sujets ?",
+  ES: "Lo siento, solo puedo ayudarte con asuntos legales y administrativos. Puedo asistirte con contratos, cartas formales, asesoramiento legal o trámites burocráticos. ¿Necesitas ayuda con alguno de estos temas?",
+  PL: "Przepraszam, mogę pomagać tylko w sprawach prawnych i administracyjnych. Mogę pomóc w zakresie umów, pism formalnych, porad prawnych lub procedur urzędowych. Czy potrzebujesz pomocy w którymś z tych obszarów?",
+  RO: "Îmi pare rău, vă pot ajuta doar în materie juridică și administrativă. Vă pot asista la contracte, scrisori formale, consultanță juridică sau proceduri birocratice. Aveți nevoie de ajutor pentru unul dintre aceste subiecte?",
+  TR: "Üzgünüm, yalnızca hukuki ve idari konularda yardımcı olabilirim. Sözleşmeler, resmi yazılar, hukuki danışmanlık veya bürokratik işlemler konusunda size yardımcı olabilirim. Bu konulardan biriyle ilgili yardıma ihtiyacınız var mı?",
+  AR: "أعتذر، يمكنني المساعدة فقط في المسائل القانونية والإدارية. يمكنني مساعدتك في العقود والرسائل الرسمية والاستشارات القانونية أو الإجراءات الإدارية. هل تحتاج مساعدة في أحد هذه المواضيع؟",
+  UK: "Вибачте, я можу допомагати лише з юридичними та адміністративними питаннями. Можу допомогти з договорами, офіційними листами, юридичними консультаціями чи бюрократичними процедурами. Чи потрібна вам допомога з одним із цих питань?",
+  RU: "Извините, я могу помогать только по юридическим и административным вопросам. Могу помочь с договорами, официальными письмами, юридическими консультациями или бюрократическими процедурами. Нужна ли вам помощь по одному из этих вопросов?",
 };
 
 export interface ScopeCheckResult {

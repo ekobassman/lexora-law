@@ -11,6 +11,7 @@ import { extractFormalLetterOnly } from '@/lib/extractFormalLetter';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 import { useCaseChatMessages } from '@/hooks/useCaseChatMessages';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
 // ═══════════════════════════════════════════════════════════════════════════
 // LETTER EXTRACTION UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -558,6 +559,12 @@ export function ChatWithAI({
     }
     
     if (!textToSend || isLoading) return;
+
+    // Guardrail: block non-legal/administrative queries before sending
+    if (!isLegalAdministrativeQuery(textToSend)) {
+      toast.error(t('chat.outOfScopeRefusal'));
+      return;
+    }
 
     if ((entitlements as any)?.access_state === 'blocked') {
       setShowPaymentBlockedPopup(true);
