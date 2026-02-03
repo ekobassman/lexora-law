@@ -1206,7 +1206,10 @@
     "logout": "Logout",
     "login": "Login",
     "signup": "Sign up",
-    "support": "Support"
+    "support": "Support",
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Try Lexora now",

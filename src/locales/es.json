@@ -1044,7 +1044,10 @@
     "logout": "Cerrar sesión",
     "login": "Iniciar sesión",
     "signup": "Registrarse",
-    "support": "Soporte"
+    "support": "Soporte",
+    "howItWorks": "Cómo funciona",
+    "pricing": "Precios",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Prueba Lexora ahora",

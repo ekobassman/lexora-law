@@ -1100,7 +1100,10 @@
     "logout": "Abmelden",
     "login": "Anmelden",
     "signup": "Registrieren",
-    "support": "Support"
+    "support": "Support",
+    "howItWorks": "So funktioniert's",
+    "pricing": "Preise",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Lexora jetzt testen",

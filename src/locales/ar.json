@@ -914,7 +914,10 @@
     "logout": "تسجيل الخروج",
     "login": "تسجيل الدخول",
     "signup": "إنشاء حساب",
-    "support": "الدعم"
+    "support": "الدعم",
+    "howItWorks": "كيف يعمل",
+    "pricing": "الأسعار",
+    "faq": "الأسئلة الشائعة"
   },
   "tryChat": {
     "title": "جرّب Lexora الآن",

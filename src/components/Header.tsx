@@ -25,11 +25,16 @@ export function Header() {
 
   const isLanding = location.pathname === '/';
 
-  // Nav links for landing page
+  const navLabel = (key: string, fallback: string) => {
+    const v = t(key);
+    return v && v !== key && !v.startsWith('nav.') ? v : fallback;
+  };
+
+  // Nav links for landing page (i18n)
   const landingNavLinks = [
-    { href: '#how-it-works', label: 'So funktioniert\'s' },
-    { href: '#pricing', label: 'Preise' },
-    { href: '#faq', label: 'FAQ' },
+    { href: '#how-it-works', labelKey: 'nav.howItWorks', fallback: 'How it works' },
+    { href: '#pricing', labelKey: 'nav.pricing', fallback: 'Pricing' },
+    { href: '#faq', labelKey: 'nav.faq', fallback: 'FAQ' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -60,17 +65,18 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Desktop Navigation (landing page only) */}
+        {/* Desktop Navigation (landing page only) - flex, truncate long labels */}
         {isLanding && !user && (
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-3 lg:gap-5 min-w-0 flex-1 justify-center max-w-2xl">
             <InstallAppButton variant="menu" />
             {landingNavLinks.map((link) => (
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium"
+                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium whitespace-nowrap truncate max-w-[140px] lg:max-w-[160px]"
+                title={navLabel(link.labelKey, link.fallback)}
               >
-                {link.label}
+                {navLabel(link.labelKey, link.fallback)}
               </button>
             ))}
           </nav>
@@ -151,9 +157,9 @@ export function Header() {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium text-left py-2"
+                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium text-left py-2 break-words"
               >
-                {link.label}
+                {navLabel(link.labelKey, link.fallback)}
               </button>
             ))}
             <Link
@@ -161,7 +167,7 @@ export function Header() {
               className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Support
+              {t('nav.support')}
             </Link>
             <InstallAppButton variant="menu" />
           </nav>

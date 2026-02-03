@@ -1020,7 +1020,10 @@
     "logout": "Déconnexion",
     "login": "Connexion",
     "signup": "Inscription",
-    "support": "Support"
+    "support": "Support",
+    "howItWorks": "Comment ça marche",
+    "pricing": "Tarifs",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Essayez Lexora maintenant",

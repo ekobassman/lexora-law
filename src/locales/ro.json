@@ -1027,7 +1027,10 @@
     "logout": "Deconectare",
     "login": "Conectare",
     "signup": "Înregistrare",
-    "support": "Suport"
+    "support": "Suport",
+    "howItWorks": "Cum funcționează",
+    "pricing": "Prețuri",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Încearcă Lexora acum",

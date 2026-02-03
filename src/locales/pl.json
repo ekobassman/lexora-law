@@ -1027,7 +1027,10 @@
     "logout": "Wyloguj",
     "login": "Zaloguj",
     "signup": "Zarejestruj",
-    "support": "Wsparcie"
+    "support": "Wsparcie",
+    "howItWorks": "Jak to działa",
+    "pricing": "Cennik",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Wypróbuj Lexora teraz",

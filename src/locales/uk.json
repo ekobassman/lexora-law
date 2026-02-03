@@ -914,7 +914,10 @@
     "logout": "Вийти",
     "login": "Увійти",
     "signup": "Зареєструватися",
-    "support": "Підтримка"
+    "support": "Підтримка",
+    "howItWorks": "Як це працює",
+    "pricing": "Ціни",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Спробуйте Lexora зараз",

@@ -1096,7 +1096,10 @@
     "logout": "Esci",
     "login": "Accedi",
     "signup": "Registrati",
-    "support": "Supporto"
+    "support": "Supporto",
+    "howItWorks": "Come funziona",
+    "pricing": "Prezzi",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Prova Lexora ora",

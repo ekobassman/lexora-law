@@ -1,0 +1,10 @@
+[33mff6113a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add PWA install banners to homepage and dashboard - support iOS/Android with i18n for all 11 languages
+[33m381f8a3[m Fix countries grid layout - prevent overflow with UK/Lateinamerika, check all languages for text wrapping issues
+[33m1aac3d9[m Fix trust badges visibility - ISO 27001, DSGVO, SOC 2 icons now visible with proper contrast
+[33m166c4cc[m Update PWA icons with new gold Lexora logo - add favicon.ico and maskable icons
+[33m8700535[m Update PWA icons with new gold L logo
+[33mdc58cb1[m Add Pull to Refresh functionality for PWA
+[33m6ac48fc[m Fix layout: card alignment, badges, footer translations in 11 languages
+[33m04212a1[m Fix offline detection: add real ping check with timeout and retry button
+[33m0765b76[m Fix iOS safe area: add padding for notch/status bar in PWA
+[33mf054e70[m Fix PWA translations: add all languages, simplify iOS modal, add fallback

@@ -1012,7 +1012,10 @@
     "logout": "Çıkış",
     "login": "Giriş",
     "signup": "Kayıt Ol",
-    "support": "Destek"
+    "support": "Destek",
+    "howItWorks": "Nasıl çalışır",
+    "pricing": "Fiyatlar",
+    "faq": "SSS"
   },
   "tryChat": {
     "title": "Lexora'yı şimdi deneyin",

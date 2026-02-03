@@ -929,7 +929,10 @@
     "logout": "Выйти",
     "login": "Войти",
     "signup": "Регистрация",
-    "support": "Поддержка"
+    "support": "Поддержка",
+    "howItWorks": "Как это работает",
+    "pricing": "Цены",
+    "faq": "FAQ"
   },
   "tryChat": {
     "title": "Попробуйте Lexora сейчас",
