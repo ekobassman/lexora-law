@@ -579,12 +579,22 @@
     "deleteCase": "Usuń sprawę"
   },
   "footer": {
+    "product": "Produkt",
+    "howItWorks": "Jak to działa",
+    "pricing": "Cennik",
+    "supportedDocuments": "Obsługiwane dokumenty",
+    "faq": "FAQ",
+    "company": "Firma",
+    "aboutUs": "O nas",
+    "contact": "Kontakt",
+    "legal": "Prawne",
     "privacy": "Polityka prywatności",
     "terms": "Warunki korzystania",
     "disclaimer": "Zastrzeżenie",
-    "legal": "Informacje prawne",
+    "support": "Wsparcie",
+    "helpCenter": "Centrum pomocy",
     "impressum": "Impressum",
-    "disclaimerText": "Ta usługa nie stanowi porady prawnej. W skomplikowanych przypadkach skonsultuj się z prawnikiem.",
+    "disclaimerText": "Lexora to asystent oparty na AI i nie świadczy porad prawnych. Generowana treść ma charakter wyłącznie informacyjny. W sprawach prawnych skonsultuj się z prawnikiem.",
     "copyright": "© {year} LEXORA. Wszelkie prawa zastrzeżone."
   },
   "pricing": {

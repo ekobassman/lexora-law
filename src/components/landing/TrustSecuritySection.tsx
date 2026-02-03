@@ -81,19 +81,19 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
           })}
         </div>
 
-        {/* Certifications */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30">
-            <CheckCircle className="h-5 w-5 text-green-400" />
-            <span className="text-sm text-green-300 font-medium">ISO 27001</span>
+        {/* Certifications - flex wrap, centrato, gap uniforme, badge stessa dimensione */}
+        <div className="flex flex-wrap justify-center items-center gap-4 mb-12">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-green-500/10 border border-green-500/30 min-h-[2.75rem]">
+            <CheckCircle className="h-5 w-5 shrink-0 text-green-400" />
+            <span className="text-sm font-medium text-green-300">ISO 27001</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30">
-            <Shield className="h-5 w-5 text-blue-400" />
-            <span className="text-sm text-blue-300 font-medium">{t('landingSections.trust.certifications.gdpr')}</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-500/10 border border-blue-500/30 min-h-[2.75rem]">
+            <Shield className="h-5 w-5 shrink-0 text-blue-400" />
+            <span className="text-sm font-medium text-blue-300">{t('landingSections.trust.certifications.gdpr')}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
-            <Lock className="h-5 w-5 text-purple-400" />
-            <span className="text-sm text-purple-300 font-medium">SOC 2 Type II</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-500/10 border border-purple-500/30 min-h-[2.75rem]">
+            <Lock className="h-5 w-5 shrink-0 text-purple-400" />
+            <span className="text-sm font-medium text-purple-300">SOC 2 Type II</span>
           </div>
         </div>
 

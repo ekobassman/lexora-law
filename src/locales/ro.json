@@ -579,12 +579,22 @@
     "deleteCase": "Șterge dosarul"
   },
   "footer": {
+    "product": "Produs",
+    "howItWorks": "Cum funcționează",
+    "pricing": "Prețuri",
+    "supportedDocuments": "Documente acceptate",
+    "faq": "FAQ",
+    "company": "Companie",
+    "aboutUs": "Despre noi",
+    "contact": "Contact",
+    "legal": "Legal",
     "privacy": "Politica de confidențialitate",
     "terms": "Termeni și condiții",
     "disclaimer": "Declinare responsabilitate",
-    "legal": "Notă legală",
+    "support": "Suport",
+    "helpCenter": "Centru de asistență",
     "impressum": "Impressum",
-    "disclaimerText": "Acest serviciu nu constituie consiliere juridică. Pentru cazuri complexe, consultă un avocat.",
+    "disclaimerText": "Lexora este un asistent bazat pe IA și nu oferă consultanță juridică. Conținutul generat este doar informativ. Pentru decizii juridice, consultați un avocat calificat.",
     "copyright": "© {year} LEXORA. Toate drepturile rezervate."
   },
   "pricing": {

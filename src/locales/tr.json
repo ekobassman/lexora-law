@@ -564,12 +564,22 @@
     "deleteCase": "Davayı sil"
   },
   "footer": {
+    "product": "Ürün",
+    "howItWorks": "Nasıl çalışır",
+    "pricing": "Fiyatlar",
+    "supportedDocuments": "Desteklenen belgeler",
+    "faq": "SSS",
+    "company": "Şirket",
+    "aboutUs": "Hakkımızda",
+    "contact": "İletişim",
+    "legal": "Yasal",
     "privacy": "Gizlilik Politikası",
     "terms": "Kullanım Koşulları",
     "disclaimer": "Sorumluluk Reddi",
-    "legal": "Yasal Bildirim",
+    "support": "Destek",
+    "helpCenter": "Yardım Merkezi",
     "impressum": "Künye",
-    "disclaimerText": "Bu hizmet hukuki danışmanlık oluşturmaz. Karmaşık durumlar için bir avukata danışın.",
+    "disclaimerText": "Lexora bir YZ asistanıdır ve hukuki danışmanlık sunmaz. Üretilen içerik yalnızca bilgilendirme amaçlıdır. Hukuki kararlar için bir avukata danışın.",
     "copyright": "© {year} LEXORA. Tüm hakları saklıdır."
   },
   "pricing": {

@@ -657,12 +657,22 @@
     "deleteCase": "Vorgang löschen"
   },
   "footer": {
-    "privacy": "Datenschutzerklärung",
+    "product": "Produkt",
+    "howItWorks": "So funktioniert's",
+    "pricing": "Preise",
+    "supportedDocuments": "Unterstützte Dokumente",
+    "faq": "FAQ",
+    "company": "Unternehmen",
+    "aboutUs": "Über uns",
+    "contact": "Kontakt",
+    "legal": "Rechtliches",
+    "privacy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
     "disclaimer": "Haftungsausschluss",
-    "legal": "Rechtliche Hinweise",
+    "support": "Support",
+    "helpCenter": "Hilfe-Center",
     "impressum": "Impressum",
-    "disclaimerText": "Dieser Service stellt keine Rechtsberatung dar. Bei komplexen Fällen wenden Sie sich an einen Anwalt.",
+    "disclaimerText": "Lexora ist ein KI-basierter Assistent und bietet keine Rechtsberatung. Die generierten Inhalte dienen ausschließlich zu Informationszwecken. Für rechtlich bindende Entscheidungen konsultieren Sie bitte einen qualifizierten Anwalt.",
     "copyright": "© {year} LEXORA. Alle Rechte vorbehalten."
   },
   "pricing": {
