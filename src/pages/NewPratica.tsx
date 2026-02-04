@@ -264,6 +264,9 @@ export default function NewPratica() {
       if (result.warning?.ocr === 'disabled') {
         toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
       }
+      if (result.code === 'PDF_NOT_SUPPORTED') {
+        toast.warning(t('scan.pdfNotSupportedHint') || 'Converti PDF in immagini (1-3 pagine) e ricarica.', { duration: 7000 });
+      }
 
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
@@ -296,7 +299,12 @@ export default function NewPratica() {
     } catch (error: unknown) {
       console.error('Upload error:', error);
       const msg = error instanceof Error ? error.message : String(error);
-      toast.error(msg || t('newPratica.error.upload'));
+      const code = error instanceof Error ? (error as { code?: string }).code : undefined;
+      if (code === 'HEIC_NOT_SUPPORTED') {
+        toast.error(msg || t('newPratica.error.upload'), { duration: 6000 });
+      } else {
+        toast.error(msg || t('newPratica.error.upload'));
+      }
       setFile(null);
       setAnalysisStep('error');
     }
@@ -321,6 +329,9 @@ export default function NewPratica() {
       toast.success(t('newPratica.fileUploaded'));
       if (result.warning?.ocr === 'disabled') {
         toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
+      }
+      if (result.code === 'PDF_NOT_SUPPORTED') {
+        toast.warning(t('scan.pdfNotSupportedHint') || 'Converti PDF in immagini (1-3 pagine) e ricarica.', { duration: 7000 });
       }
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
@@ -351,7 +362,13 @@ export default function NewPratica() {
       }
     } catch (error: unknown) {
       console.error('Camera scan error:', error);
-      toast.error(error instanceof Error ? error.message : t('newPratica.error.upload'));
+      const msg = error instanceof Error ? error.message : t('newPratica.error.upload');
+      const code = error instanceof Error ? (error as { code?: string }).code : undefined;
+      if (code === 'HEIC_NOT_SUPPORTED') {
+        toast.error(msg, { duration: 6000 });
+      } else {
+        toast.error(msg);
+      }
       setFile(null);
       setAnalysisStep('error');
     }

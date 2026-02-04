@@ -1022,7 +1022,10 @@
       "saving": "Salvataggio documento...",
       "analyzing": "Analisi AI in corso..."
     },
-    "anonymousHint": "Per salvare questa analisi, crea un account gratuito"
+    "anonymousHint": "Per salvare questa analisi, crea un account gratuito",
+    "uploadedOcrDisabled": "Caricato, OCR non disponibile",
+    "ocrFailed": "OCR non riuscito",
+    "pdfNotSupportedHint": "Converti PDF in immagini (1-3 pagine) e ricarica."
   },
   "subscription": {
     "paywall": {

@@ -1053,7 +1053,10 @@
       "saving": "Saving document...",
       "analyzing": "AI analysis in progress..."
     },
-    "anonymousHint": "To save this analysis, create a free account"
+    "anonymousHint": "To save this analysis, create a free account",
+    "uploadedOcrDisabled": "Uploaded; OCR not available",
+    "ocrFailed": "OCR failed",
+    "pdfNotSupportedHint": "Convert PDF to images (1–3 pages) and upload again."
   },
   "subscription": {
     "paywall": {

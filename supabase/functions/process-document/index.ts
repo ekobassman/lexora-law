@@ -149,146 +149,150 @@ serve(async (req) => {
       return json(errPayload("auth", "AUTH_ERROR", msg), 401);
     }
 
-  await logStep(supabase, userId, null, "auth", true);
+    await logStep(supabase, userId, null, "auth", true);
 
-  let fileBytes: Uint8Array;
-  let fileName: string;
-  let mimeType: string;
-  let caseId: string | null = null;
+    let fileBytes: Uint8Array;
+    let fileName: string;
+    let mimeType: string;
+    let caseId: string | null = null;
 
-  try {
-    const contentType = req.headers.get("content-type") ?? "";
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-      const file = formData.get("file") as File | null;
-      const caseIdParam = formData.get("caseId") as string | null;
-      const sourceParam = formData.get("source") as string | null; // 'camera'|'upload' optional
-      if (caseIdParam) caseId = caseIdParam;
-      if (!file || !(file instanceof File)) {
-        await logStep(supabase, userId, null, "error", false, "NO_FILE", "Missing file in form");
-        return json({ ok: false, where: "payload", code: "NO_FILE", message: "Missing file in form", ts }, 400);
+    try {
+      const contentType = req.headers.get("content-type") ?? "";
+      if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        const file = formData.get("file") as File | null;
+        const caseIdParam = formData.get("caseId") as string | null;
+        if (caseIdParam) caseId = caseIdParam;
+        if (!file || !(file instanceof File)) {
+          await logStep(supabase, userId, null, "error", false, "NO_FILE", "Missing file in form");
+          return json(errPayload("payload", "NO_FILE", "Missing file in form"), 400);
+        }
+        fileBytes = new Uint8Array(await file.arrayBuffer());
+        fileName = file.name || "upload";
+        mimeType = file.type || "application/octet-stream";
+      } else {
+        const body = (await req.json().catch(() => null)) as { base64?: string; mimeType?: string; caseId?: string } | null;
+        if (!body?.base64 || typeof body.base64 !== "string") {
+          await logStep(supabase, userId, null, "error", false, "NO_BASE64", "Missing base64 in body");
+          return json(errPayload("payload", "NO_BASE64", "Missing base64 in body"), 400);
+        }
+        const raw = body.base64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+        try {
+          fileBytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+        } catch {
+          await logStep(supabase, userId, null, "error", false, "INVALID_BASE64", "Invalid base64");
+          return json(errPayload("payload", "INVALID_BASE64", "Invalid base64"), 400);
+        }
+        fileName = "camera-capture";
+        mimeType = (body.mimeType as string) || "image/jpeg";
+        if (body.caseId) caseId = String(body.caseId);
       }
-      fileBytes = new Uint8Array(await file.arrayBuffer());
-      fileName = file.name || "upload";
-      mimeType = file.type || "application/octet-stream";
-    } else {
-      const body = (await req.json().catch(() => null)) as { base64?: string; mimeType?: string; caseId?: string } | null;
-      if (!body?.base64 || typeof body.base64 !== "string") {
-        await logStep(supabase, userId, null, "error", false, "NO_BASE64", "Missing base64 in body");
-        return json({ ok: false, where: "payload", code: "NO_BASE64", message: "Missing base64 in body", ts }, 400);
-      }
-      const raw = body.base64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
-      try {
-        fileBytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
-      } catch {
-        await logStep(supabase, userId, null, "error", false, "INVALID_BASE64", "Invalid base64");
-        return json({ ok: false, where: "payload", code: "INVALID_BASE64", message: "Invalid base64", ts }, 400);
-      }
-      fileName = "camera-capture";
-      mimeType = (body.mimeType as string) || "image/jpeg";
-      if (body.caseId) caseId = String(body.caseId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await logStep(supabase, userId, null, "error", false, "PAYLOAD_ERROR", msg);
+      return json(errPayload("payload", "PAYLOAD_ERROR", msg), 400);
     }
+
+    if (fileBytes.length > MAX_FILE_BYTES) {
+      await logStep(supabase, userId, null, "error", false, "FILE_TOO_LARGE", `Max ${MAX_FILE_BYTES} bytes`);
+      return json(errPayload("validation", "FILE_TOO_LARGE", `File too large (max ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB)`), 413);
+    }
+    const allowed = ALLOWED_MIMES.some((m) => mimeType.toLowerCase() === m || mimeType.toLowerCase().startsWith(m.split("/")[0]));
+    if (!allowed) {
+      await logStep(supabase, userId, null, "error", false, "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf");
+      return json(errPayload("validation", "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf"), 400);
+    }
+
+    const pathPrefix = caseId ? `${userId}/${caseId}` : `${userId}/no-case`;
+    const pathSegment = `${Date.now()}-${safeFilename(fileName)}`;
+    const storagePath = `${pathPrefix}/${pathSegment}`;
+
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, fileBytes, {
+      contentType: mimeType,
+      upsert: false,
+    });
+    if (uploadError) {
+      await logStep(supabase, userId, null, "upload_storage", false, "STORAGE_ERROR", uploadError.message, { path: storagePath });
+      return json(errPayload("upload_storage", "STORAGE_ERROR", uploadError.message), 500);
+    }
+    await logStep(supabase, userId, null, "upload_storage", true, null, null, { path: storagePath });
+
+    const docRow = {
+      user_id: userId,
+      case_id: caseId,
+      pratica_id: caseId,
+      storage_bucket: BUCKET,
+      storage_path: storagePath,
+      file_name: fileName,
+      mime_type: mimeType,
+      file_size: fileBytes.length,
+      size_bytes: fileBytes.length,
+      status: "uploaded",
+      direction: "incoming",
+    };
+    const { data: insertDoc, error: insertError } = await supabase.from("documents").insert(docRow).select("id").single();
+    if (insertError) {
+      await logStep(supabase, userId, null, "insert_db", false, "DB_ERROR", insertError.message);
+      return json(errPayload("insert_db", "DB_ERROR", insertError.message), 500);
+    }
+    const docId = insertDoc.id;
+    await logStep(supabase, userId, docId, "insert_db", true);
+
+    let ocrText: string | null = null;
+    let ocrError: string | null = null;
+    let status = "uploaded";
+    let warning: { ocr?: string } | undefined;
+
+    if (mimeType === "application/pdf") {
+      ocrError = PDF_NOT_SUPPORTED_MSG;
+      status = "ocr_failed";
+      await logStep(supabase, userId, docId, "ocr", false, "PDF_NOT_SUPPORTED", PDF_NOT_SUPPORTED_MSG);
+    } else if (mimeType.startsWith("image/")) {
+      if (!openaiKey) {
+        warning = { ocr: "disabled" };
+        await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true, reason: "no_openai_key" });
+      } else {
+        const base64ForVision = `data:${mimeType};base64,${btoa(String.fromCharCode(...fileBytes))}`;
+        const ocrResult = await openaiVisionOcr(base64ForVision, openaiKey, visionModel);
+        if ("error" in ocrResult) {
+          ocrError = ocrResult.error;
+          status = "ocr_failed";
+          await logStep(supabase, userId, docId, "ocr", false, "OCR_FAILED", ocrResult.error);
+        } else {
+          ocrText = ocrResult.text;
+          status = "ocr_done";
+          await logStep(supabase, userId, docId, "ocr", true);
+        }
+      }
+    } else {
+      if (!openaiKey) warning = { ocr: "disabled" };
+      await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true });
+    }
+
+    const { error: updateError } = await supabase
+      .from("documents")
+      .update({ ocr_text: ocrText, ocr_error: ocrError, status, updated_at: new Date().toISOString(), raw_text: ocrText })
+      .eq("id", docId);
+    if (updateError) await logStep(supabase, userId, docId, "save_ocr", false, "UPDATE_ERROR", updateError.message);
+    else await logStep(supabase, userId, docId, "save_ocr", true);
+
+    await logStep(supabase, userId, docId, "done", true);
+
+    const textPreview = ocrText ? ocrText.slice(0, 200) + (ocrText.length > 200 ? "…" : "") : null;
+    return json(
+      {
+        ok: true,
+        doc: { id: docId, storage_path: storagePath, status, has_text: !!ocrText, text_preview: textPreview },
+        run_id: null,
+        ts,
+        ...(warning && { warning }),
+        ...(status === "ocr_failed" && ocrError === PDF_NOT_SUPPORTED_MSG && { code: "PDF_NOT_SUPPORTED", message: PDF_NOT_SUPPORTED_MSG }),
+      },
+      200
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await logStep(supabase, userId, null, "error", false, "PAYLOAD_ERROR", msg);
-    return json({ ok: false, where: "payload", code: "PAYLOAD_ERROR", message: msg, ts }, 400);
+    console.error("[process-document] unhandled", msg);
+    return json(errPayload("unhandled", "INTERNAL", msg), 500);
   }
-
-  if (fileBytes.length > MAX_FILE_BYTES) {
-    await logStep(supabase, userId, null, "error", false, "FILE_TOO_LARGE", `Max ${MAX_FILE_BYTES} bytes`);
-    return json({ ok: false, where: "validation", code: "FILE_TOO_LARGE", message: `File too large (max ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB)`, ts }, 413);
-  }
-  const allowed = ALLOWED_MIMES.some((m) => mimeType.toLowerCase() === m || mimeType.toLowerCase().startsWith(m.split("/")[0]));
-  if (!allowed) {
-    await logStep(supabase, userId, null, "error", false, "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf");
-    return json({ ok: false, where: "validation", code: "INVALID_TYPE", message: "Allowed: jpeg, png, webp, pdf", ts }, 400);
-  }
-
-  const pathPrefix = caseId ? `${userId}/${caseId}` : `${userId}/no-case`;
-  const pathSegment = `${Date.now()}-${safeFilename(fileName)}`;
-  const storagePath = `${pathPrefix}/${pathSegment}`;
-
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, fileBytes, {
-    contentType: mimeType,
-    upsert: false,
-  });
-  if (uploadError) {
-    await logStep(supabase, userId, null, "upload_storage", false, "STORAGE_ERROR", uploadError.message, { path: storagePath });
-    return json({ ok: false, where: "upload_storage", code: "STORAGE_ERROR", message: uploadError.message, ts }, 500);
-  }
-  await logStep(supabase, userId, null, "upload_storage", true, null, null, { path: storagePath });
-
-  const docRow = {
-    user_id: userId,
-    case_id: caseId,
-    pratica_id: caseId,
-    storage_bucket: BUCKET,
-    storage_path: storagePath,
-    file_name: fileName,
-    mime_type: mimeType,
-    file_size: fileBytes.length,
-    size_bytes: fileBytes.length,
-    status: "uploaded",
-    direction: "incoming",
-  };
-  const { data: insertDoc, error: insertError } = await supabase.from("documents").insert(docRow).select("id").single();
-  if (insertError) {
-    await logStep(supabase, userId, null, "insert_db", false, "DB_ERROR", insertError.message);
-    return json({ ok: false, where: "insert_db", code: "DB_ERROR", message: insertError.message, ts }, 500);
-  }
-  const docId = insertDoc.id;
-  await logStep(supabase, userId, docId, "insert_db", true);
-
-  let ocrText: string | null = null;
-  let ocrError: string | null = null;
-  let status = "uploaded";
-  let warning: { ocr?: string } | undefined;
-
-  if (mimeType === "application/pdf") {
-    ocrError = PDF_NOT_SUPPORTED_MSG;
-    status = "ocr_failed";
-    await logStep(supabase, userId, docId, "ocr", false, "PDF_NOT_SUPPORTED", PDF_NOT_SUPPORTED_MSG);
-  } else if (mimeType.startsWith("image/")) {
-    if (!openaiKey) {
-      warning = { ocr: "disabled" };
-      await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true, reason: "no_openai_key" });
-    } else {
-      const base64ForVision = `data:${mimeType};base64,${btoa(String.fromCharCode(...fileBytes))}`;
-      const ocrResult = await openaiVisionOcr(base64ForVision, openaiKey, visionModel);
-      if ("error" in ocrResult) {
-        ocrError = ocrResult.error;
-        status = "ocr_failed";
-        await logStep(supabase, userId, docId, "ocr", false, "OCR_FAILED", ocrResult.error);
-      } else {
-        ocrText = ocrResult.text;
-        status = "ocr_done";
-        await logStep(supabase, userId, docId, "ocr", true);
-      }
-    }
-  } else {
-    if (!openaiKey) warning = { ocr: "disabled" };
-    await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true });
-  }
-
-  const { error: updateError } = await supabase
-    .from("documents")
-    .update({ ocr_text: ocrText, ocr_error: ocrError, status, updated_at: new Date().toISOString(), raw_text: ocrText })
-    .eq("id", docId);
-  if (updateError) await logStep(supabase, userId, docId, "save_ocr", false, "UPDATE_ERROR", updateError.message);
-  else await logStep(supabase, userId, docId, "save_ocr", true);
-
-  await logStep(supabase, userId, docId, "done", true);
-
-  const textPreview = ocrText ? ocrText.slice(0, 200) + (ocrText.length > 200 ? "…" : "") : null;
-  return json(
-    {
-      ok: true,
-      doc: { id: docId, storage_path: storagePath, status, has_text: !!ocrText, text_preview: textPreview },
-      run_id: null,
-      ts,
-      ...(warning && { warning }),
-      ...(status === "ocr_failed" && ocrError === PDF_NOT_SUPPORTED_MSG && { code: "PDF_NOT_SUPPORTED", message: PDF_NOT_SUPPORTED_MSG }),
-    },
-    200
-  );
 });

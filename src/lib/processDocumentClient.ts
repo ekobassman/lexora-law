@@ -16,13 +16,29 @@ export interface ProcessDocumentResult {
   run_id: string | null;
   ts: string;
   warning?: { ocr?: string };
+  /** Set when status is ocr_failed and document was PDF (hint for UI). */
+  code?: string;
+  message?: string;
 }
+
+/** Returns true if the file is HEIC/HEIF (iPhone camera). We do not support HEIC; client should block or convert to JPEG. */
+export function isHeicFile(file: File): boolean {
+  const t = (file.type || "").toLowerCase();
+  if (t.includes("heic") || t.includes("heif")) return true;
+  const name = (file.name || "").toLowerCase();
+  return name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+/** HEIC not supported message for UI. */
+export const HEIC_NOT_SUPPORTED_MSG =
+  "Le foto HEIC non sono supportate. Esporta in JPEG dall’album o scegli un file JPG/PNG.";
 
 export interface ProcessDocumentError {
   ok: false;
   where: string;
   code: string;
   message: string;
+  run_id?: string | null;
   ts: string;
 }
 
@@ -41,6 +57,11 @@ export async function processDocumentWithFile(
   file: File,
   options?: { caseId?: string }
 ): Promise<ProcessDocumentResult> {
+  if (isHeicFile(file)) {
+    const e = new Error(HEIC_NOT_SUPPORTED_MSG) as Error & { code?: string };
+    e.code = "HEIC_NOT_SUPPORTED";
+    throw e;
+  }
   const token = await getToken();
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const form = new FormData();
@@ -69,6 +90,9 @@ export async function processDocumentWithFile(
   throw new Error((data as ProcessDocumentError)?.message ?? "Risposta non valida");
 }
 
+/** MIME types for HEIC/HEIF (iPhone); not accepted by process-document. */
+const HEIC_MIMES = ["image/heic", "image/heif"];
+
 /**
  * Invia base64 (es. da camera) a process-document.
  */
@@ -77,6 +101,12 @@ export async function processDocumentWithBase64(
   mimeType: string,
   options?: { caseId?: string }
 ): Promise<ProcessDocumentResult> {
+  const m = (mimeType || "").toLowerCase();
+  if (HEIC_MIMES.some((h) => m.includes(h))) {
+    const e = new Error(HEIC_NOT_SUPPORTED_MSG) as Error & { code?: string };
+    e.code = "HEIC_NOT_SUPPORTED";
+    throw e;
+  }
   const token = await getToken();
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const body = JSON.stringify({
