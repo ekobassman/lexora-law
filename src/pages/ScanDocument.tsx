@@ -154,11 +154,12 @@ export default function ScanDocument() {
         
         toast.success(t('analysis.completed'));
       } else {
-        toast.error(t('scan.error'));
+        toast.error(t('scan.error') + (typeof window !== 'undefined' ? '. ' + (t('analysis.ocrError') || 'Nessun testo estratto. Riprova con un\'immagine più nitida.') : ''), { duration: 6000 });
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error processing files:', error);
-      toast.error(t('scan.error'));
+      toast.error(`${t('scan.error')}: ${msg}`, { duration: 8000 });
     } finally {
       setIsProcessing(false);
       setProcessingStep('');
@@ -247,8 +248,9 @@ export default function ScanDocument() {
       toast.success(t('scan.success'));
       navigate(`/pratiche/${pratica.id}`);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error processing files:', error);
-      toast.error(t('scan.error'));
+      toast.error(`${t('scan.error')}: ${msg}`, { duration: 8000 });
     } finally {
       setIsProcessing(false);
       setProcessingStep('');
