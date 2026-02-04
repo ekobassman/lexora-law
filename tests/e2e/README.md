@@ -46,6 +46,10 @@ npm run test:e2e:report
 - Direct route access protection
 - Backend limit enforcement
 
+### 4. `health.spec.ts` - Health Check (optional)
+- Calls Supabase Edge Function `health` when `VITE_SUPABASE_URL` or `SUPABASE_URL` is set
+- Skips when env is not set
+
 ## Environment Variables
 
 For testing with real users:
