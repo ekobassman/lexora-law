@@ -85,6 +85,21 @@ const DEMO_MOCK_REPLY_BY_LANG: Record<string, string> = {
 };
 const DEMO_MOCK_REPLY_FALLBACK = DEMO_MOCK_REPLY_BY_LANG.EN;
 
+/** First message in demo: Lexora asks for situation (conversion-oriented) */
+const DEMO_GREETING_BY_LANG: Record<string, string> = {
+  IT: "Ciao, sono Lexora. Descrivimi brevemente la tua situazione legale così vedo come posso aiutarti.",
+  EN: "Hi, I'm Lexora. Describe your legal situation briefly so I can see how to help you.",
+  DE: "Hallo, ich bin Lexora. Schildern Sie kurz Ihre rechtliche Situation, damit ich sehen kann, wie ich helfen kann.",
+  FR: "Bonjour, je suis Lexora. Décrivez brièvement votre situation juridique pour que je puisse vous aider.",
+  ES: "Hola, soy Lexora. Descríbeme brevemente tu situación legal para ver cómo puedo ayudarte.",
+  PL: "Cześć, jestem Lexora. Opisz krótko swoją sytuację prawną, abym mógł zobaczyć, jak mogę pomóc.",
+  RO: "Bună, sunt Lexora. Descrie-mi pe scurt situația ta juridică ca să văd cum te pot ajuta.",
+  TR: "Merhaba, ben Lexora. Bana kısa bir şekilde hukuki durumunuzu anlatın, nasıl yardımcı olabileceğimi göreyim.",
+  AR: "مرحباً، أنا Lexora. صف لي وضعك القانوني باختصار لأرى كيف أستطيع مساعدتك.",
+  UK: "Привіт, я Lexora. Коротко опиши свою правову ситуацію, щоб я міг побачити, як допомогти.",
+  RU: "Привет, я Lexora. Кратко опишите вашу правовую ситуацию, чтобы я мог понять, как помочь.",
+};
+
 /** Badge text: "Demo gratuita – nessun login richiesto" in all UI languages */
 const DEMO_BADGE_BY_LANG: Record<string, string> = {
   IT: "Demo gratuita – nessun login richiesto",
@@ -500,6 +515,13 @@ export function DemoChatSection() {
     if (typeof buf.draftText === 'string' && buf.draftText) setDraftText(buf.draftText);
     if (typeof buf.input === 'string' && buf.input) setInput(buf.input);
   }, []); // run once
+
+  // Demo: show Lexora greeting when chat is empty (conversion-oriented first message)
+  useEffect(() => {
+    if (!demoMode || messages.length !== 0) return;
+    const greeting = DEMO_GREETING_BY_LANG[lang] || DEMO_GREETING_BY_LANG.EN;
+    setMessages([{ role: 'assistant', content: greeting, timestamp: new Date() }]);
+  }, [demoMode, messages.length, lang]);
 
   // Ensure AI context starts "fresh" when arriving with restored UI state.
   // This keeps the transcript visible, but prevents the AI from reusing old drafts/topics.
@@ -932,21 +954,8 @@ export function DemoChatSection() {
       attachmentType,
     };
 
-    // ——— DEMO MODE: short-circuit PRIMA di terms/limits/API – sempre mock, mai "temporary error" ———
-    if (demoMode) {
-      setMessages(prev => [...prev, userMessage]);
-      setInput('');
-      setIsLoading(true);
-      const reply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }]);
-        setIsLoading(false);
-        scrollToBottom();
-      }, 80);
-      return;
-    }
-
-    // Check terms before allowing interaction
+    // Demo mode: call API with isDemo=true (Lexora asks questions, then CTA; no static mock)
+    // Check terms before allowing interaction (skipped in demo via checkTermsBeforeInteraction)
     if (!checkTermsBeforeInteraction()) return;
 
     if (isLimitReached) {
@@ -958,15 +967,15 @@ export function DemoChatSection() {
     setInput('');
     setIsLoading(true);
 
-    // Guardrail: block non-legal/administrative queries before sending (only when not demo)
-    if (!isLegalAdministrativeQuery(messageContent.trim())) {
+    // Guardrail: block non-legal/administrative queries (skip in demo so "Ciao" / first message is allowed)
+    if (!demoMode && !isLegalAdministrativeQuery(messageContent.trim())) {
       toast.error(txt.outOfScopeRefusal);
       setMessages(prev => prev.slice(0, -1));
       setIsLoading(false);
       return;
     }
 
-    const isFirstMessage = messages.length === 0;
+    const isFirstMessage = messages.length === 0 || (demoMode && messages.length === 1 && messages[0].role === 'assistant');
 
     // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
     let legalSearchContext: LegalSearchResult[] = [];
@@ -1017,14 +1026,6 @@ export function DemoChatSection() {
     }
 
     try {
-      // Hard guard: in demo non chiamare mai API/Edge/Supabase
-      if (demoMode) {
-        const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
-        scrollToBottom();
-        return;
-      }
-
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
         {
@@ -1039,6 +1040,7 @@ export function DemoChatSection() {
             isFirstMessage,
             conversationHistory,
             legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+            isDemo: demoMode,
           }),
         }
       );
@@ -1046,14 +1048,12 @@ export function DemoChatSection() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.ok) {
-        if (demoMode) {
-          const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
-          setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
-          scrollToBottom();
-        } else {
-          toast.error(txt.errorToast);
-          setMessages(prev => prev.slice(0, -1));
-        }
+        const fallbackMsg = demoMode
+          ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
+          : txt.errorToast;
+        if (!demoMode) toast.error(txt.errorToast);
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
+        scrollToBottom();
         return;
       }
 
@@ -1128,9 +1128,10 @@ export function DemoChatSection() {
 
       setTimeout(scrollToBottom, 100);
     } catch {
-      // Fallback: mai "temporary error" in demo; sempre append mock e non rompere la UI
-      const fallbackReply = DEMO_MOCK_REPLY_BY_LANG[lang] || DEMO_MOCK_REPLY_BY_LANG['EN'] || DEMO_MOCK_REPLY_FALLBACK;
-      setMessages(prev => [...prev, { role: 'assistant', content: fallbackReply, timestamp: new Date() }]);
+      const fallbackMsg = demoMode
+        ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
+        : (lang === 'IT' ? 'Si è verificato un errore. Riprova.' : 'Something went wrong. Please try again.');
+      setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
       scrollToBottom();
     } finally {
       setIsLoading(false);

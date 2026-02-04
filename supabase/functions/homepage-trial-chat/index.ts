@@ -125,6 +125,22 @@ function getSystemPrompt(lang: string): string {
   return UNIFIED_LEXORA_IDENTITY + langRule + UNIFIED_CHAT_BEHAVIOR;
 }
 
+// Demo mode: same Lexora behavior (ask questions, collect data) but NO document generation; end with registration CTA
+const DEMO_ADDON = `
+
+=== DEMO MODE (unauthenticated user) ===
+- You are in DEMO mode. Do NOT generate the actual document. Do NOT output [LETTER]...[/LETTER].
+- Behave exactly like Lexora: ask 2-3 questions (type of problem, who is the counterpart, when it happened).
+- After you have enough info (2-3 exchanges), summarize and say something like:
+  "Ho capito, si tratta di [brief summary]. Nella versione completa genererei un [tipo documento]. Per generare il documento ufficiale e scaricarlo, registrati gratis. Vuoi procedere? Lasciami la tua email per ricevere il documento quando ti registri!"
+- Adapt the CTA to the user's language (IT/DE/EN/FR/ES etc.). Always end by inviting registration and asking for email.
+- Never generate a full letter in demo. draftText must remain empty.`;
+
+function getDemoSystemPrompt(lang: string): string {
+  const langRule = LANGUAGE_RULE[lang] || LANGUAGE_RULE.EN;
+  return UNIFIED_LEXORA_IDENTITY + langRule + DEMO_ADDON;
+}
+
 // Greeting prefixes per language (ONLY for first message)
 const GREETINGS: Record<string, string> = {
   IT: "Ciao, sono Lexora, il tuo assistente legale AI. ",
@@ -223,7 +239,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [] } = await req.json();
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [], isDemo = false } = await req.json();
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return json(400, {
@@ -254,9 +270,9 @@ serve(async (req) => {
       }
     }
     
-    const systemPrompt = getSystemPrompt(lang);
+    const systemPrompt = isDemo ? getDemoSystemPrompt(lang) : getSystemPrompt(lang);
     
-    // Add greeting instruction ONLY for first message
+    // Add greeting instruction ONLY for first message (skip in demo if we already have history with greeting)
     const greetingInstruction = isFirstMessage 
       ? `\n\nIMPORTANT: This is the user's FIRST message. Start your response with a brief greeting: "${GREETINGS[lang] || GREETINGS.EN}" Then proceed to ask what they need help with.`
       : `\n\nNote: This is a follow-up message. Do NOT greet or introduce yourself again. Just respond directly to the user's question or continue the intake process.`;
@@ -339,7 +355,9 @@ serve(async (req) => {
     
     // Add gate instruction to system prompt
     let gateInstruction = '';
-    if (!allowDocumentGeneration) {
+    if (isDemo) {
+      gateInstruction = `\n\nDemo: Do NOT generate [LETTER]...[/LETTER]. After collecting info, summarize and invite registration + ask for email.`;
+    } else if (!allowDocumentGeneration) {
       gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
 CRITICAL: Before generating ANY final document/letter, you MUST:
 1. First show a SUMMARY of all data you will use (sender, recipient, subject, etc.)
