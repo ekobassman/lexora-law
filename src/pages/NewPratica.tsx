@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
@@ -139,7 +140,7 @@ export default function NewPratica() {
           },
         });
 
-        if (error) throw error;
+        if (error) throw new Error(getEdgeFunctionErrorMessage(error, data));
         
         if (data?.error === 'LIMIT_REACHED') {
           setShowPaywall(true);
@@ -432,7 +433,7 @@ export default function NewPratica() {
         },
       });
       
-      if (error) throw error;
+      if (error) throw new Error(getEdgeFunctionErrorMessage(error, data));
       
       // Check for LIMIT_REACHED error from backend
       if (data?.error === 'LIMIT_REACHED') {

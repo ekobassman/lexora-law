@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -233,9 +234,12 @@ export default function ScanDocument() {
       if (combinedText) {
         await supabase.from('pratiche').update({ letter_text: combinedText, status: 'in_progress' }).eq('id', pratica.id);
         setProcessingStep(t('scan.step.analyzing'));
-        const { data: analysisData } = await supabase.functions.invoke('analyze-letter', {
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-letter', {
           body: { letterText: combinedText, userLanguage: language },
         });
+        if (analysisError) {
+          throw new Error(getEdgeFunctionErrorMessage(analysisError, analysisData));
+        }
         if (analysisData?.explanation) {
           await supabase.from('pratiche').update({
             explanation: analysisData.explanation, risks: analysisData.risks ?? [],
