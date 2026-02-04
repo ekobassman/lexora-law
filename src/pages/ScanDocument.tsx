@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
-import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
+import { callEdgeFunction } from '@/lib/edgeFetch';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -176,19 +176,27 @@ export default function ScanDocument() {
     setProcessingStep(t('scan.step.creating'));
     
     try {
-      const { data: caseResponse, error: caseError } = await supabase.functions.invoke('create-case', {
-        body: { title: name.trim(), status: 'new' },
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sessione scaduta. Effettua di nuovo l\'accesso.');
 
-      if (caseError) throw caseError;
-      if (caseResponse?.error === 'LIMIT_REACHED') {
+      const createResult = await callEdgeFunction('create-case', token, { title: name.trim(), status: 'new' });
+      const caseResponse = createResult.data;
+
+      if (!createResult.ok) {
+        const msg = (caseResponse && typeof caseResponse === 'object' && ('message' in caseResponse) ? (caseResponse as { message?: string }).message : null)
+          || (caseResponse && typeof caseResponse === 'object' && ('error' in caseResponse) ? (caseResponse as { error?: string }).error : null)
+          || `Errore server (${createResult.status})`;
+        throw new Error(msg);
+      }
+      if (caseResponse?.error === 'LIMIT_REACHED' || caseResponse?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowLimitPopup(true);
-        toast.error(caseResponse.message || t('subscription.limitReached'));
+        toast.error((caseResponse as { message?: string }).message || t('subscription.limitReached'));
         return;
       }
-      if (caseResponse?.error) throw new Error(caseResponse.message || caseResponse.error);
+      if (caseResponse?.error) throw new Error((caseResponse as { message?: string }).message || (caseResponse as { error?: string }).error);
 
-      const pratica = caseResponse.case;
+      const pratica = (caseResponse as { case?: { id: string } })?.case;
       if (!pratica?.id) throw new Error('Failed to create case');
 
       let combinedText = '';
@@ -234,11 +242,13 @@ export default function ScanDocument() {
       if (combinedText) {
         await supabase.from('pratiche').update({ letter_text: combinedText, status: 'in_progress' }).eq('id', pratica.id);
         setProcessingStep(t('scan.step.analyzing'));
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-letter', {
-          body: { letterText: combinedText, userLanguage: language },
-        });
-        if (analysisError) {
-          throw new Error(getEdgeFunctionErrorMessage(analysisError, analysisData));
+        const analyzeResult = await callEdgeFunction('analyze-letter', token, { letterText: combinedText, userLanguage: language });
+        const analysisData = analyzeResult.data;
+        if (!analyzeResult.ok) {
+          const msg = (analysisData && typeof analysisData === 'object' && ('message' in analysisData) ? (analysisData as { message?: string }).message : null)
+            || (analysisData && typeof analysisData === 'object' && ('error' in analysisData) ? (analysisData as { error?: string }).error : null)
+            || `Errore analisi (${analyzeResult.status})`;
+          throw new Error(msg);
         }
         if (analysisData?.explanation) {
           await supabase.from('pratiche').update({

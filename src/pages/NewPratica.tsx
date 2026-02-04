@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
-import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionError';
+import { callEdgeFunction } from '@/lib/edgeFetch';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
@@ -88,22 +88,27 @@ export default function NewPratica() {
 
     const createBlitzerCase = async () => {
       try {
-        // Create the blitzer case via backend
-        const { data, error } = await supabase.functions.invoke('create-case', {
-          body: {
-            title: 'Einspruch gegen Blitzer-Bußgeld',
-            authority: 'Bußgeldstelle',
-            status: 'in_progress',
-          },
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          toast.error('Sessione scaduta. Effettua di nuovo l\'accesso.');
+          return;
+        }
+        const result = await callEdgeFunction('create-case', token, {
+          title: 'Einspruch gegen Blitzer-Bußgeld',
+          authority: 'Bußgeldstelle',
+          status: 'in_progress',
         });
-
-        if (error) throw error;
-        
+        const data = result.data as { id?: string; error?: string; message?: string } | null;
+        if (!result.ok) {
+          const msg = data?.message || data?.error || `Errore ${result.status}`;
+          toast.error(msg);
+          return;
+        }
         if (data?.error === 'LIMIT_REACHED') {
           setShowPaywall(true);
           return;
         }
-        
         if (data?.id) {
           setBlitzerPraticaId(data.id);
           setShowBlitzerWizard(true);
@@ -111,7 +116,7 @@ export default function NewPratica() {
         }
       } catch (err) {
         console.error('Error creating blitzer case:', err);
-        toast.error('Fehler beim Erstellen des Vorgangs');
+        toast.error(err instanceof Error ? err.message : 'Fehler beim Erstellen des Vorgangs');
       }
     };
 
@@ -131,17 +136,23 @@ export default function NewPratica() {
 
     const createAutoveloxCase = async () => {
       try {
-        // Create the autovelox case via backend
-        const { data, error } = await supabase.functions.invoke('create-case', {
-          body: {
-            title: 'Ricorso Multa Autovelox – Italia',
-            authority: 'Prefettura / Giudice di Pace',
-            status: 'in_progress',
-          },
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          toast.error('Sessione scaduta. Effettua di nuovo l\'accesso.');
+          return;
+        }
+        const result = await callEdgeFunction('create-case', token, {
+          title: 'Ricorso Multa Autovelox – Italia',
+          authority: 'Prefettura / Giudice di Pace',
+          status: 'in_progress',
         });
-
-        if (error) throw new Error(getEdgeFunctionErrorMessage(error, data));
-        
+        const data = result.data as { id?: string; error?: string; message?: string } | null;
+        if (!result.ok) {
+          const msg = data?.message || data?.error || `Errore ${result.status}`;
+          toast.error(msg);
+          return;
+        }
         if (data?.error === 'LIMIT_REACHED') {
           setShowPaywall(true);
           return;
@@ -417,35 +428,35 @@ export default function NewPratica() {
     setIsLoading(true);
     
     try {
-      // Use backend edge function for case creation (enforces limits server-side)
-      const { data, error } = await supabase.functions.invoke('create-case', {
-        body: {
-          title: formData.title.trim(),
-          authority: formData.authority.trim() || null,
-          aktenzeichen: formData.aktenzeichen.trim() || null,
-          deadline: formData.deadline || null,
-          letter_text: formData.letter_text.trim() || null,
-          file_url: fileUrl,
-          status: analysisResult ? 'in_progress' : 'new',
-          explanation: analysisResult?.explanation || null,
-          risks: analysisResult?.risks || null,
-          draft_response: analysisResult?.draft_response || null,
-        },
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sessione scaduta. Effettua di nuovo l\'accesso.');
+
+      const result = await callEdgeFunction('create-case', token, {
+        title: formData.title.trim(),
+        authority: formData.authority.trim() || null,
+        aktenzeichen: formData.aktenzeichen.trim() || null,
+        deadline: formData.deadline || null,
+        letter_text: formData.letter_text.trim() || null,
+        file_url: fileUrl,
+        status: analysisResult ? 'in_progress' : 'new',
+        explanation: analysisResult?.explanation || null,
+        risks: analysisResult?.risks || null,
+        draft_response: analysisResult?.draft_response || null,
       });
-      
-      if (error) throw new Error(getEdgeFunctionErrorMessage(error, data));
-      
-      // Check for LIMIT_REACHED error from backend
-      if (data?.error === 'LIMIT_REACHED') {
+
+      const data = result.data as { error?: string; message?: string } | null;
+      if (!result.ok) {
+        const msg = data?.message || data?.error || `Errore server (${result.status})`;
+        throw new Error(msg);
+      }
+      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowPaywall(true);
         toast.error(data.message || t('subscription.limitReached'));
         return;
       }
-      
-      if (data?.error) {
-        throw new Error(data.message || data.error);
-      }
-      
+      if (data?.error) throw new Error(data.message || data.error);
+
       await refreshEntitlements();
       toast.success(t('newPratica.success'));
       navigate('/dashboard');
