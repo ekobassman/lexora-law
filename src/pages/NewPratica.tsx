@@ -17,7 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
-import { invokeExtractText } from '@/lib/invokeExtractText';
+import { processDocumentWithFile } from '@/lib/processDocumentClient';
 import { callEdgeFunction } from '@/lib/edgeFetch';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
@@ -203,31 +203,10 @@ export default function NewPratica() {
     });
   };
 
-  const extractTextFromFile = async (file: File): Promise<string | null> => {
-    try {
-      const base64 = await fileToBase64(file);
-
-      // Use centralized invoke wrapper with auth validation
-      const result = await invokeExtractText({
-        base64,
-        mimeType: file.type,
-        userLanguage: language,
-        navigate,
-      });
-
-      // null means auth failed and user was redirected
-      if (result === null) return null;
-
-      if (result.error) {
-        console.error('[extract-text] function error', result.error);
-        return null;
-      }
-
-      return result.text || null;
-    } catch (err) {
-      console.error('[extract-text] unexpected error', err);
-      return null;
-    }
+  /** Pipeline unico: upload + OCR via process-document; ritorna testo estratto o null. */
+  const getTextFromProcessDocument = async (docId: string): Promise<string | null> => {
+    const { data } = await supabase.from('documents').select('ocr_text, raw_text').eq('id', docId).single();
+    return (data?.ocr_text ?? data?.raw_text) ?? null;
   };
 
   const runAnalysis = async (text: string) => {
@@ -278,41 +257,30 @@ export default function NewPratica() {
     setAnalysisProgress(10);
     
     try {
-      // Upload file first
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('pratiche-files')
-        .upload(fileName, selectedFile);
-      
-      if (uploadError) throw uploadError;
-      
-      setFileUrl(fileName);
+      const result = await processDocumentWithFile(selectedFile);
+      setFileUrl(result.doc.storage_path);
       setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
+      if (result.warning?.ocr === 'disabled') {
+        toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
+      }
 
-      // Run OCR for both images AND PDFs
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
-      
-      const extractedText = await extractTextFromFile(selectedFile);
+      const extractedText = result.doc.has_text && result.doc.id
+        ? await getTextFromProcessDocument(result.doc.id)
+        : null;
       
       if (extractedText && extractedText.trim().length > 0) {
         setFormData(prev => ({ ...prev, letter_text: extractedText }));
         setAnalysisProgress(70);
-        
-        // Now run AI analysis
         setAnalysisStep('analyzing');
         setAnalysisProgress(80);
-        
-        const result = await runAnalysis(extractedText);
-        
-        if (result) {
-          setAnalysisResult(result);
-          // Auto-fill authority if detected
-          if (result.authority) {
-            setFormData(prev => ({ ...prev, authority: result.authority }));
+        const analysisResult = await runAnalysis(extractedText);
+        if (analysisResult) {
+          setAnalysisResult(analysisResult);
+          if (analysisResult.authority) {
+            setFormData(prev => ({ ...prev, authority: analysisResult.authority }));
           }
           setAnalysisStep('completed');
           setAnalysisProgress(100);
@@ -325,9 +293,10 @@ export default function NewPratica() {
         setAnalysisStep('error');
         toast.error(t('analysis.ocrError'));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
-      toast.error(error.message || t('newPratica.error.upload'));
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(msg || t('newPratica.error.upload'));
       setFile(null);
       setAnalysisStep('error');
     }
@@ -341,47 +310,33 @@ export default function NewPratica() {
     setAnalysisResult(null);
   };
 
-  // Handle camera scan - reuse file handling logic
   const handleCameraScan = async (capturedFile: File) => {
     setFile(capturedFile);
     setAnalysisStep('uploading');
     setAnalysisProgress(10);
-    
     try {
-      // Upload file
-      const fileExt = 'jpg';
-      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('pratiche-files')
-        .upload(fileName, capturedFile);
-      
-      if (uploadError) throw uploadError;
-      
-      setFileUrl(fileName);
+      const result = await processDocumentWithFile(capturedFile);
+      setFileUrl(result.doc.storage_path);
       setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
-
-      // Run OCR
+      if (result.warning?.ocr === 'disabled') {
+        toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
+      }
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
-      
-      const extractedText = await extractTextFromFile(capturedFile);
-      
+      const extractedText = result.doc.has_text && result.doc.id
+        ? await getTextFromProcessDocument(result.doc.id)
+        : null;
       if (extractedText && extractedText.trim().length > 0) {
         setFormData(prev => ({ ...prev, letter_text: extractedText }));
         setAnalysisProgress(70);
-        
-        // Now run AI analysis
         setAnalysisStep('analyzing');
         setAnalysisProgress(80);
-        
-        const result = await runAnalysis(extractedText);
-        
-        if (result) {
-          setAnalysisResult(result);
-          if (result.authority) {
-            setFormData(prev => ({ ...prev, authority: result.authority }));
+        const analysisResult = await runAnalysis(extractedText);
+        if (analysisResult) {
+          setAnalysisResult(analysisResult);
+          if (analysisResult.authority) {
+            setFormData(prev => ({ ...prev, authority: analysisResult.authority }));
           }
           setAnalysisStep('completed');
           setAnalysisProgress(100);
@@ -394,9 +349,9 @@ export default function NewPratica() {
         setAnalysisStep('error');
         toast.error(t('analysis.ocrError'));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Camera scan error:', error);
-      toast.error(error.message || t('newPratica.error.upload'));
+      toast.error(error instanceof Error ? error.message : t('newPratica.error.upload'));
       setFile(null);
       setAnalysisStep('error');
     }

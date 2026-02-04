@@ -760,15 +760,26 @@ export default function AdminPanel() {
             <Shield className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-semibold">Admin Panel</h1>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/app', { replace: true })}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('admin.backToDashboard')}</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/pipeline-runs')}
+              className="flex items-center gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Pipeline runs</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/app', { replace: true })}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('admin.backToDashboard')}</span>
+            </Button>
+          </div>
         </div>
       </header>
 

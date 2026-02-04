@@ -31,6 +31,7 @@ cd ~/OneDrive/Desktop/LEXORA/lexora-law-main
 | **Sistema limiti (plan_limits, user_plan, usage_counters_monthly, RPC)** | Esegui la migration `supabase/migrations/20260204000000_plan_limits_usage_counters_rpc.sql` in Supabase SQL Editor (copia/incolla), poi Dashboard → Settings → API → **Reload schema cache** |
 | **Deploy Edge Function** | `npx supabase functions deploy nome-funzione --project-ref wzpxxlkfxymelrodjarl` |
 | **Deploy Edge Function health** | `npx supabase functions deploy health --project-ref wzpxxlkfxymelrodjarl` (dopo migration `20260204120000_schema_health_rpc.sql`) |
+| **Deploy Edge Function process-document** | `npx supabase functions deploy process-document --project-ref wzpxxlkfxymelrodjarl` (dopo migration `20260205100000_pipeline_documents_bucket.sql`; secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_VISION_API_KEY) |
 | **Log Edge Function in tempo reale** | `npx supabase functions logs nome-funzione --tail` |
 
 ---
@@ -83,6 +84,16 @@ Esegui in sequenza:
 
 5. **Vercel rewrites (Vite SPA)**  
    In `vercel.json` la prima rewrite deve essere `/api/:path*` → `/api/:path*` così `/api/*` non viene riscritto su `index.html`. Poi `/(.*)` → `/index.html` per la SPA.
+
+---
+
+## Pipeline Upload+OCR (process-document)
+
+1. **Migration:** eseguire `supabase/migrations/20260205100000_pipeline_documents_bucket.sql` (bucket `documents`, tabella `pipeline_runs`, colonne su `documents`).
+2. **Deploy:** `npx supabase functions deploy process-document --project-ref wzpxxlkfxymelrodjarl`
+3. **Secrets:** `npx supabase secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GOOGLE_VISION_API_KEY=... --project-ref wzpxxlkfxymelrodjarl`
+4. **Bucket:** `documents` (private); path `userId/caseId|no-case/timestamp-filename`. Bucket `pratiche-files` deprecato (vedi `docs/PIPELINE_UPLOAD_OCR.md`).
+5. **Debug:** Admin → Pipeline runs (`/admin/pipeline-runs`) per ultime 20 righe di `pipeline_runs`.
 
 ---
 

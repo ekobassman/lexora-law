@@ -49,9 +49,10 @@ Questo documento elenca tutti gli oggetti DB, storage, RPC e Edge Functions che 
 
 ## 3. Storage bucket richiesti
 
-| Bucket | Visibilità | Path atteso | Migration |
-|--------|------------|-------------|-----------|
-| `pratiche-files` | private | `{user_id}/{pratica_id}/{filename}` o `{user_id}/...` | 20251225061854 |
+| Bucket | Visibilità | Path atteso | Note |
+|--------|------------|-------------|------|
+| `documents` | private | `{user_id}/{case_id\|no-case}/{timestamp}-{filename}` | **Standard pipeline** (20260205100000) |
+| `pratiche-files` | private | `{user_id}/{pratica_id}/{filename}` | **Deprecato** — mantenuto solo per dati esistenti; non usare per nuovi upload |
 
 Policies: lettura/scrittura/delete solo per `auth.uid()` sul proprio path (primo segmento = user_id).
 
@@ -63,6 +64,7 @@ Policies: lettura/scrittura/delete solo per `auth.uid()` sul proprio path (primo
 |----------|-----|
 | `entitlements` | Limiti piano, can_create_case, admin override, user_subscriptions/user_usage |
 | `create-case` | Crea pratica, consume_usage('uploads'), storage |
+| `process-document` | **Pipeline unico** upload+OCR: bucket `documents`, tabella `documents`, log `pipeline_runs` |
 | `analyze-letter` | Analisi lettera (OCR/rischi/deadline) |
 | `analyze-document` | Analisi documento (upload flow) |
 | `chat-with-ai` | Chat per pratica |

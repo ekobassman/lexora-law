@@ -32,6 +32,7 @@ import LocaleDebug from "./pages/LocaleDebug";
 import Pricing from "./pages/Pricing";
 import AdminPanel from "./pages/AdminPanel";
 import AdminUsage from "./pages/AdminUsage";
+import PipelineRuns from "./pages/PipelineRuns";
 import AccountUsage from "./pages/AccountUsage";
 import ResetPassword from "./pages/ResetPassword";
 import UpdatePassword from "./pages/UpdatePassword";
@@ -155,6 +156,7 @@ const App = () => (
                   <Route path="/account/usage" element={<ProtectedRoute><AccountUsage /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
                   <Route path="/admin/usage" element={<ProtectedRoute requireAdmin><AdminUsage /></ProtectedRoute>} />
+                  <Route path="/admin/pipeline-runs" element={<ProtectedRoute requireAdmin><PipelineRuns /></ProtectedRoute>} />
                   
                   {/* Debug route */}
                   <Route path="/debug/locale" element={<LocaleDebug />} />

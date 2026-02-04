@@ -13,8 +13,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
-import { invokeExtractText } from '@/lib/invokeExtractText';
 import { callEdgeFunction } from '@/lib/edgeFetch';
+import { processDocumentWithFile } from '@/lib/processDocumentClient';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -214,39 +214,28 @@ export default function ScanDocument() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
-        
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user!.id}/${pratica.id}/${Date.now()}-${i}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('pratiche-files')
-          .upload(fileName, file);
-        if (uploadError) throw uploadError;
-
-        let extractedText = '';
-        if (file.type.startsWith('image/')) {
-          setProcessingStep(`${t('scan.step.ocr')} (${i + 1}/${files.length})`);
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-            reader.readAsDataURL(file);
-          });
-
-          const ocrResult = await invokeExtractText({ base64, mimeType: file.type, userLanguage: language, navigate });
-          if (ocrResult === null) { setIsProcessing(false); return; }
-          if (ocrResult.text) {
-            extractedText = ocrResult.text;
-            combinedText += (combinedText ? '\n\n---\n\n' : '') + extractedText;
-          } else if (ocrResult.error) {
-            toast.error(`${file.name}: ${ocrResult.details || ocrResult.error}`, { duration: 7000 });
+        try {
+          const result = await processDocumentWithFile(file, { caseId: pratica.id });
+          if (result.warning?.ocr === 'disabled') {
+            toast.info(`${file.name}: ${t('scan.uploadedOcrDisabled') || 'Caricato, OCR non disponibile'}`, { duration: 4000 });
+          }
+          if (result.doc.has_text && result.doc.id) {
+            setProcessingStep(`${t('scan.step.ocr')} (${i + 1}/${files.length})`);
+            const { data: docRow } = await supabase.from('documents').select('ocr_text, raw_text').eq('id', result.doc.id).single();
+            const text = (docRow?.ocr_text ?? docRow?.raw_text) ?? '';
+            if (text) combinedText += (combinedText ? '\n\n---\n\n' : '') + text;
+          } else if (!result.doc.has_text && !result.warning?.ocr) {
+            toast.error(`${file.name}: ${t('scan.ocrFailed') || 'OCR non riuscito'}`, { duration: 5000 });
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const code = err instanceof Error ? (err as { code?: string }).code : undefined;
+          if (code === 'FILE_TOO_LARGE' || code === 'INVALID_TYPE') {
+            toast.error(`${file.name}: ${msg}`, { duration: 6000 });
+          } else {
+            throw err;
           }
         }
-
-        await supabase.from('documents').insert({
-          pratica_id: pratica.id, user_id: user!.id, direction: 'incoming',
-          file_url: fileName, file_name: file.name, file_size: file.size,
-          mime_type: file.type, raw_text: extractedText, document_type: 'letter',
-        });
       }
 
       if (combinedText) {
