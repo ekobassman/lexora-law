@@ -216,14 +216,17 @@ export default function ScanDocument() {
       let combinedText = '';
       let firstAnalysis: { summary?: string; risks?: string[]; draft_text?: string } | null = null;
 
+      console.log("[DEBUG-UPLOAD] ScanDocument: prima upload", { numFiles: files.length });
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        console.log("[DEBUG-UPLOAD] File:", file.name, file.size, file.type);
         if (isHeicFile(file)) {
           toast.error(`${file.name}: HEIC non supportato. Usa JPG/PNG.`, { duration: 6000 });
           continue;
         }
         setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
         try {
+          console.log("[DEBUG-UPLOAD] ScanDocument: durante upload (runCanonicalPipeline)", file.name);
           const result = await runCanonicalPipeline(file, {
             caseId: pratica.id,
             source: 'upload',
@@ -234,6 +237,7 @@ export default function ScanDocument() {
               else if (step === 'analyzing') setProcessingStep(t('scan.step.analyzing'));
             },
           });
+          console.log("[DEBUG-UPLOAD] Risposta:", { document_id: result.document_id, ocrLen: result.ocr_text?.length, hasDraft: !!result.draft_text });
           if (result.ocr_text) combinedText += (combinedText ? '\n\n---\n\n' : '') + result.ocr_text;
           if (!firstAnalysis && (result.analysis || result.draft_text)) {
             firstAnalysis = {
@@ -243,6 +247,8 @@ export default function ScanDocument() {
             };
           }
         } catch (err: unknown) {
+          console.error("[DEBUG-processDocument] ERRORE in processFiles (ScanDocument):", err);
+          console.error("[DEBUG-processDocument] Stack:", err instanceof Error ? err.stack : "(no stack)");
           const code = err instanceof Error ? (err as { code?: string }).code : undefined;
           if (code === 'HEIC_NOT_SUPPORTED') {
             toast.error(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, { duration: 6000 });
@@ -268,7 +274,8 @@ export default function ScanDocument() {
       toast.success(t('scan.success'));
       navigate(`/pratiche/${pratica.id}`);
     } catch (error) {
-      console.error('Error processing files:', error);
+      console.error("[DEBUG-processDocument] ERRORE in processFiles (ScanDocument) outer catch:", error);
+      console.error("[DEBUG-processDocument] Stack:", error instanceof Error ? error.stack : "(no stack)");
       const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
       toast.error(`${t('scan.error')}: ${message}`, {
         duration: 8000,

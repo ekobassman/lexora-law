@@ -1199,8 +1199,12 @@ export function DemoChatSection() {
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files ?? []);
+    console.log("[DEBUG-UPLOAD] DemoChatSection: prima upload", { numFiles: selected.length });
     if (selected.length === 0) return;
 
+    for (const f of selected) {
+      console.log("[DEBUG-UPLOAD] File:", f.name, f.size, f.type);
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     // Demo mode: no backend/OCR – simulate steps and send mock reply
@@ -1238,6 +1242,7 @@ export function DemoChatSection() {
     setProcessingStep('uploading');
 
     try {
+      console.log("[DEBUG-UPLOAD] DemoChatSection: durante upload (pipeline)");
       const extractedParts: { name: string; text: string; isPDF: boolean; analysis?: AnalysisItem; draft?: string }[] = [];
       
       // Step 1: Uploading (handled inside processOCRSingle via pipeline)
@@ -1245,8 +1250,10 @@ export function DemoChatSection() {
       
       // Step 2: Run canonical pipeline per file (upload → ocr → analyze-and-draft)
       for (const file of validFiles) {
+        console.log("[DEBUG-UPLOAD] File in pipeline:", file.name, file.size, file.type);
         const isPDF = isLikelyPdf(file);
         const ocrResult = await processOCRSingle(file, demoMode);
+        console.log("[DEBUG-UPLOAD] Risposta processOCRSingle:", { name: file.name, hasText: !!ocrResult.text, hasDraft: !!ocrResult.draft, error: ocrResult.error });
         if (ocrResult.text !== null || ocrResult.draft) {
           extractedParts.push({
             name: file.name,
@@ -1317,6 +1324,11 @@ export function DemoChatSection() {
       } else {
         toast.error(txt.ocrError);
       }
+      console.log("[DEBUG-UPLOAD] DemoChatSection: dopo upload", { extractedPartsCount: extractedParts.length });
+    } catch (err) {
+      console.error("[DEBUG-processDocument] ERRORE in handleFileChange (DemoChatSection):", err);
+      console.error("[DEBUG-processDocument] Stack:", err instanceof Error ? err.stack : "(no stack)");
+      throw err;
     } finally {
       setProcessingStep('idle');
       setIsProcessingFile(false);

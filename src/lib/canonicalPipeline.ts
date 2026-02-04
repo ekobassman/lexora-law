@@ -53,6 +53,7 @@ export async function uploadDocument(
   file: File,
   options?: { caseId?: string; source?: "upload" | "camera" }
 ): Promise<UploadDocumentResult> {
+  console.log("[DEBUG-processDocument] Chiamata funzione: uploadDocument (canonicalPipeline)", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
   const token = await getToken();
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/upload-document`;
   const form = new FormData();
@@ -67,6 +68,7 @@ export async function uploadDocument(
   });
 
   const data = (await res.json().catch(() => ({}))) as UploadDocumentResult | UploadDocumentError;
+  console.log("[DEBUG-UPLOAD] Risposta upload-document (Supabase):", { ok: res.ok, status: res.status, data });
   if (!res.ok) {
     const err = data as UploadDocumentError;
     throw new Error(err?.message ?? err?.error ?? `Upload failed ${res.status}`);

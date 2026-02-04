@@ -23,6 +23,7 @@ export interface ProcessDocumentResult {
 
 /** Returns true if the file is HEIC/HEIF (iPhone camera). We do not support HEIC; client should block or convert to JPEG. */
 export function isHeicFile(file: File): boolean {
+  console.log("[DEBUG-processDocument] Chiamata funzione: isHeicFile", { file: file?.name, type: file?.type });
   const t = (file.type || "").toLowerCase();
   if (t.includes("heic") || t.includes("heif")) return true;
   const name = (file.name || "").toLowerCase();
@@ -54,6 +55,7 @@ export function getProcessDocumentErrorToast(
   err: ProcessDocumentErrorLike,
   options?: { isAdmin?: boolean; filePrefix?: string }
 ): { message: string; runId: string | null; actionLabel: string | null } {
+  console.log("[DEBUG-processDocument] Chiamata funzione: getProcessDocumentErrorToast", { errMessage: err?.message, options });
   const msg = err?.message ?? "Errore";
   const runId = err?.run_id ?? null;
   const isAdmin = options?.isAdmin ?? false;
@@ -82,6 +84,7 @@ export async function processDocumentWithFile(
   file: File,
   options?: { caseId?: string }
 ): Promise<ProcessDocumentResult> {
+  console.log("[DEBUG-processDocument] Chiamata funzione: processDocumentWithFile", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
   if (isHeicFile(file)) {
     const e = new Error(HEIC_NOT_SUPPORTED_MSG) as Error & { code?: string };
     e.code = "HEIC_NOT_SUPPORTED";
@@ -130,6 +133,7 @@ export async function processDocumentWithBase64(
   mimeType: string,
   options?: { caseId?: string }
 ): Promise<ProcessDocumentResult> {
+  console.log("[DEBUG-processDocument] Chiamata funzione: processDocumentWithBase64", { base64Len: base64?.length, mimeType, options });
   const m = (mimeType || "").toLowerCase();
   if (HEIC_MIMES.some((h) => m.includes(h))) {
     const e = new Error(HEIC_NOT_SUPPORTED_MSG) as Error & { code?: string };
