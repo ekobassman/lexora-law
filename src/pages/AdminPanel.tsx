@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Shield, User, AlertTriangle, Bug, Zap, Wifi, WifiOff, ArrowLeft, Users, UserCheck, UserPlus, Activity, RefreshCw, CreditCard, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isAdminEmail } from '@/lib/adminConfig';
 
 interface UserMetrics {
   totalUsers: number;
@@ -185,7 +186,7 @@ export default function AdminPanel() {
     };
   }, [user?.email]);
 
-  // Check admin status via RPC (server-side role verification)
+  // Check admin status via RPC (user_roles / profiles). Fallback to email if DB not populated (e.g. after migration).
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!user) {
@@ -193,18 +194,35 @@ export default function AdminPanel() {
         return;
       }
 
+      // Debug: log user / metadata
+      console.log('[AdminPanel] user for admin check:', {
+        id: user.id,
+        email: user.email,
+        user_metadata: user.user_metadata,
+        app_metadata: user.app_metadata,
+      });
+
       try {
         const { data, error } = await supabase.rpc('is_admin');
         console.log('[AdminPanel] admin-check response:', { data, error: error?.message });
+
         if (error) {
           console.error('[AdminPanel] Admin check error:', error);
-          setIsAdmin(false);
+          // Fallback: known admin email when RPC fails (e.g. user_roles empty after migration)
+          setIsAdmin(isAdminEmail(user?.email));
+          if (isAdminEmail(user?.email)) console.log('[AdminPanel] fallback: admin by email');
+        } else if (data === true) {
+          setIsAdmin(true);
         } else {
-          setIsAdmin(data === true);
+          // RPC returned false: no row in user_roles. Fallback to email.
+          const byEmail = isAdminEmail(user?.email);
+          setIsAdmin(byEmail);
+          if (byEmail) console.log('[AdminPanel] fallback: admin by email (RPC false)');
         }
       } catch (err) {
         console.error('[AdminPanel] Admin check failed:', err);
-        setIsAdmin(false);
+        setIsAdmin(isAdminEmail(user?.email));
+        if (isAdminEmail(user?.email)) console.log('[AdminPanel] fallback: admin by email (after throw)');
       } finally {
         setCheckingAdmin(false);
       }

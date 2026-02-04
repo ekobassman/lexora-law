@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useTermsCheck } from '@/hooks/useTermsCheck';
 import { TermsReacceptDialog } from '@/components/TermsReacceptDialog';
+import { isAdminEmail } from '@/lib/adminConfig';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -43,21 +44,53 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         setUserId(session.user.id);
         setUserEmail(session.user.email ?? '');
 
-        // If admin is required, check admin status
+        // Debug: log user / metadata (admin check)
+        const u = session.user;
+        console.log('[ProtectedRoute] user for admin check:', {
+          id: u?.id,
+          email: u?.email,
+          user_metadata: u?.user_metadata,
+          app_metadata: u?.app_metadata,
+        });
+
+        // If admin is required, check admin status (RPC reads user_roles / profiles)
         if (requireAdmin) {
           try {
             const { data: adminData, error } = await supabase.rpc('is_admin');
             if (cancelled) return;
-            
+
+            console.log('[ProtectedRoute] is_admin RPC result:', { adminData, error: error?.message });
+
             if (error) {
               console.error('[ProtectedRoute] is_admin RPC error:', error);
-              setAdminStatus('error');
+              // Fallback: if DB role missing (e.g. after migration), allow known admin email
+              if (isAdminEmail(u?.email)) {
+                console.log('[ProtectedRoute] fallback: admin by email');
+                setAdminStatus('admin');
+              } else {
+                setAdminStatus('error');
+              }
+            } else if (adminData === true) {
+              setAdminStatus('admin');
             } else {
-              setAdminStatus(adminData === true ? 'admin' : 'not_admin');
+              // RPC returned false: no row in user_roles. Fallback to email for known admin.
+              if (isAdminEmail(u?.email)) {
+                console.log('[ProtectedRoute] fallback: admin by email (RPC false)');
+                setAdminStatus('admin');
+              } else {
+                setAdminStatus('not_admin');
+              }
             }
           } catch (e) {
             console.error('[ProtectedRoute] is_admin threw:', e);
-            if (!cancelled) setAdminStatus('error');
+            if (!cancelled) {
+              if (isAdminEmail(u?.email)) {
+                console.log('[ProtectedRoute] fallback: admin by email (after throw)');
+                setAdminStatus('admin');
+              } else {
+                setAdminStatus('error');
+              }
+            }
           }
         }
       } catch (e) {
@@ -87,17 +120,20 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
 
       // Re-check admin status on auth change if required
       if (requireAdmin) {
-        setAdminStatus('loading'); // Show loader while checking
+        setAdminStatus('loading');
         setTimeout(async () => {
           try {
             const { data: adminData, error } = await supabase.rpc('is_admin');
+            const email = session?.user?.email;
             if (error) {
-              setAdminStatus('error');
+              setAdminStatus(isAdminEmail(email) ? 'admin' : 'error');
+            } else if (adminData === true) {
+              setAdminStatus('admin');
             } else {
-              setAdminStatus(adminData === true ? 'admin' : 'not_admin');
+              setAdminStatus(isAdminEmail(email) ? 'admin' : 'not_admin');
             }
           } catch {
-            setAdminStatus('error');
+            setAdminStatus(isAdminEmail(session?.user?.email) ? 'admin' : 'error');
           }
         }, 0);
       }

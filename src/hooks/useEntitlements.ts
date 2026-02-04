@@ -2,6 +2,7 @@ import { useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEntitlements, type EntitlementsDTO } from "@/lib/getEntitlements";
+import { isAdminEmail } from "@/lib/adminConfig";
 import { supabase } from "@/integrations/supabase/client";
 
 const DEFAULT_ENTITLEMENTS: EntitlementsDTO = {
@@ -95,11 +96,9 @@ export function useEntitlements(): UseEntitlementsReturn {
   const isPaid = entitlements.plan !== "free" && (entitlements.status === "active" || entitlements.status === "trialing");
 
   // Derive isAdmin: API role/debug first, then fallback by email (so UI shows Admin even if DB/API not synced yet)
-  const ADMIN_EMAIL = "imbimbo.bassman@gmail.com";
   const computeIsAdmin = useCallback(() => {
     if (entitlements?.role === 'admin' || entitlements?.debug?.is_admin === true) return true;
-    const email = (session?.user?.email ?? "").toLowerCase();
-    return email === ADMIN_EMAIL.toLowerCase();
+    return isAdminEmail(session?.user?.email);
   }, [entitlements?.role, entitlements?.debug?.is_admin, session?.user?.email]);
 
   const isAdmin = computeIsAdmin();
