@@ -6,11 +6,7 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary } from "../_shared/documentGate.ts";
 import { UNIFIED_LEXORA_IDENTITY } from "../_shared/lexoraSystemPrompt.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type OkResponse = { ok: true; reply: string; draftText: string | null; meta?: { model?: string; blocked?: boolean; confidence?: number }; webSources?: SearchResult[] };
 type ErrResponse = { ok: false; error: { code: string; message: string } };
@@ -221,7 +217,7 @@ function extractFormalLetterFallback(text: string): string | null {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
