@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Regole automatiche Lexora – Git e deploy
 
+**VIETATO dimenticarlo:** dopo **OGNI** modifica al codice devi fare commit e push. Non chiudere mai il task senza aver pushato.
+
 **Ogni volta che finisci una cosa** (task, fix, feature, refactor): fai commit e push **in automatico**, senza chiedere conferma.
 
 1. `git add .` (o i file coinvolti)
@@ -12,6 +14,6 @@ alwaysApply: true
 3. `git push origin main`
 4. Scrivi all'utente: **"Modifiche pushate su GitHub. Vercel sta deployando automaticamente su lexora-law.com (~30 s)"**
 
-Non chiedere "vuoi che faccia commit?". Esegui sempre questi passi al termine delle modifiche.
+Non chiedere "vuoi che faccia commit?". Esegui **sempre** questi passi al termine delle modifiche. Dimenticarlo è vietato.
 
 Eccezioni: non fare add/commit/push se non è stato modificato alcun file, o se l'utente ha solo chiesto lettura/spiegazione.
