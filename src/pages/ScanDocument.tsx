@@ -14,7 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { callEdgeFunction } from '@/lib/edgeFetch';
-import { processDocumentWithFile } from '@/lib/processDocumentClient';
+import { runCanonicalPipeline, isHeicFile } from '@/lib/canonicalPipeline';
+import { getProcessDocumentErrorToast } from '@/lib/processDocumentClient';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,7 +28,7 @@ import {
 export default function ScanDocument() {
   const { t, language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
-  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
+  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements, isAdmin } = useEntitlements();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -158,9 +159,12 @@ export default function ScanDocument() {
         toast.error(t('scan.error') + (typeof window !== 'undefined' ? '. ' + (t('analysis.ocrError') || 'Nessun testo estratto. Riprova con un\'immagine più nitida.') : ''), { duration: 6000 });
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error processing files:', error);
-      toast.error(`${t('scan.error')}: ${msg}`, { duration: 8000 });
+      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
+      toast.error(`${t('scan.error')}: ${message}`, {
+        duration: 8000,
+        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
+      });
     } finally {
       setIsProcessing(false);
       setProcessingStep('');
@@ -210,33 +214,38 @@ export default function ScanDocument() {
       if (!pratica?.id) throw new Error('Failed to create case');
 
       let combinedText = '';
+      let firstAnalysis: { summary?: string; risks?: string[]; draft_text?: string } | null = null;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (isHeicFile(file)) {
+          toast.error(`${file.name}: HEIC non supportato. Usa JPG/PNG.`, { duration: 6000 });
+          continue;
+        }
         setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
         try {
-          const result = await processDocumentWithFile(file, { caseId: pratica.id });
-          if (result.warning?.ocr === 'disabled') {
-            toast.info(`${file.name}: ${t('scan.uploadedOcrDisabled') || 'Caricato, OCR non disponibile'}`, { duration: 4000 });
-          }
-          if (result.code === 'PDF_NOT_SUPPORTED') {
-            toast.warning(t('scan.pdfNotSupportedHint') || 'Converti PDF in immagini (1-3 pagine) e ricarica.', { duration: 7000 });
-          }
-          if (result.doc.has_text && result.doc.id) {
-            setProcessingStep(`${t('scan.step.ocr')} (${i + 1}/${files.length})`);
-            const { data: docRow } = await supabase.from('documents').select('ocr_text, raw_text').eq('id', result.doc.id).single();
-            const text = (docRow?.ocr_text ?? docRow?.raw_text) ?? '';
-            if (text) combinedText += (combinedText ? '\n\n---\n\n' : '') + text;
-          } else if (!result.doc.has_text && !result.warning?.ocr && result.code !== 'PDF_NOT_SUPPORTED') {
-            toast.error(`${file.name}: ${t('scan.ocrFailed') || 'OCR non riuscito'}`, { duration: 5000 });
+          const result = await runCanonicalPipeline(file, {
+            caseId: pratica.id,
+            source: 'upload',
+            userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
+            onProgress: (step) => {
+              if (step === 'uploading') setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
+              else if (step === 'ocr') setProcessingStep(`${t('scan.step.ocr')} (${i + 1}/${files.length})`);
+              else if (step === 'analyzing') setProcessingStep(t('scan.step.analyzing'));
+            },
+          });
+          if (result.ocr_text) combinedText += (combinedText ? '\n\n---\n\n' : '') + result.ocr_text;
+          if (!firstAnalysis && (result.analysis || result.draft_text)) {
+            firstAnalysis = {
+              summary: result.analysis?.summary,
+              risks: result.analysis?.risks,
+              draft_text: result.draft_text,
+            };
           }
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
           const code = err instanceof Error ? (err as { code?: string }).code : undefined;
           if (code === 'HEIC_NOT_SUPPORTED') {
-            toast.error(`${file.name}: ${msg}`, { duration: 6000 });
-          } else if (code === 'FILE_TOO_LARGE' || code === 'INVALID_TYPE') {
-            toast.error(`${file.name}: ${msg}`, { duration: 6000 });
+            toast.error(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, { duration: 6000 });
           } else {
             throw err;
           }
@@ -245,19 +254,12 @@ export default function ScanDocument() {
 
       if (combinedText) {
         await supabase.from('pratiche').update({ letter_text: combinedText, status: 'in_progress' }).eq('id', pratica.id);
-        setProcessingStep(t('scan.step.analyzing'));
-        const analyzeResult = await callEdgeFunction('analyze-letter', token, { letterText: combinedText, userLanguage: language });
-        const analysisData = analyzeResult.data;
-        if (!analyzeResult.ok) {
-          const msg = (analysisData && typeof analysisData === 'object' && ('message' in analysisData) ? (analysisData as { message?: string }).message : null)
-            || (analysisData && typeof analysisData === 'object' && ('error' in analysisData) ? (analysisData as { error?: string }).error : null)
-            || `Errore analisi (${analyzeResult.status})`;
-          throw new Error(msg);
-        }
-        if (analysisData?.explanation) {
+        if (firstAnalysis) {
           await supabase.from('pratiche').update({
-            explanation: analysisData.explanation, risks: analysisData.risks ?? [],
-            draft_response: analysisData.draft_response, status: 'in_progress',
+            explanation: firstAnalysis.summary ?? null,
+            risks: firstAnalysis.risks ?? [],
+            draft_response: firstAnalysis.draft_text ?? null,
+            status: 'in_progress',
           }).eq('id', pratica.id);
         }
       }
@@ -266,9 +268,12 @@ export default function ScanDocument() {
       toast.success(t('scan.success'));
       navigate(`/pratiche/${pratica.id}`);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error processing files:', error);
-      toast.error(`${t('scan.error')}: ${msg}`, { duration: 8000 });
+      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
+      toast.error(`${t('scan.error')}: ${message}`, {
+        duration: 8000,
+        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
+      });
     } finally {
       setIsProcessing(false);
       setProcessingStep('');

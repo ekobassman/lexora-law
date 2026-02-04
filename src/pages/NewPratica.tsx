@@ -17,7 +17,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
-import { processDocumentWithFile } from '@/lib/processDocumentClient';
+import { runCanonicalPipeline, isHeicFile } from '@/lib/canonicalPipeline';
+import { getProcessDocumentErrorToast } from '@/lib/processDocumentClient';
 import { callEdgeFunction } from '@/lib/edgeFetch';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
@@ -34,7 +35,7 @@ const praticaSchema = z.object({
 export default function NewPratica() {
   const { t, isRTL, language } = useLanguage();
   const { user, loading: authLoading, hardReset } = useAuth();
-  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
+  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements, isAdmin } = useEntitlements();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -203,108 +204,64 @@ export default function NewPratica() {
     });
   };
 
-  /** Pipeline unico: upload + OCR via process-document; ritorna testo estratto o null. */
-  const getTextFromProcessDocument = async (docId: string): Promise<string | null> => {
-    const { data } = await supabase.from('documents').select('ocr_text, raw_text').eq('id', docId).single();
-    return (data?.ocr_text ?? data?.raw_text) ?? null;
-  };
-
-  const runAnalysis = async (text: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-letter', {
-        body: {
-          letterText: text,
-          userLanguage: language,
-        },
-      });
-
-      if (error) {
-        console.error('Analysis error:', error);
-        return null;
-      }
-
-      if (data?.error) {
-        console.error('AI error:', data.error);
-        return null;
-      }
-
-      return data;
-    } catch (err) {
-      console.error('Error running analysis:', err);
-      return null;
-    }
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-    
-    // Validate file type
+
+    if (isHeicFile(selectedFile)) {
+      toast.error(t('demoChat.heicNotSupported') || 'HEIC non supportato. Usa JPG/PNG.', { duration: 6000 });
+      return;
+    }
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(selectedFile.type)) {
       toast.error(t('newPratica.error.fileType'));
       return;
     }
-    
-    // Validate file size (max 10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
       toast.error(t('newPratica.error.fileSize'));
       return;
     }
-    
+
     setFile(selectedFile);
     setAnalysisStep('uploading');
     setAnalysisProgress(10);
-    
-    try {
-      const result = await processDocumentWithFile(selectedFile);
-      setFileUrl(result.doc.storage_path);
-      setAnalysisProgress(30);
-      toast.success(t('newPratica.fileUploaded'));
-      if (result.warning?.ocr === 'disabled') {
-        toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
-      }
-      if (result.code === 'PDF_NOT_SUPPORTED') {
-        toast.warning(t('scan.pdfNotSupportedHint') || 'Converti PDF in immagini (1-3 pagine) e ricarica.', { duration: 7000 });
-      }
 
-      setAnalysisStep('extracting');
-      setAnalysisProgress(50);
-      const extractedText = result.doc.has_text && result.doc.id
-        ? await getTextFromProcessDocument(result.doc.id)
-        : null;
-      
-      if (extractedText && extractedText.trim().length > 0) {
-        setFormData(prev => ({ ...prev, letter_text: extractedText }));
-        setAnalysisProgress(70);
-        setAnalysisStep('analyzing');
-        setAnalysisProgress(80);
-        const analysisResult = await runAnalysis(extractedText);
-        if (analysisResult) {
-          setAnalysisResult(analysisResult);
-          if (analysisResult.authority) {
-            setFormData(prev => ({ ...prev, authority: analysisResult.authority }));
+    try {
+      const result = await runCanonicalPipeline(selectedFile, {
+        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
+        onProgress: (step) => {
+          if (step === 'uploading') {
+            setAnalysisStep('uploading');
+            setAnalysisProgress(20);
+          } else if (step === 'ocr') {
+            setAnalysisStep('extracting');
+            setAnalysisProgress(50);
+          } else if (step === 'analyzing') {
+            setAnalysisStep('analyzing');
+            setAnalysisProgress(80);
+          } else {
+            setAnalysisProgress(100);
           }
-          setAnalysisStep('completed');
-          setAnalysisProgress(100);
-          toast.success(t('detail.analyzeSuccess'));
-        } else {
-          setAnalysisStep('error');
-          toast.error(t('detail.analyzeError'));
-        }
-      } else {
-        setAnalysisStep('error');
-        toast.error(t('analysis.ocrError'));
-      }
+        },
+      });
+      setFileUrl(result.signed_url ?? null);
+      setFormData((prev) => ({ ...prev, letter_text: result.ocr_text || '' }));
+      setAnalysisResult({
+        explanation: result.analysis?.summary,
+        risks: result.analysis?.risks ?? [],
+        draft_response: result.draft_text,
+      });
+      setAnalysisStep('completed');
+      setAnalysisProgress(100);
+      toast.success(t('newPratica.fileUploaded'));
+      toast.success(t('detail.analyzeSuccess'));
     } catch (error: unknown) {
       console.error('Upload error:', error);
       const msg = error instanceof Error ? error.message : String(error);
-      const code = error instanceof Error ? (error as { code?: string }).code : undefined;
-      if (code === 'HEIC_NOT_SUPPORTED') {
-        toast.error(msg || t('newPratica.error.upload'), { duration: 6000 });
-      } else {
-        toast.error(msg || t('newPratica.error.upload'));
-      }
+      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
+      toast.error(message || msg || t('newPratica.error.upload'), {
+        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
+      });
       setFile(null);
       setAnalysisStep('error');
     }
@@ -319,56 +276,50 @@ export default function NewPratica() {
   };
 
   const handleCameraScan = async (capturedFile: File) => {
+    if (isHeicFile(capturedFile)) {
+      toast.error(t('demoChat.heicNotSupported') || 'HEIC non supportato. Usa JPG/PNG.', { duration: 6000 });
+      return;
+    }
     setFile(capturedFile);
     setAnalysisStep('uploading');
     setAnalysisProgress(10);
     try {
-      const result = await processDocumentWithFile(capturedFile);
-      setFileUrl(result.doc.storage_path);
-      setAnalysisProgress(30);
-      toast.success(t('newPratica.fileUploaded'));
-      if (result.warning?.ocr === 'disabled') {
-        toast.info(t('newPratica.ocrDisabled') || 'Caricato, OCR non disponibile', { duration: 4000 });
-      }
-      if (result.code === 'PDF_NOT_SUPPORTED') {
-        toast.warning(t('scan.pdfNotSupportedHint') || 'Converti PDF in immagini (1-3 pagine) e ricarica.', { duration: 7000 });
-      }
-      setAnalysisStep('extracting');
-      setAnalysisProgress(50);
-      const extractedText = result.doc.has_text && result.doc.id
-        ? await getTextFromProcessDocument(result.doc.id)
-        : null;
-      if (extractedText && extractedText.trim().length > 0) {
-        setFormData(prev => ({ ...prev, letter_text: extractedText }));
-        setAnalysisProgress(70);
-        setAnalysisStep('analyzing');
-        setAnalysisProgress(80);
-        const analysisResult = await runAnalysis(extractedText);
-        if (analysisResult) {
-          setAnalysisResult(analysisResult);
-          if (analysisResult.authority) {
-            setFormData(prev => ({ ...prev, authority: analysisResult.authority }));
+      const result = await runCanonicalPipeline(capturedFile, {
+        source: 'camera',
+        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
+        onProgress: (step) => {
+          if (step === 'uploading') {
+            setAnalysisStep('uploading');
+            setAnalysisProgress(20);
+          } else if (step === 'ocr') {
+            setAnalysisStep('extracting');
+            setAnalysisProgress(50);
+          } else if (step === 'analyzing') {
+            setAnalysisStep('analyzing');
+            setAnalysisProgress(80);
+          } else {
+            setAnalysisProgress(100);
           }
-          setAnalysisStep('completed');
-          setAnalysisProgress(100);
-          toast.success(t('detail.analyzeSuccess'));
-        } else {
-          setAnalysisStep('error');
-          toast.error(t('detail.analyzeError'));
-        }
-      } else {
-        setAnalysisStep('error');
-        toast.error(t('analysis.ocrError'));
-      }
+        },
+      });
+      setFileUrl(result.signed_url ?? null);
+      setFormData((prev) => ({ ...prev, letter_text: result.ocr_text || '' }));
+      setAnalysisResult({
+        explanation: result.analysis?.summary,
+        risks: result.analysis?.risks ?? [],
+        draft_response: result.draft_text,
+      });
+      setAnalysisStep('completed');
+      setAnalysisProgress(100);
+      toast.success(t('newPratica.fileUploaded'));
+      toast.success(t('detail.analyzeSuccess'));
     } catch (error: unknown) {
       console.error('Camera scan error:', error);
-      const msg = error instanceof Error ? error.message : t('newPratica.error.upload');
-      const code = error instanceof Error ? (error as { code?: string }).code : undefined;
-      if (code === 'HEIC_NOT_SUPPORTED') {
-        toast.error(msg, { duration: 6000 });
-      } else {
-        toast.error(msg);
-      }
+      const msg = error instanceof Error ? error.message : String(error);
+      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
+      toast.error(message || msg || t('newPratica.error.upload'), {
+        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
+      });
       setFile(null);
       setAnalysisStep('error');
     }

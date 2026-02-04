@@ -45,7 +45,7 @@ import { RegistrationGate } from '@/components/RegistrationGate';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
 import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
-import { ocrFromFile } from '@/lib/ocrClient';
+import { runCanonicalPipeline, isHeicFile, HEIC_NOT_SUPPORTED_MSG, type AnalysisItem } from '@/lib/canonicalPipeline';
 import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 
 interface ChatMessage {
@@ -262,6 +262,17 @@ function getSafeText(t: (key: string) => string, key: string, fallback: string):
     return fallback;
   }
   return result;
+}
+
+/** Format pipeline analysis for display in chat (OCR + analysis summary). */
+function formatAnalysisForChat(analysis: AnalysisItem | undefined, ocrSnippet?: string): string {
+  const parts: string[] = [];
+  if (analysis?.summary) parts.push(`**Summary:** ${analysis.summary}`);
+  if (analysis?.deadlines?.length) parts.push(`**Deadlines:** ${analysis.deadlines.join('; ')}`);
+  if (analysis?.risks?.length) parts.push(`**Risks:** ${analysis.risks.join('; ')}`);
+  if (analysis?.suggested_action) parts.push(`**Suggested action:** ${analysis.suggested_action}`);
+  if (ocrSnippet && ocrSnippet.trim()) parts.push(`\n*Extracted text (excerpt):*\n${ocrSnippet.trim().slice(0, 500)}${ocrSnippet.length > 500 ? '…' : ''}`);
+  return parts.length ? parts.join('\n\n') : 'Analysis completed. See draft below.';
 }
 
 async function fileToBase64(file: File): Promise<string> {
@@ -534,7 +545,7 @@ export function DemoChatSection() {
 
   const [showCamera, setShowCamera] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'extracting' | 'analyzing' | 'completed'>('idle');
+  const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'ocr' | 'analyzing' | 'completed'>('idle');
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const isRecordingRef = useRef(false);
@@ -861,26 +872,49 @@ export function DemoChatSection() {
     }
   };
 
-  const processOCRSingle = async (file: File, isDemo?: boolean) => {
-    if (isDemo) return { text: null as string | null } as import('@/lib/ocrClient').OcrResult;
-    return await ocrFromFile(file);
+  /** Canonical pipeline: upload → ocr → analyze-and-draft. Returns { text, analysis, draft } or null. */
+  const processOCRSingle = async (
+    file: File,
+    isDemo?: boolean,
+    source?: 'upload' | 'camera'
+  ): Promise<{ text: string | null; analysis?: AnalysisItem; draft?: string; error?: string; details?: string }> => {
+    if (isDemo) return { text: null };
+    if (isHeicFile(file)) {
+      toast.error(HEIC_NOT_SUPPORTED_MSG, { duration: 6000 });
+      return { text: null, error: 'HEIC_NOT_SUPPORTED', details: HEIC_NOT_SUPPORTED_MSG };
+    }
+    try {
+      const result = await runCanonicalPipeline(file, {
+        source: source ?? 'upload',
+        onProgress: (step) => {
+          if (step === 'uploading') setProcessingStep('uploading');
+          else if (step === 'ocr') setProcessingStep('ocr');
+          else if (step === 'analyzing') setProcessingStep('analyzing');
+          else setProcessingStep('completed');
+        },
+        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
+      });
+      return {
+        text: result.ocr_text || null,
+        analysis: result.analysis as AnalysisItem,
+        draft: result.draft_text,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { text: null, error: msg, details: msg };
+    }
   };
 
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
     setProcessingStep('uploading');
     try {
-      await new Promise(r => setTimeout(r, 300));
-      setProcessingStep('extracting');
       const result = await processOCRSingle(file, demoMode);
       if (result.text) {
-        setProcessingStep('analyzing');
-        await new Promise(r => setTimeout(r, 400));
         toast.success(txt.ocrSuccess);
         return result.text;
       }
-      const errMsg = result.details || result.error || txt.ocrError;
-      toast.error(errMsg, { duration: 7000 });
+      toast.error(result.details || result.error || txt.ocrError, { duration: 7000 });
       return null;
     } finally {
       setProcessingStep('idle');
@@ -1173,7 +1207,7 @@ export function DemoChatSection() {
       setIsProcessingFile(true);
       setProcessingStep('uploading');
       await new Promise(r => setTimeout(r, 300));
-      setProcessingStep('extracting');
+      setProcessingStep('ocr');
       await new Promise(r => setTimeout(r, 400));
       setProcessingStep('analyzing');
       await new Promise(r => setTimeout(r, 400));
@@ -1203,56 +1237,82 @@ export function DemoChatSection() {
     setProcessingStep('uploading');
 
     try {
-      const extractedParts: { name: string; text: string; isPDF: boolean }[] = [];
+      const extractedParts: { name: string; text: string; isPDF: boolean; analysis?: AnalysisItem; draft?: string }[] = [];
       
-      // Step 1: Uploading
-      await new Promise(r => setTimeout(r, 300));
-      setProcessingStep('extracting');
+      // Step 1: Uploading (handled inside processOCRSingle via pipeline)
+      setProcessingStep('ocr');
       
-      // Step 2: Extracting text from each file
+      // Step 2: Run canonical pipeline per file (upload → ocr → analyze-and-draft)
       for (const file of validFiles) {
         const isPDF = isLikelyPdf(file);
         const ocrResult = await processOCRSingle(file, demoMode);
-        if (ocrResult.text) {
-          extractedParts.push({ name: file.name, text: ocrResult.text, isPDF });
+        if (ocrResult.text !== null || ocrResult.draft) {
+          extractedParts.push({
+            name: file.name,
+            text: ocrResult.text ?? '',
+            isPDF,
+            analysis: ocrResult.analysis as AnalysisItem | undefined,
+            draft: ocrResult.draft,
+          });
         } else {
           toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
         }
       }
 
       if (extractedParts.length > 0) {
-        // Step 3: Analyzing
-        setProcessingStep('analyzing');
-        await new Promise(r => setTimeout(r, 400));
-        
-        let combinedMessage: string;
-        
-        if (extractedParts.length === 1) {
-          const part = extractedParts[0];
-          const prefix = part.isPDF ? '[PDF uploaded]' : '[Document uploaded]';
-          combinedMessage = `${prefix}\n\n${part.text}`;
+        // Use first part that has draft for display (canonical pipeline result)
+        const withDraft = extractedParts.find((p) => p.draft && p.draft.trim().length >= 50);
+        if (withDraft?.draft) {
+          setDraftText(withDraft.draft);
+          draftTextRef.current = withDraft.draft;
+          setGeneratedInSession(true);
+          const hasPDF = extractedParts.some((p) => p.isPDF);
+          const hasImage = extractedParts.some((p) => !p.isPDF);
+          const attachmentType: 'pdf' | 'image' = hasPDF && !hasImage ? 'pdf' : 'image';
+          const userLabel =
+            extractedParts.length === 1
+              ? hasPDF
+                ? '[PDF uploaded]'
+                : '[Document uploaded]'
+              : `[${extractedParts.length} documents uploaded]`;
+          const ocrSnippet = extractedParts.length === 1 ? extractedParts[0].text : undefined;
+          const analysisContent = formatAnalysisForChat(withDraft.analysis, ocrSnippet);
+          setMessages((prev) => [
+            ...prev,
+            { role: 'user', content: userLabel, timestamp: new Date(), attachmentType },
+            { role: 'assistant', content: analysisContent, timestamp: new Date() },
+          ]);
+          if (withDraft.draft.trim().length >= 50) {
+            openLetterOnlyPreviewWithText(withDraft.draft);
+          }
+          if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
+          if (!hasIncrementedCounterThisSession.current) {
+            hasIncrementedCounterThisSession.current = true;
+            (async () => {
+              try {
+                await supabase.rpc('increment_documents_processed');
+              } catch {
+                /* ignore */
+              }
+            })();
+          }
+          scrollToBottom();
+          toast.success(`${extractedParts.length} ${extractedParts.length === 1 ? 'document' : 'documents'} processed`);
         } else {
-          const header = `[${extractedParts.length} documents uploaded]`;
-          const sections = extractedParts.map((part, idx) => {
-            const typeLabel = part.isPDF ? 'PDF' : 'Image';
-            return `--- Page ${idx + 1} (${typeLabel}: ${part.name}) ---\n${part.text}`;
-          }).join('\n\n');
-          combinedMessage = `${header}\n\n${sections}`;
+          // Pipeline completed but no draft (e.g. analyze failed or empty)
+          const userLabel =
+            extractedParts.length === 1 ? '[Document uploaded]' : `[${extractedParts.length} documents uploaded]`;
+          setMessages((prev) => [
+            ...prev,
+            { role: 'user', content: userLabel, timestamp: new Date() },
+            {
+              role: 'assistant',
+              content: language === 'IT' ? 'Analisi non disponibile. Riprova.' : 'Analysis unavailable. Please try again.',
+              timestamp: new Date(),
+            },
+          ]);
+          toast.error(txt.ocrError);
         }
-
-        const hasPDF = extractedParts.some(p => p.isPDF);
-        const hasImage = extractedParts.some(p => !p.isPDF);
-        const attachmentType: 'pdf' | 'image' = hasPDF && !hasImage ? 'pdf' : 'image';
-
-        await sendMessage(combinedMessage, attachmentType);
-
-        // Match the original demo flow: after generating the draft, open the light "modify/preview" page.
-        // (Only for Scan/Upload-triggered flows; normal chat remains unchanged.)
-        const maybeDraft = (draftTextRef.current || '').trim();
-        if (maybeDraft.length >= 50) {
-          openLetterOnlyPreviewWithText(maybeDraft);
-        }
-        toast.success(`${extractedParts.length} ${extractedParts.length === 1 ? 'document' : 'documents'} processed`);
       } else {
         toast.error(txt.ocrError);
       }
@@ -1403,18 +1463,20 @@ export function DemoChatSection() {
 
           if (validFiles.length === 0) return;
 
-          // Build a single combined message, consistent with the upload flow.
           setIsProcessingFile(true);
           setProcessingStep('uploading');
           try {
-            await new Promise((r) => setTimeout(r, 300));
-            setProcessingStep('extracting');
-
-            const extractedParts: { name: string; text: string }[] = [];
+            setProcessingStep('ocr');
+            const extractedParts: { name: string; text: string; analysis?: AnalysisItem; draft?: string }[] = [];
             for (const file of validFiles) {
-              const ocrResult = await processOCRSingle(file, demoMode);
-              if (ocrResult.text) {
-                extractedParts.push({ name: file.name, text: ocrResult.text });
+              const ocrResult = await processOCRSingle(file, demoMode, 'camera');
+              if (ocrResult.text !== null || ocrResult.draft) {
+                extractedParts.push({
+                  name: file.name,
+                  text: ocrResult.text ?? '',
+                  analysis: ocrResult.analysis as AnalysisItem | undefined,
+                  draft: ocrResult.draft,
+                });
               } else {
                 toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
               }
@@ -1425,22 +1487,51 @@ export function DemoChatSection() {
               return;
             }
 
-            setProcessingStep('analyzing');
-            await new Promise((r) => setTimeout(r, 400));
-
-            const header = extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
-            const body =
-              extractedParts.length === 1
-                ? extractedParts[0].text
-                : extractedParts
-                    .map((p, idx) => `--- Photo ${idx + 1} (${p.name}) ---\n${p.text}`)
-                    .join('\n\n');
-
-            await sendMessage(`${header}\n\n${body}`, 'image');
-
-            const maybeDraft = (draftTextRef.current || '').trim();
-            if (maybeDraft.length >= 50) {
-              openLetterOnlyPreviewWithText(maybeDraft);
+            const withDraft = extractedParts.find((p) => p.draft && p.draft.trim().length >= 50);
+            if (withDraft?.draft) {
+              setDraftText(withDraft.draft);
+              draftTextRef.current = withDraft.draft;
+              setGeneratedInSession(true);
+              const userLabel =
+                extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
+              const ocrSnippet = extractedParts.length === 1 ? extractedParts[0].text : undefined;
+              const analysisContent = formatAnalysisForChat(withDraft.analysis, ocrSnippet);
+              setMessages((prev) => [
+                ...prev,
+                { role: 'user', content: userLabel, timestamp: new Date(), attachmentType: 'image' },
+                { role: 'assistant', content: analysisContent, timestamp: new Date() },
+              ]);
+              if (withDraft.draft.trim().length >= 50) {
+                openLetterOnlyPreviewWithText(withDraft.draft);
+              }
+              if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
+              if (!hasIncrementedCounterThisSession.current) {
+                hasIncrementedCounterThisSession.current = true;
+                (async () => {
+                  try {
+                    await supabase.rpc('increment_documents_processed');
+                  } catch {
+                    /* ignore */
+                  }
+                })();
+              }
+              scrollToBottom();
+              toast.success(
+                extractedParts.length === 1 ? (language === 'IT' ? 'Documento elaborato' : 'Document processed') : `${extractedParts.length} documents processed`
+              );
+            } else {
+              const userLabel =
+                extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
+              setMessages((prev) => [
+                ...prev,
+                { role: 'user', content: userLabel, timestamp: new Date() },
+                {
+                  role: 'assistant',
+                  content: language === 'IT' ? 'Analisi non disponibile. Riprova.' : 'Analysis unavailable. Please try again.',
+                  timestamp: new Date(),
+                },
+              ]);
+              toast.error(txt.ocrError);
             }
           } finally {
             setProcessingStep('idle');
@@ -1493,7 +1584,7 @@ export function DemoChatSection() {
                     {/* Progress Steps */}
                     <div className="flex flex-col gap-2">
                       {/* Step 1: Uploading */}
-                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'uploading' || processingStep === 'extracting' || processingStep === 'analyzing' ? 'opacity-100' : 'opacity-40'}`}>
+                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'uploading' || processingStep === 'ocr' || processingStep === 'analyzing' ? 'opacity-100' : 'opacity-40'}`}>
                         {processingStep === 'uploading' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         ) : (
@@ -1503,15 +1594,15 @@ export function DemoChatSection() {
                       </div>
                       
                       {/* Step 2: Extracting */}
-                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'extracting' || processingStep === 'analyzing' ? 'opacity-100' : processingStep === 'uploading' ? 'opacity-40' : 'opacity-40'}`}>
-                        {processingStep === 'extracting' ? (
+                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'ocr' || processingStep === 'analyzing' ? 'opacity-100' : processingStep === 'uploading' ? 'opacity-40' : 'opacity-40'}`}>
+                        {processingStep === 'ocr' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         ) : processingStep === 'analyzing' ? (
                           <Check className="h-4 w-4 text-success" />
                         ) : (
                           <div className="h-4 w-4 rounded-full border-2 border-muted" />
                         )}
-                        <span className={`text-sm ${processingStep === 'extracting' ? 'font-medium' : ''}`}>{txt.stepExtracting}</span>
+                        <span className={`text-sm ${processingStep === 'ocr' ? 'font-medium' : ''}`}>{txt.stepExtracting}</span>
                       </div>
                       
                       {/* Step 3: Analyzing */}
@@ -1531,7 +1622,7 @@ export function DemoChatSection() {
                         className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
                         style={{ 
                           width: processingStep === 'uploading' ? '20%' : 
-                                 processingStep === 'extracting' ? '50%' : 
+                                 processingStep === 'ocr' ? '50%' : 
                                  processingStep === 'analyzing' ? '85%' : '100%' 
                         }}
                       />
