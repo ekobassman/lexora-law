@@ -60,16 +60,16 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## Vercel – Environment variables (admin / server-side)
+## Vercel – Environment variables (Vite / client)
 
-For admin protection and server-side Supabase (e.g. API routes), set in Vercel:
+This app uses **Vite**; env vars must be prefixed with `VITE_` to be available in the browser. Set in Vercel **Project → Settings → Environment Variables**:
 
-- `NEXT_PUBLIC_SUPABASE_URL` – Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase anon (publishable) key
-- `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key (**server-side only**, never expose to client)
-- `GOOGLE_APPLICATION_CREDENTIALS_JSON` – Full JSON string of the Google Cloud service account key for OCR (**server-side only**). Used by `/api/ocr` and `/api/ocr/ping`. Do not put the JSON file in the repo.
+- **`VITE_SUPABASE_URL`** – Supabase project URL, e.g. `https://[project-ref].supabase.co` (not localhost)
+- **`VITE_SUPABASE_PUBLISHABLE_KEY`** or **`VITE_SUPABASE_ANON_KEY`** – Supabase anon (publishable) key
 
-Admin is enforced via `profiles.is_admin = true` (no client trust). Use `requireAdmin(req)` in server-side endpoints.
+Without these, the Admin Panel "User Monitoring" and other Edge Function calls will fail with "Failed to send a request to the Edge Function". After changing env vars, redeploy the project.
+
+**Do not** expose `SUPABASE_SERVICE_ROLE_KEY` to the client; it is used only in Supabase Edge Functions (server-side).
 
 ## OCR (Google Cloud Vision)
 

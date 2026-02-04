@@ -254,6 +254,11 @@ export default function AdminPanel() {
         return;
       }
 
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
+      console.log('[AdminPanel] admin-user-metrics request:', {
+        urlHint: supabaseUrl ? `${supabaseUrl.slice(0, 30)}.../functions/v1/admin-user-metrics` : 'MISSING VITE_SUPABASE_URL',
+      });
+
       const { data, error } = await supabase.functions.invoke('admin-user-metrics', {
         headers: { Authorization: `Bearer ${token}` },
         body: { windowMinutes: 10 },
@@ -264,7 +269,18 @@ export default function AdminPanel() {
       if (error) {
         const anyErr = error as any;
         const status = anyErr?.context?.status ?? anyErr?.status ?? '';
-        setMetricsError(status === 403 ? 'Admin only' : `Error: ${error.message}`);
+        const msg = error?.message ?? '';
+        const isNetworkOrConfig =
+          !supabaseUrl ||
+          msg.includes('Failed to send') ||
+          msg.includes('fetch') ||
+          msg.includes('NetworkError');
+        const hint = isNetworkOrConfig
+          ? ' Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or ANON_KEY) in Vercel; deploy: supabase functions deploy admin-user-metrics'
+          : '';
+        setMetricsError(
+          status === 403 ? 'Admin only' : `Error: ${msg}${hint}`
+        );
         return;
       }
 
@@ -285,7 +301,12 @@ export default function AdminPanel() {
       console.log('[admin-user-metrics] Fetched:', data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setMetricsError(`Exception: ${msg}`);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
+      const hint =
+        !supabaseUrl || msg.includes('fetch') || msg.includes('Failed')
+          ? ' Set VITE_SUPABASE_URL and key in Vercel; run: supabase functions deploy admin-user-metrics'
+          : '';
+      setMetricsError(`Exception: ${msg}${hint}`);
     } finally {
       setMetricsLoading(false);
     }
