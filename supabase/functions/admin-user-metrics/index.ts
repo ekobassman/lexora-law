@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Fallback se le env non sono settate su Supabase (Dashboard → Project Settings → Edge Functions)
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://wzpxxlkfxymelrodjarl.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "LA_TUA_CHIAVE_SERVICE_ROLE";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "LA_TUA_CHIAVE_ANON";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -29,6 +34,7 @@ const isAdminEmail = (email: string | undefined) =>
   ADMIN_EMAILS.some((e) => e.toLowerCase() === (email ?? "").toLowerCase());
 
 Deno.serve(async (req) => {
+  console.log("Edge function starting with URL:", SUPABASE_URL);
   console.log("[admin-user-metrics] entry");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -47,15 +53,13 @@ Deno.serve(async (req) => {
       return json200({ ok: false, reason: "unauthorized" });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-      console.error("[admin-user-metrics] missing env (SUPABASE_URL or keys)");
-      return json200({ ok: false, reason: "error", message: "Service not configured" });
+    if (!SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY === "LA_TUA_CHIAVE_SERVICE_ROLE" ||
+        !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === "LA_TUA_CHIAVE_ANON") {
+      console.error("[admin-user-metrics] Sostituisci LA_TUA_CHIAVE_SERVICE_ROLE e LA_TUA_CHIAVE_ANON nel file con le chiavi reali");
+      return json200({ ok: false, reason: "error", message: "Service not configured (keys missing)" });
     }
 
-    const userClient = createClient(supabaseUrl, anonKey, {
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: userError } = await userClient.auth.getUser();
@@ -65,7 +69,7 @@ Deno.serve(async (req) => {
       return json200({ ok: false, reason: "unauthorized" });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
     const { data: profile } = await adminClient
       .from("profiles")
