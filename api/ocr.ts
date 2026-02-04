@@ -18,9 +18,12 @@ function setCors(res: VercelResponse) {
 }
 
 function normalizeBase64(base64: string): string {
-  const commaIdx = base64.indexOf(",");
-  if (commaIdx !== -1) return base64.slice(commaIdx + 1).trim();
-  return base64.trim();
+  if (typeof base64 !== "string") return "";
+  let s = base64.trim();
+  const commaIdx = s.indexOf(",");
+  if (commaIdx !== -1) s = s.slice(commaIdx + 1).trim();
+  // Remove any whitespace/newlines that can break OpenAI (e.g. from JSON)
+  return s.replace(/\s/g, "");
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,20 +38,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed", details: "Use POST" });
   }
 
+  // Debug: log OPENAI_API_KEY presence (never log the key itself)
+  const hasKey = Boolean(process.env.OPENAI_API_KEY);
+  const keyLen = process.env.OPENAI_API_KEY?.length ?? 0;
+  console.log("[api/ocr] OPENAI_API_KEY present:", hasKey, "length:", keyLen);
+
   try {
     if (!process.env.OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY mancante su Vercel");
+      console.error("[api/ocr] OPENAI_API_KEY mancante su Vercel");
       return res.status(500).json({
         error: "Could not read document. Try again.",
         details: "OpenAI API key not configured on server",
       });
     }
 
-    const body = typeof req.body === "object" && req.body !== null ? (req.body as { base64?: string; mimeType?: string }) : {};
+    // Support both parsed object and raw JSON string (Vercel can send either)
+    let body: { base64?: string; mimeType?: string } = {};
+    if (typeof req.body === "object" && req.body !== null) {
+      body = req.body as { base64?: string; mimeType?: string };
+    } else if (typeof req.body === "string") {
+      try {
+        body = JSON.parse(req.body) as { base64?: string; mimeType?: string };
+      } catch {
+        console.error("[api/ocr] Invalid JSON body");
+        return res.status(400).json({
+          error: "Could not read document. Try again.",
+          details: "Invalid request body",
+        });
+      }
+    }
+
     const rawBase64 = body.base64;
     const mimeType = typeof body.mimeType === "string" ? body.mimeType : "image/jpeg";
 
-    if (!rawBase64 || typeof rawBase64 !== "string") {
+    if (rawBase64 === undefined || rawBase64 === null || typeof rawBase64 !== "string") {
+      console.error("[api/ocr] Missing or invalid base64: type", typeof rawBase64);
       return res.status(400).json({
         error: "Could not read document. Try again.",
         details: "Request must contain base64 image data",
@@ -56,6 +80,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const base64 = normalizeBase64(rawBase64);
+
+    if (!base64.length) {
+      console.error("[api/ocr] Base64 empty after normalize (raw length:", rawBase64.length, ")");
+      return res.status(400).json({
+        error: "Could not read document. Try again.",
+        details: "Empty image data after parsing",
+      });
+    }
+
+    console.log("[api/ocr] base64 length:", base64.length, "mimeType:", mimeType);
 
     const estimatedSizeMB = (base64.length * 0.75) / 1024 / 1024;
     if (estimatedSizeMB > 10) {
