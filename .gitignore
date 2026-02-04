@@ -1,6 +1,7 @@
 # Env (secreti - mai in Git)
 .env
 .env.local
+.env.local.bak
 .env.*.local
 .env.vercel-check
 
