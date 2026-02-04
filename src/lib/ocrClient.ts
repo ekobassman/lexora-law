@@ -17,24 +17,42 @@ function getOcrApiUrl(): string {
   return "/api/ocr";
 }
 
-/** Normalize base64: strip data URL prefix if present. */
+/** Normalize base64: strip data URL prefix if present, remove any whitespace/newlines. */
 function cleanBase64(base64: string): string {
   if (typeof base64 !== "string") return "";
-  const comma = base64.indexOf(",");
-  if (comma !== -1) return base64.slice(comma + 1).trim();
-  return base64.trim();
+  let s = base64.trim();
+  const comma = s.indexOf(",");
+  if (comma !== -1) s = s.slice(comma + 1).trim();
+  return s.replace(/\s/g, "");
 }
 
 /**
  * Call Vercel /api/ocr only. Base64 can be raw or data-URL (data:image/jpeg;base64,...).
+ * Payload must be: { base64: string, mimeType: string }.
  */
 export async function ocrWithBase64(base64: string, mimeType: string): Promise<OcrResult> {
-  const url = getOcrApiUrl();
+  const pathOrUrl = getOcrApiUrl();
   const rawBase64 = cleanBase64(base64);
-  const body = { base64: rawBase64, mimeType: mimeType || "image/jpeg" };
+  const effectiveMime = mimeType || "image/jpeg";
+  const body = { base64: rawBase64, mimeType: effectiveMime };
+
+  const fullUrl =
+    pathOrUrl.startsWith("http") ? pathOrUrl : (typeof window !== "undefined" ? window.location.origin : "") + pathOrUrl;
+
+  if (!rawBase64.length) {
+    console.error("[OCR] Empty base64 after normalize");
+    return { text: null, error: "Could not read document. Try again.", details: "Empty image data" };
+  }
+
+  console.log("Sending to OCR:", {
+    base64Length: rawBase64.length,
+    mimeType: effectiveMime,
+    url: fullUrl,
+    preview: rawBase64.substring(0, 50) + (rawBase64.length > 50 ? "…" : ""),
+  });
 
   try {
-    const res = await fetch(url.startsWith("http") ? url : (typeof window !== "undefined" ? window.location.origin : "") + url, {
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -42,6 +60,7 @@ export async function ocrWithBase64(base64: string, mimeType: string): Promise<O
 
     const data = (await res.json().catch(() => null)) as { text?: string; pages?: number; error?: string; details?: string } | null;
     if (!res.ok) {
+      console.error("[OCR] API error:", res.status, data?.details ?? data?.error);
       const error = data?.error ?? "Could not read document. Try again.";
       const details = data?.details ?? `HTTP ${res.status}`;
       return { text: null, error, details };
@@ -52,6 +71,7 @@ export async function ocrWithBase64(base64: string, mimeType: string): Promise<O
     return { text: null, error: data?.error ?? "No text", details: data?.details ?? "API returned no text" };
   } catch (err) {
     const details = err instanceof Error ? err.message : "Network or request failed";
+    console.error("[OCR] Request failed:", details);
     return { text: null, error: "Could not read document. Try again.", details };
   }
 }
@@ -74,7 +94,7 @@ export async function ocrFromFile(file: File): Promise<OcrResult> {
   }
 
   const base64 = await fileToBase64(processedFile);
-  const mimeType = processedFile.type || "image/jpeg";
+  const mimeType = processedFile.type || guessMimeType(processedFile);
   return ocrWithBase64(base64, mimeType);
 }
 
@@ -82,8 +102,15 @@ function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve((reader.result as string) || "");
-    reader.onerror = reject;
+    reader.onload = () => {
+      const result = (reader.result as string) || "";
+      if (!result) {
+        reject(new Error("FileReader returned empty result"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(reader.error || new Error("FileReader failed"));
   });
 }
 
