@@ -27,7 +27,8 @@ cd ~/OneDrive/Desktop/LEXORA/lexora-law-main
 |--------|--------|
 | **Genera/aggiorna i types dal DB** (dopo ogni modifica DB) | `npx supabase gen types typescript --project-id wzpxxlkfxymelrodjarl --schema public > src/types/supabase.ts` |
 | **Crea una nuova migration** | `npx supabase migration new nome_modifica` |
-| **Applica le migration al DB online** | `npx supabase db push` |
+| **Applica le migration al DB online** | `npx supabase db push` (dopo `npx supabase link --project-ref wzpxxlkfxymelrodjarl`) |
+| **Sistema limiti (plan_limits, user_plan, usage_counters_monthly, RPC)** | Esegui la migration `supabase/migrations/20260204000000_plan_limits_usage_counters_rpc.sql` in Supabase SQL Editor (copia/incolla), poi Dashboard → Settings → API → **Reload schema cache** |
 | **Deploy Edge Function** | `npx supabase functions deploy nome-funzione --project-ref wzpxxlkfxymelrodjarl` |
 | **Log Edge Function in tempo reale** | `npx supabase functions logs nome-funzione --tail` |
 

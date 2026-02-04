@@ -101,11 +101,17 @@ export default function NewPratica() {
         });
         const data = result.data as { id?: string; error?: string; message?: string } | null;
         if (!result.ok) {
+          const errCode = data?.error ?? '';
           const msg = data?.message || data?.error || `Errore ${result.status}`;
+          if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED'].includes(errCode)) {
+            setShowPaywall(true);
+            toast.error(msg || t('subscription.limitReached'));
+            return;
+          }
           toast.error(msg);
           return;
         }
-        if (data?.error === 'LIMIT_REACHED') {
+        if (data?.error === 'LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
           setShowPaywall(true);
           return;
         }
@@ -149,15 +155,20 @@ export default function NewPratica() {
         });
         const data = result.data as { id?: string; error?: string; message?: string } | null;
         if (!result.ok) {
+          const errCode = data?.error ?? '';
           const msg = data?.message || data?.error || `Errore ${result.status}`;
+          if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED'].includes(errCode)) {
+            setShowPaywall(true);
+            toast.error(msg || t('subscription.limitReached'));
+            return;
+          }
           toast.error(msg);
           return;
         }
-        if (data?.error === 'LIMIT_REACHED') {
+        if (data?.error === 'LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
           setShowPaywall(true);
           return;
         }
-        
         if (data?.id) {
           setAutoveloxPraticaId(data.id);
           setShowAutoveloxWizard(true);
@@ -447,10 +458,20 @@ export default function NewPratica() {
 
       const data = result.data as { error?: string; message?: string } | null;
       if (!result.ok) {
+        const errCode = data?.error ?? '';
         const msg = data?.message || data?.error || `Errore server (${result.status})`;
+        if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED', 'PRACTICE_LIMIT_REACHED'].includes(errCode)) {
+          setShowPaywall(true);
+          toast.error(msg || t('subscription.limitReached'), { duration: 6000 });
+          return;
+        }
+        if (result.status === 503 && errCode === 'USAGE_SYSTEM_UNAVAILABLE') {
+          toast.error(msg || t('newPratica.error.upload'), { duration: 6000 });
+          return;
+        }
         throw new Error(msg);
       }
-      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED') {
+      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
         setShowPaywall(true);
         toast.error(data.message || t('subscription.limitReached'));
         return;

@@ -106,97 +106,65 @@ serve(async (req) => {
       throw new Error("DEBUG_FORCED_INSERT_FAILURE");
     }
 
-    // STEP 3: Read plan + usage (server-side), enforce case limit BEFORE insert
-    const currentYm = new Date().toISOString().slice(0, 7);
+    // STEP 3: Consume 1 upload via RPC (plan_limits + usage_counters_monthly). Admin bypass.
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    let usageState: { plan_key?: string; usage?: { uploads_count?: number }; limits?: { uploads_per_month?: number } } | null = null;
 
-    const { data: subStateRaw } = await supabaseAdmin
-      .from("subscriptions_state")
-      .select("plan,is_active,monthly_case_limit")
-      .eq("user_id", userId)
-      .maybeSingle();
+    if (!isAdmin) {
+      const { data: consumeResult, error: consumeErr } = await supabaseAdmin.rpc("consume_usage", {
+        p_user_id: userId,
+        p_month: today,
+        p_metric: "uploads",
+        p_amount: 1,
+      });
 
-    // Ensure subscription state exists (defaults)
-    if (!subStateRaw) {
-      await supabaseAdmin
-        .from("subscriptions_state")
-        .upsert(
-          {
-            user_id: userId,
-            plan: "free",
-            monthly_case_limit: 1,
-            monthly_credit_refill: 0,
-            monthly_ai_softcap: 0,
-            is_active: true,
-          },
-          { onConflict: "user_id" },
+      if (consumeErr) {
+        logStep("Usage RPC error", { error: consumeErr.message });
+        return new Response(
+          JSON.stringify({
+            error: "USAGE_SYSTEM_UNAVAILABLE",
+            message: "Sistema limiti non disponibile. Riprova tra poco.",
+            details: consumeErr.message,
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      const result = consumeResult as { ok?: boolean; error?: string; state?: typeof usageState } | null;
+      if (!result?.ok) {
+        usageState = result?.state ?? null;
+        const code = result?.error ?? "LIMIT_UPLOADS";
+        const msg =
+          code === "LIMIT_UPLOADS"
+            ? "Limite upload mensili raggiunto. Passa a un piano superiore."
+            : code === "LIMIT_OCR"
+              ? "Limite pagine OCR mensili raggiunto."
+              : code === "LIMIT_CHAT"
+                ? "Limite messaggi chat mensili raggiunto."
+                : "Limite mensile raggiunto. Passa a un piano superiore.";
+        logStep("REJECTED: limit reached", { code, state: usageState });
+        return new Response(
+          JSON.stringify({
+            error: code,
+            message: msg,
+            state: usageState,
+            upgrade_required: true,
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      usageState = result?.state ?? null;
+    } else {
+      const { data: stateData } = await supabaseAdmin.rpc("get_usage_and_limits", {
+        p_user_id: userId,
+        p_month: today,
+      });
+      usageState = stateData as typeof usageState;
     }
 
-    const plan = subStateRaw?.plan ?? "free";
-    
-    // ADMIN BYPASS: Admins get null limit (truly unlimited)
-    // Also handle unlimited plan with null limit
-    const monthlyCaseLimitRaw = subStateRaw?.monthly_case_limit ?? 1;
-    const monthlyCaseLimit = isAdmin ? null : (plan === "unlimited" ? null : monthlyCaseLimitRaw);
+    logStep("Usage check OK", { plan_key: usageState?.plan_key, uploads: usageState?.usage?.uploads_count });
 
-    // Ensure usage row exists for current month
-    await supabaseAdmin
-      .from("usage_counters_monthly")
-      .upsert(
-        {
-          user_id: userId,
-          ym: currentYm,
-          cases_created: 0,
-          credits_spent: 0,
-          ai_sessions_started: 0,
-        },
-        { onConflict: "user_id,ym" },
-      );
-
-    const { data: usageRow, error: usageErr } = await supabaseAdmin
-      .from("usage_counters_monthly")
-      .select("cases_created")
-      .eq("user_id", userId)
-      .eq("ym", currentYm)
-      .maybeSingle();
-
-    if (usageErr) {
-      logStep("Usage read error", { error: usageErr.message });
-      throw new Error(`Failed to read usage counters: ${usageErr.message}`);
-    }
-
-    const casesUsedBefore = usageRow?.cases_created ?? 0;
-
-    logStep("BEFORE insert check", { 
-      userId, 
-      isAdmin,
-      plan,
-      casesUsedBefore, 
-      monthlyCaseLimit: monthlyCaseLimit === null ? '∞' : monthlyCaseLimit,
-      casesRemaining: monthlyCaseLimit === null ? '∞' : (monthlyCaseLimit - casesUsedBefore),
-    });
-
-    // ADMIN BYPASS + UNLIMITED BYPASS: Skip limit check if admin or monthlyCaseLimit is null
-    const shouldEnforceLimit = !isAdmin && monthlyCaseLimit !== null;
-    
-    if (shouldEnforceLimit && monthlyCaseLimit !== null && casesUsedBefore >= monthlyCaseLimit) {
-      logStep("REJECTED: case limit reached", { casesUsed: casesUsedBefore, limit: monthlyCaseLimit });
-      return new Response(
-        JSON.stringify({
-          error: "PRACTICE_LIMIT_REACHED",
-          message: "Limite pratiche mensili raggiunto. Passa a un piano superiore per continuare.",
-          cases_used: casesUsedBefore,
-          cases_limit: monthlyCaseLimit,
-          upgrade_required: true,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 403,
-        },
-      );
-    }
-
-    // STEP 4: Insert case (only if limit check passed)
+    // STEP 4: Insert case
     const { data: newCase, error: insertError } = await supabaseAdmin
       .from("pratiche")
       .insert({
@@ -221,59 +189,33 @@ serve(async (req) => {
       throw new Error(`Failed to create case: ${insertError.message}`);
     }
 
-    // STEP 5: Only AFTER successful insert: atomic increment counter via RPC
-    const { data: newCasesCount, error: incErr } = await supabaseAdmin.rpc("increment_cases_created", {
-      _user_id: userId,
-      _ym: currentYm,
-    });
+    logStep("AFTER insert success", { caseId: newCase.id, userId });
 
-    if (incErr) {
-      // Case was created but counter update failed; surface error for observability.
-      logStep("Post-insert atomic increment failed", { error: incErr.message, caseId: newCase.id });
-      throw new Error(`Failed to increment case counter: ${incErr.message}`);
-    }
-
-    const finalCasesUsed = newCasesCount ?? (casesUsedBefore + 1);
-    const finalCasesRemaining = monthlyCaseLimit === null ? null : Math.max(0, monthlyCaseLimit - finalCasesUsed);
-
-    logStep("AFTER insert success", { 
-      caseId: newCase.id, 
-      casesUsedBefore, 
-      casesUsedAfter: finalCasesUsed, 
-      casesRemaining: finalCasesRemaining === null ? '∞' : finalCasesRemaining,
-      monthlyCaseLimit: monthlyCaseLimit === null ? '∞' : monthlyCaseLimit,
-    });
-
-    const requestId = `case-create-${userId}-${Date.now()}`;
-    const { error: ledgerErr } = await supabaseAdmin.from("credit_ledger").insert({
-      user_id: userId,
-      case_id: newCase.id,
-      action_type: "CASE_CREATED",
-      delta: 0,
-      meta: { request_id: requestId, ym: currentYm, plan },
-    });
-
-    if (ledgerErr) {
-      logStep("Post-insert ledger write failed", { error: ledgerErr.message, caseId: newCase.id });
-      throw new Error(`Failed to write ledger: ${ledgerErr.message}`);
-    }
-
-    // STEP 7: Increment global documents processed counter (fire and forget)
+    // Optional: credit_ledger / user_wallet (non-blocking)
     try {
-      await supabaseAdmin.rpc("increment_documents_processed");
-    } catch (globalErr) {
-      logStep("Global stats increment failed (non-critical)", { error: (globalErr as Error)?.message });
+      await supabaseAdmin.from("credit_ledger").insert({
+        user_id: userId,
+        case_id: newCase.id,
+        action_type: "CASE_CREATED",
+        delta: 0,
+        meta: { request_id: `case-create-${userId}-${Date.now()}`, month: today },
+      });
+    } catch (ledgerErr) {
+      logStep("Ledger write failed (non-critical)", { error: (ledgerErr as Error)?.message });
     }
 
-    const { data: walletRow } = await supabaseAdmin
-      .from("user_wallet")
-      .select("balance_credits")
-      .eq("user_id", userId)
-      .maybeSingle();
+    let creditsBalance = 0;
+    try {
+      const { data: walletRow } = await supabaseAdmin.from("user_wallet").select("balance_credits").eq("user_id", userId).maybeSingle();
+      creditsBalance = walletRow?.balance_credits ?? 0;
+    } catch (_) {
+      // ignore
+    }
 
-    const creditsBalance = walletRow?.balance_credits ?? 0;
-
-    logStep("Case created successfully", { caseId: newCase.id, userId });
+    const usage = usageState?.usage ?? {};
+    const limits = usageState?.limits ?? {};
+    const uploadsUsed = usage.uploads_count ?? 0;
+    const uploadsLimit = limits.uploads_per_month ?? 999999;
 
     return new Response(
       JSON.stringify({
@@ -281,16 +223,13 @@ serve(async (req) => {
         id: newCase.id,
         case: newCase,
         usage: {
-          cases_used: finalCasesUsed,
-          cases_limit: monthlyCaseLimit === null ? 999999 : monthlyCaseLimit,  // Legacy format
-          remaining: finalCasesRemaining === null ? 999999 : finalCasesRemaining,  // Legacy format
+          cases_used: uploadsUsed,
+          cases_limit: uploadsLimit,
+          remaining: Math.max(0, uploadsLimit - uploadsUsed),
         },
         credits_balance: creditsBalance,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 201,
-      },
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

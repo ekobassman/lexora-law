@@ -184,12 +184,22 @@ export default function ScanDocument() {
       const caseResponse = createResult.data;
 
       if (!createResult.ok) {
-        const msg = (caseResponse && typeof caseResponse === 'object' && ('message' in caseResponse) ? (caseResponse as { message?: string }).message : null)
+        const errCode = (caseResponse && typeof caseResponse === 'object' && ('error' in caseResponse) ? (caseResponse as { error?: string }).error : null) ?? '';
+        const errMsg = (caseResponse && typeof caseResponse === 'object' && ('message' in caseResponse) ? (caseResponse as { message?: string }).message : null)
           || (caseResponse && typeof caseResponse === 'object' && ('error' in caseResponse) ? (caseResponse as { error?: string }).error : null)
           || `Errore server (${createResult.status})`;
-        throw new Error(msg);
+        if (createResult.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED', 'PRACTICE_LIMIT_REACHED'].includes(errCode)) {
+          setShowLimitPopup(true);
+          toast.error(errMsg || t('subscription.limitReached'), { duration: 6000 });
+          return;
+        }
+        if (createResult.status === 503 && errCode === 'USAGE_SYSTEM_UNAVAILABLE') {
+          toast.error(errMsg || t('scan.error'), { duration: 6000 });
+          return;
+        }
+        throw new Error(errMsg);
       }
-      if (caseResponse?.error === 'LIMIT_REACHED' || caseResponse?.error === 'PRACTICE_LIMIT_REACHED') {
+      if (caseResponse?.error === 'LIMIT_REACHED' || caseResponse?.error === 'PRACTICE_LIMIT_REACHED' || caseResponse?.error === 'LIMIT_UPLOADS') {
         setShowLimitPopup(true);
         toast.error((caseResponse as { message?: string }).message || t('subscription.limitReached'));
         return;
