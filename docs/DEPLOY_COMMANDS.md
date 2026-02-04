@@ -30,6 +30,7 @@ cd ~/OneDrive/Desktop/LEXORA/lexora-law-main
 | **Applica le migration al DB online** | `npx supabase db push` (dopo `npx supabase link --project-ref wzpxxlkfxymelrodjarl`) |
 | **Sistema limiti (plan_limits, user_plan, usage_counters_monthly, RPC)** | Esegui la migration `supabase/migrations/20260204000000_plan_limits_usage_counters_rpc.sql` in Supabase SQL Editor (copia/incolla), poi Dashboard → Settings → API → **Reload schema cache** |
 | **Deploy Edge Function** | `npx supabase functions deploy nome-funzione --project-ref wzpxxlkfxymelrodjarl` |
+| **Deploy Edge Function health** | `npx supabase functions deploy health --project-ref wzpxxlkfxymelrodjarl` (dopo migration `20260204120000_schema_health_rpc.sql`) |
 | **Log Edge Function in tempo reale** | `npx supabase functions logs nome-funzione --tail` |
 
 ---
@@ -58,6 +59,30 @@ Esegui in sequenza:
 6. `git commit -m 'Aggiunta colonna xyz'`
 7. `git push`
 8. `npx vercel --prod`
+
+---
+
+## Health Check (Supabase + Vercel)
+
+1. **Migration schema_health**  
+   Esegui `supabase/migrations/20260204120000_schema_health_rpc.sql` nel SQL Editor Supabase (crea RPC `schema_health()` per `to_regclass` su tabelle critiche).
+
+2. **Deploy Edge Function health**  
+   `npx supabase functions deploy health --project-ref wzpxxlkfxymelrodjarl`  
+   Secrets richiesti: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+3. **Endpoint Vercel `/api/health`**  
+   Il file `api/health.ts` è deployato con il sito; chiama la Edge Function `health`.  
+   Env Vercel: `SUPABASE_URL` (o `VITE_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL`), `SUPABASE_SERVICE_ROLE_KEY` (o `SUPABASE_ANON_KEY` / `VITE_SUPABASE_ANON_KEY`).
+
+4. **Test**  
+   - Edge: `GET https://<project-ref>.supabase.co/functions/v1/health` (opzionale Bearer)  
+   - Vercel (produzione): `GET https://lexora-law.com/api/health`  
+   - Ping rapido: `GET https://lexora-law.com/api/ping`  
+   Risposte sempre JSON; status 200 (ok) o 503 (unhealthy). Mai 404 se rewrites sono corretti.
+
+5. **Vercel rewrites (Vite SPA)**  
+   In `vercel.json` la prima rewrite deve essere `/api/:path*` → `/api/:path*` così `/api/*` non viene riscritto su `index.html`. Poi `/(.*)` → `/index.html` per la SPA.
 
 ---
 
