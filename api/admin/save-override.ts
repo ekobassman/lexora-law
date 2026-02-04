@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireAdminNode, HttpError } from "../_lib/requireAdmin";
-import { supabaseServer } from "../_lib/supabaseServer";
+import { requireAdminNode, HttpError } from "../_lib/requireAdmin.js";
+import { supabaseServer } from "../_lib/supabaseServer.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS

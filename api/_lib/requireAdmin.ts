@@ -1,4 +1,4 @@
-import { supabaseServer } from "./supabaseServer";
+import { supabaseServer } from "./supabaseServer.js";
 
 export class HttpError extends Error {
   status: number;
