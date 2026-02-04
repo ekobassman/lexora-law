@@ -32,7 +32,8 @@ function safeFilename(name: string): string {
 
 async function logStep(
   supabase: ReturnType<typeof createClient>,
-  userId: string,
+  runId: string,
+  userId: string | null,
   docId: string | null,
   step: string,
   ok: boolean,
@@ -42,7 +43,8 @@ async function logStep(
 ) {
   try {
     const { error } = await supabase.from("pipeline_runs").insert({
-      user_id: userId,
+      run_id: runId,
+      user_id: userId ?? null,
       doc_id: docId,
       step,
       ok,
@@ -105,25 +107,26 @@ async function openaiVisionOcr(
 
 serve(async (req) => {
   const ts = new Date().toISOString();
-  const errPayload = (where: string, code: string, message: string, runId: string | null = null) =>
+  const runId = crypto.randomUUID();
+  const errPayload = (where: string, code: string, message: string) =>
     ({ ok: false, where, code, message, run_id: runId, ts });
 
+  let supabase: ReturnType<typeof createClient> | null = null;
   try {
     if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
     if (req.method !== "POST") {
       return json(errPayload("method", "METHOD_NOT_ALLOWED", "Use POST"), 405);
     }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
-  const visionModel = Deno.env.get("OPENAI_MODEL_VISION") ?? "gpt-4o-mini";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+    const visionModel = Deno.env.get("OPENAI_MODEL_VISION") ?? "gpt-4o-mini";
 
     if (!supabaseUrl || !serviceKey) {
       return json(errPayload("env", "ENV_MISSING", "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing"), 500);
     }
 
-    let supabase: ReturnType<typeof createClient>;
     try {
       supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
     } catch (e) {
@@ -131,8 +134,15 @@ serve(async (req) => {
       return json(errPayload("env", "CLIENT_ERROR", msg), 500);
     }
 
+    const requestMeta = {
+      ip: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? null,
+      userAgent: req.headers.get("user-agent")?.slice(0, 200) ?? null,
+    };
+    await logStep(supabase, runId, null, null, "start", true, undefined, undefined, requestMeta);
+
     const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+      await logStep(supabase, runId, null, null, "auth_failed", false, "MISSING_BEARER", "Authorization Bearer required");
       return json(errPayload("auth", "MISSING_BEARER", "Authorization Bearer required"), 401);
     }
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
@@ -140,16 +150,18 @@ serve(async (req) => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
       if (userError || !userData.user) {
-        await logStep(supabase, "", null, "auth", false, "INVALID_TOKEN", userError?.message ?? "Invalid token");
+        await logStep(supabase, runId, null, null, "auth_failed", false, "INVALID_TOKEN", userError?.message ?? "Invalid token");
         return json(errPayload("auth", "INVALID_TOKEN", userError?.message ?? "Invalid token"), 401);
       }
       userId = userData.user.id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      await logStep(supabase, runId, null, null, "auth_failed", false, "AUTH_ERROR", msg);
       return json(errPayload("auth", "AUTH_ERROR", msg), 401);
     }
 
-    await logStep(supabase, userId, null, "auth", true);
+    await supabase.from("pipeline_runs").update({ user_id: userId }).eq("run_id", runId).is("user_id", null);
+    await logStep(supabase, runId, userId, null, "auth_ok", true);
 
     let fileBytes: Uint8Array;
     let fileName: string;
@@ -164,7 +176,7 @@ serve(async (req) => {
         const caseIdParam = formData.get("caseId") as string | null;
         if (caseIdParam) caseId = caseIdParam;
         if (!file || !(file instanceof File)) {
-          await logStep(supabase, userId, null, "error", false, "NO_FILE", "Missing file in form");
+          await logStep(supabase, runId, userId, null, "payload_error", false, "NO_FILE", "Missing file in form");
           return json(errPayload("payload", "NO_FILE", "Missing file in form"), 400);
         }
         fileBytes = new Uint8Array(await file.arrayBuffer());
@@ -173,14 +185,14 @@ serve(async (req) => {
       } else {
         const body = (await req.json().catch(() => null)) as { base64?: string; mimeType?: string; caseId?: string } | null;
         if (!body?.base64 || typeof body.base64 !== "string") {
-          await logStep(supabase, userId, null, "error", false, "NO_BASE64", "Missing base64 in body");
+          await logStep(supabase, runId, userId, null, "payload_error", false, "NO_BASE64", "Missing base64 in body");
           return json(errPayload("payload", "NO_BASE64", "Missing base64 in body"), 400);
         }
         const raw = body.base64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
         try {
           fileBytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
         } catch {
-          await logStep(supabase, userId, null, "error", false, "INVALID_BASE64", "Invalid base64");
+          await logStep(supabase, runId, userId, null, "payload_error", false, "INVALID_BASE64", "Invalid base64");
           return json(errPayload("payload", "INVALID_BASE64", "Invalid base64"), 400);
         }
         fileName = "camera-capture";
@@ -189,17 +201,17 @@ serve(async (req) => {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await logStep(supabase, userId, null, "error", false, "PAYLOAD_ERROR", msg);
+      await logStep(supabase, runId, userId, null, "payload_error", false, "PAYLOAD_ERROR", msg);
       return json(errPayload("payload", "PAYLOAD_ERROR", msg), 400);
     }
 
     if (fileBytes.length > MAX_FILE_BYTES) {
-      await logStep(supabase, userId, null, "error", false, "FILE_TOO_LARGE", `Max ${MAX_FILE_BYTES} bytes`);
+      await logStep(supabase, runId, userId, null, "validation_failed", false, "FILE_TOO_LARGE", `Max ${MAX_FILE_BYTES} bytes`);
       return json(errPayload("validation", "FILE_TOO_LARGE", `File too large (max ${Math.round(MAX_FILE_BYTES / 1024 / 1024)}MB)`), 413);
     }
     const allowed = ALLOWED_MIMES.some((m) => mimeType.toLowerCase() === m || mimeType.toLowerCase().startsWith(m.split("/")[0]));
     if (!allowed) {
-      await logStep(supabase, userId, null, "error", false, "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf");
+      await logStep(supabase, runId, userId, null, "validation_failed", false, "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf");
       return json(errPayload("validation", "INVALID_TYPE", "Allowed: jpeg, png, webp, pdf"), 400);
     }
 
@@ -212,10 +224,10 @@ serve(async (req) => {
       upsert: false,
     });
     if (uploadError) {
-      await logStep(supabase, userId, null, "upload_storage", false, "STORAGE_ERROR", uploadError.message, { path: storagePath });
+      await logStep(supabase, runId, userId, null, "upload_storage_failed", false, "STORAGE_ERROR", uploadError.message, { path: storagePath });
       return json(errPayload("upload_storage", "STORAGE_ERROR", uploadError.message), 500);
     }
-    await logStep(supabase, userId, null, "upload_storage", true, null, null, { path: storagePath });
+    await logStep(supabase, runId, userId, null, "upload_storage_ok", true, undefined, undefined, { path: storagePath });
 
     const docRow = {
       user_id: userId,
@@ -232,11 +244,11 @@ serve(async (req) => {
     };
     const { data: insertDoc, error: insertError } = await supabase.from("documents").insert(docRow).select("id").single();
     if (insertError) {
-      await logStep(supabase, userId, null, "insert_db", false, "DB_ERROR", insertError.message);
+      await logStep(supabase, runId, userId, null, "insert_db_failed", false, "DB_ERROR", insertError.message);
       return json(errPayload("insert_db", "DB_ERROR", insertError.message), 500);
     }
     const docId = insertDoc.id;
-    await logStep(supabase, userId, docId, "insert_db", true);
+    await logStep(supabase, runId, userId, docId, "insert_db_ok", true);
 
     let ocrText: string | null = null;
     let ocrError: string | null = null;
@@ -246,44 +258,57 @@ serve(async (req) => {
     if (mimeType === "application/pdf") {
       ocrError = PDF_NOT_SUPPORTED_MSG;
       status = "ocr_failed";
-      await logStep(supabase, userId, docId, "ocr", false, "PDF_NOT_SUPPORTED", PDF_NOT_SUPPORTED_MSG);
+      await logStep(supabase, runId, userId, docId, "ocr_start", true);
+      await logStep(supabase, runId, userId, docId, "ocr_failed", false, "PDF_NOT_SUPPORTED", PDF_NOT_SUPPORTED_MSG);
     } else if (mimeType.startsWith("image/")) {
+      await logStep(supabase, runId, userId, docId, "ocr_start", true);
       if (!openaiKey) {
         warning = { ocr: "disabled" };
-        await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true, reason: "no_openai_key" });
+        await logStep(supabase, runId, userId, docId, "ocr_done", true, undefined, undefined, { skipped: true, reason: "no_openai_key" });
       } else {
         const base64ForVision = `data:${mimeType};base64,${btoa(String.fromCharCode(...fileBytes))}`;
         const ocrResult = await openaiVisionOcr(base64ForVision, openaiKey, visionModel);
         if ("error" in ocrResult) {
           ocrError = ocrResult.error;
           status = "ocr_failed";
-          await logStep(supabase, userId, docId, "ocr", false, "OCR_FAILED", ocrResult.error);
+          await logStep(supabase, runId, userId, docId, "ocr_failed", false, "OCR_FAILED", ocrResult.error);
         } else {
           ocrText = ocrResult.text;
           status = "ocr_done";
-          await logStep(supabase, userId, docId, "ocr", true);
+          await logStep(supabase, runId, userId, docId, "ocr_done", true, undefined, undefined, { textLength: ocrText.length });
         }
       }
     } else {
+      await logStep(supabase, runId, userId, docId, "ocr_start", true);
       if (!openaiKey) warning = { ocr: "disabled" };
-      await logStep(supabase, userId, docId, "ocr", true, null, null, { skipped: true });
+      await logStep(supabase, runId, userId, docId, "ocr_done", true, undefined, undefined, { skipped: true });
     }
 
     const { error: updateError } = await supabase
       .from("documents")
-      .update({ ocr_text: ocrText, ocr_error: ocrError, status, updated_at: new Date().toISOString(), raw_text: ocrText })
+      .update({
+        ocr_text: ocrText,
+        ocr_error: ocrError,
+        status,
+        updated_at: new Date().toISOString(),
+        raw_text: ocrText,
+        ultima_run_id: runId,
+      })
       .eq("id", docId);
-    if (updateError) await logStep(supabase, userId, docId, "save_ocr", false, "UPDATE_ERROR", updateError.message);
-    else await logStep(supabase, userId, docId, "save_ocr", true);
+    if (updateError) {
+      await logStep(supabase, runId, userId, docId, "save_ocr_failed", false, "UPDATE_ERROR", updateError.message);
+    } else {
+      await logStep(supabase, runId, userId, docId, "save_ocr_ok", true);
+    }
 
-    await logStep(supabase, userId, docId, "done", true);
+    await logStep(supabase, runId, userId, docId, "done", true);
 
     const textPreview = ocrText ? ocrText.slice(0, 200) + (ocrText.length > 200 ? "…" : "") : null;
     return json(
       {
         ok: true,
         doc: { id: docId, storage_path: storagePath, status, has_text: !!ocrText, text_preview: textPreview },
-        run_id: null,
+        run_id: runId,
         ts,
         ...(warning && { warning }),
         ...(status === "ocr_failed" && ocrError === PDF_NOT_SUPPORTED_MSG && { code: "PDF_NOT_SUPPORTED", message: PDF_NOT_SUPPORTED_MSG }),
@@ -293,6 +318,16 @@ serve(async (req) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[process-document] unhandled", msg);
+    try {
+      const url = Deno.env.get("SUPABASE_URL");
+      const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const client = supabase ?? (url && key ? createClient(url, key, { auth: { persistSession: false } }) : null);
+      if (client) {
+        await logStep(client, runId, null, null, "unhandled", false, "INTERNAL", msg);
+      }
+    } catch (_) {
+      /* ignore */
+    }
     return json(errPayload("unhandled", "INTERNAL", msg), 500);
   }
 });

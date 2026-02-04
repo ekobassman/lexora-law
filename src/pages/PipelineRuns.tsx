@@ -1,9 +1,9 @@
 /**
- * Debug: ultime 20 righe da pipeline_runs per l'utente corrente (auth.uid()).
- * Accessibile da Admin o per qualsiasi utente loggato per vedere i propri run.
+ * Debug: pipeline_runs per l'utente corrente.
+ * Se run_id in querystring: mostra solo quel run (timeline); altrimenti ultime 20.
  */
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 
 interface PipelineRunRow {
   id: number;
+  run_id: string | null;
   user_id: string | null;
   doc_id: string | null;
   step: string;
@@ -27,20 +28,27 @@ interface PipelineRunRow {
 export default function PipelineRuns() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const runIdFilter = searchParams.get('run_id')?.trim() || null;
   const [runs, setRuns] = useState<PipelineRunRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRuns = async () => {
+  const fetchRuns = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     setError(null);
-    const { data, error: e } = await supabase
+    let query = supabase
       .from('pipeline_runs')
-      .select('id, user_id, doc_id, step, ok, code, message, meta, created_at')
+      .select('id, run_id, user_id, doc_id, step, ok, code, message, meta, created_at')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .order('created_at', { ascending: false });
+    if (runIdFilter) {
+      query = query.eq('run_id', runIdFilter);
+    } else {
+      query = query.limit(20);
+    }
+    const { data, error: e } = await query;
     if (e) {
       setError(e.message);
       setRuns([]);
@@ -48,7 +56,7 @@ export default function PipelineRuns() {
       setRuns((data ?? []) as PipelineRunRow[]);
     }
     setLoading(false);
-  };
+  }, [user?.id, runIdFilter]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -56,7 +64,7 @@ export default function PipelineRuns() {
       return;
     }
     if (user?.id) fetchRuns();
-  }, [user?.id, authLoading]);
+  }, [user?.id, authLoading, fetchRuns]);
 
   if (authLoading || !user) return null;
 
@@ -74,8 +82,12 @@ export default function PipelineRuns() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Pipeline runs (ultime 20)</CardTitle>
-          <p className="text-sm text-muted-foreground">Log upload+OCR per il tuo account</p>
+          <CardTitle>
+            {runIdFilter ? `Pipeline run: ${runIdFilter.slice(0, 8)}…` : 'Pipeline runs (ultime 20)'}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {runIdFilter ? 'Timeline per questo run_id' : 'Log upload+OCR per il tuo account'}
+          </p>
         </CardHeader>
         <CardContent>
           {loading && (
@@ -94,6 +106,7 @@ export default function PipelineRuns() {
               <TableHeader>
                 <TableRow>
                   <TableHead>id</TableHead>
+                  {!runIdFilter && <TableHead className="font-mono text-xs">run_id</TableHead>}
                   <TableHead>step</TableHead>
                   <TableHead>ok</TableHead>
                   <TableHead>code</TableHead>
@@ -105,6 +118,11 @@ export default function PipelineRuns() {
                 {runs.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs">{r.id}</TableCell>
+                    {!runIdFilter && (
+                      <TableCell className="font-mono text-xs" title={r.run_id ?? ''}>
+                        {r.run_id ? `${r.run_id.slice(0, 8)}…` : '—'}
+                      </TableCell>
+                    )}
                     <TableCell>{r.step}</TableCell>
                     <TableCell>
                       <Badge variant={r.ok ? 'default' : 'destructive'}>{r.ok ? 'ok' : 'fail'}</Badge>

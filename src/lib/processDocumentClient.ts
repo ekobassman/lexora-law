@@ -42,6 +42,31 @@ export interface ProcessDocumentError {
   ts: string;
 }
 
+/** Error with optional run_id (from process-document). */
+export type ProcessDocumentErrorLike = Error & { code?: string; where?: string; run_id?: string | null };
+
+/**
+ * Build message and optional action label for process-document error toasts.
+ * Shows "Run ID: xxx" only in admin or dev mode; admin gets actionLabel "Apri Pipeline Runs".
+ * Caller adds action.onClick (e.g. navigate(`/admin/pipeline-runs?run_id=${runId}`)).
+ */
+export function getProcessDocumentErrorToast(
+  err: ProcessDocumentErrorLike,
+  options?: { isAdmin?: boolean; filePrefix?: string }
+): { message: string; runId: string | null; actionLabel: string | null } {
+  const msg = err?.message ?? "Errore";
+  const runId = err?.run_id ?? null;
+  const isAdmin = options?.isAdmin ?? false;
+  const dev = typeof import.meta !== "undefined" && import.meta.env?.DEV;
+  const prefix = options?.filePrefix ? `${options.filePrefix}: ` : "";
+  let message = prefix + msg;
+  if (runId && (isAdmin || dev)) {
+    message += ` Run ID: ${runId}`;
+  }
+  const actionLabel = isAdmin && runId ? "Apri Pipeline Runs" : null;
+  return { message, runId, actionLabel };
+}
+
 function getToken(): Promise<string> {
   return supabase.auth.getSession().then(({ data }) => {
     const token = data.session?.access_token;
@@ -79,15 +104,19 @@ export async function processDocumentWithFile(
     const err = data as ProcessDocumentError;
     const msg = err?.message ?? `Errore ${res.status}`;
     const code = err?.code ?? "UNKNOWN";
-    const e = new Error(msg) as Error & { code?: string; where?: string };
+    const e = new Error(msg) as Error & { code?: string; where?: string; run_id?: string | null };
     e.code = code;
     e.where = err?.where;
+    e.run_id = err?.run_id ?? null;
     throw e;
   }
   if (data && typeof data === "object" && "ok" in data && data.ok === true) {
     return data as ProcessDocumentResult;
   }
-  throw new Error((data as ProcessDocumentError)?.message ?? "Risposta non valida");
+  const fallback = data as ProcessDocumentError;
+  const ex = new Error(fallback?.message ?? "Risposta non valida") as Error & { run_id?: string | null };
+  ex.run_id = fallback?.run_id ?? null;
+  throw ex;
 }
 
 /** MIME types for HEIC/HEIF (iPhone); not accepted by process-document. */
@@ -126,13 +155,17 @@ export async function processDocumentWithBase64(
     const err = data as ProcessDocumentError;
     const msg = err?.message ?? `Errore ${res.status}`;
     const code = err?.code ?? "UNKNOWN";
-    const e = new Error(msg) as Error & { code?: string; where?: string };
+    const e = new Error(msg) as Error & { code?: string; where?: string; run_id?: string | null };
     e.code = code;
     e.where = err?.where;
+    e.run_id = err?.run_id ?? null;
     throw e;
   }
   if (data && typeof data === "object" && "ok" in data && data.ok === true) {
     return data as ProcessDocumentResult;
   }
-  throw new Error((data as ProcessDocumentError)?.message ?? "Risposta non valida");
+  const fallback = data as ProcessDocumentError;
+  const ex = new Error(fallback?.message ?? "Risposta non valida") as Error & { run_id?: string | null };
+  ex.run_id = fallback?.run_id ?? null;
+  throw ex;
 }
