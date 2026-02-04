@@ -1027,34 +1027,29 @@ export function DemoChatSection() {
     }
 
     try {
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        apikey: anonKey,
-      };
-      if (anonKey) headers['Authorization'] = `Bearer ${anonKey}`;
+      const { data, error } = await supabase.functions.invoke('homepage-trial-chat', {
+        body: {
+          message: messageContent.trim(),
+          language,
+          isFirstMessage,
+          conversationHistory,
+          legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+          isDemo: demoMode,
+        },
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ 
-            message: messageContent.trim(), 
-            language,
-            isFirstMessage,
-            conversationHistory,
-            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
-            isDemo: demoMode,
-          }),
-        }
-      );
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.ok) {
-        console.error('[DEBUG-demo-chat] API fallita:', { status: response.status, ok: data?.ok, error: data?.error, message: data?.message });
-        // Non mostrare "Riprova tra poco o registrati" in demo: messaggio generico
+      if (error) {
+        console.error('[DEBUG-demo-chat] API fallita (invoke error):', error);
+        const fallbackMsg = demoMode
+          ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
+          : txt.errorToast;
+        if (!demoMode) toast.error(txt.errorToast);
+        setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
+        scrollToBottom();
+        return;
+      }
+      if (!data?.ok) {
+        console.error('[DEBUG-demo-chat] API fallita (data.ok false):', { ok: data?.ok, error: data?.error, message: data?.message });
         const fallbackMsg = demoMode
           ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
           : txt.errorToast;
