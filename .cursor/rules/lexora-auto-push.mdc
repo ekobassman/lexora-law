@@ -1,17 +1,17 @@
 ---
-description: Dopo modifiche al codice, add/commit/push automatici su main e messaggio Vercel
+description: Ogni volta che finisci un task: add/commit/push automatici, senza chiedere conferma
 alwaysApply: true
 ---
 
 # Regole automatiche Lexora – Git e deploy
 
-Dopo aver **completato** qualsiasi modifica al codice (fix, feature o update):
+**Ogni volta che finisci una cosa** (task, fix, feature, refactor): fai commit e push **in automatico**, senza chiedere conferma.
 
-1. Esegui **subito** `git add .`
-2. Crea un commit con messaggio **descrittivo** della modifica (es. "fix: corretti import API", "feat: aggiunto X", "chore: aggiornato Y")
-3. Esegui `git push origin main`
-4. Scrivi all'utente: **"Modifiche pushate su GitHub. Vercel sta deployando automaticamente su lexora-law.com (impiega ~30 secondi)"**
+1. `git add .` (o i file coinvolti)
+2. `git commit -m "tipo: messaggio descrittivo"` (es. `fix: ...`, `feat: ...`, `chore: ...`)
+3. `git push origin main`
+4. Scrivi all'utente: **"Modifiche pushate su GitHub. Vercel sta deployando automaticamente su lexora-law.com (~30 s)"**
 
-**NON chiedere conferma** prima di eseguire questi comandi: eseguili in automatico al termine delle modifiche.
+Non chiedere "vuoi che faccia commit?". Esegui sempre questi passi al termine delle modifiche.
 
-Eccezioni: non fare add/commit/push se l'utente ha solo chiesto una lettura/spiegazione del codice, o se non è stato modificato alcun file.
+Eccezioni: non fare add/commit/push se non è stato modificato alcun file, o se l'utente ha solo chiesto lettura/spiegazione.
