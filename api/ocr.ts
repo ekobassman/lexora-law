@@ -26,55 +26,51 @@ function normalizeBase64(base64: string): string {
   return base64.trim();
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "content-type");
   res.setHeader("Content-Type", "application/json");
+}
 
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST, OPTIONS");
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const credentials = getCredentials();
-  if (!credentials) {
-    return res.status(500).json({
-      error: "OCR failed",
-      details: "GOOGLE_APPLICATION_CREDENTIALS_JSON missing or invalid JSON",
-    });
-  }
-
-  let body: { base64?: string; mimeType?: string };
-  try {
-    body = typeof req.body === "object" && req.body !== null ? req.body : {};
-  } catch {
-    return res.status(400).json({ error: "OCR failed", details: "Invalid JSON body" });
-  }
-
-  const rawBase64 = body.base64;
-  const mimeType = typeof body.mimeType === "string" ? body.mimeType : "image/jpeg";
-  if (!rawBase64 || typeof rawBase64 !== "string") {
-    return res.status(400).json({ error: "OCR failed", details: "Missing base64" });
-  }
-
-  const base64 = normalizeBase64(rawBase64);
-  let buffer: Buffer;
-  try {
-    buffer = Buffer.from(base64, "base64");
-  } catch {
-    return res.status(400).json({ error: "OCR failed", details: "Invalid base64" });
-  }
-  if (buffer.length === 0) {
-    return res.status(400).json({ error: "OCR failed", details: "Empty file" });
+    return res.status(405).json({ error: "OCR failed", details: "Method not allowed" });
   }
 
   try {
+    const credentials = getCredentials();
+    if (!credentials) {
+      return res.status(500).json({
+        error: "Could not read document. Try again.",
+        details: "GOOGLE_APPLICATION_CREDENTIALS_JSON missing or invalid JSON",
+      });
+    }
+
+    const body = typeof req.body === "object" && req.body !== null ? (req.body as { base64?: string; mimeType?: string }) : {};
+    const rawBase64 = body.base64;
+    const mimeType = typeof body.mimeType === "string" ? body.mimeType : "image/jpeg";
+    if (!rawBase64 || typeof rawBase64 !== "string") {
+      return res.status(400).json({ error: "Could not read document. Try again.", details: "Missing base64" });
+    }
+
+    const base64 = normalizeBase64(rawBase64);
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(base64, "base64");
+    } catch {
+      return res.status(400).json({ error: "Could not read document. Try again.", details: "Invalid base64" });
+    }
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: "Could not read document. Try again.", details: "Empty file" });
+    }
+
     const client = new ImageAnnotatorClient({ credentials });
     const isPdf = mimeType.toLowerCase() === "application/pdf";
 
     if (isPdf) {
-      // DOCUMENT_TEXT_DETECTION for PDF (batchAnnotateFiles, inline content)
       const [result] = await client.batchAnnotateFiles({
         requests: [
           {
@@ -99,7 +95,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ text, pages });
     }
 
-    // Image: documentTextDetection (batchAnnotateImages with DOCUMENT_TEXT_DETECTION)
     const [response] = await client.batchAnnotateImages({
       requests: [
         {
@@ -112,13 +107,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const err = response?.responses?.[0]?.error;
     if (err) {
       const msg = err.message || String(err.code ?? "Unknown Vision API error");
-      return res.status(500).json({ error: "OCR failed", details: msg });
+      return res.status(500).json({ error: "Could not read document. Try again.", details: msg });
     }
 
     const fullText = response?.responses?.[0]?.fullTextAnnotation?.text ?? "";
     return res.status(200).json({ text: fullText.trim() });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: "OCR failed", details: message });
+    return res.status(500).json({ error: "Could not read document. Try again.", details: message });
   }
 }
