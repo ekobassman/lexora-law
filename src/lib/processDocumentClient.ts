@@ -77,12 +77,23 @@ function getToken(): Promise<string> {
   });
 }
 
+/** Anon key for demo/unauthenticated calls (Edge Function accepts X-Demo-Mode and skips user auth). */
+function getAnonKey(): string {
+  const key =
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    import.meta.env.VITE_SUPABASE_ANON_KEY ??
+    "";
+  if (!key) throw new Error("Configurazione Supabase mancante.");
+  return key;
+}
+
 /**
  * Invia un file (multipart) a process-document. Opzionale caseId (pratica/case).
+ * Con isDemo: true usa X-Demo-Mode (anon upload, no login).
  */
 export async function processDocumentWithFile(
   file: File,
-  options?: { caseId?: string }
+  options?: { caseId?: string; isDemo?: boolean }
 ): Promise<ProcessDocumentResult> {
   console.log("[DEBUG-processDocument] Chiamata funzione: processDocumentWithFile", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
   if (isHeicFile(file)) {
@@ -90,7 +101,11 @@ export async function processDocumentWithFile(
     e.code = "HEIC_NOT_SUPPORTED";
     throw e;
   }
-  const token = await getToken();
+  const isDemo = options?.isDemo === true;
+  const authHeader = isDemo ? `Bearer ${getAnonKey()}` : `Bearer ${await getToken()}`;
+  const headers: Record<string, string> = { Authorization: authHeader };
+  if (isDemo) headers["X-Demo-Mode"] = "true";
+
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const form = new FormData();
   form.append("file", file);
@@ -98,7 +113,7 @@ export async function processDocumentWithFile(
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
     body: form,
   });
 
@@ -127,11 +142,12 @@ const HEIC_MIMES = ["image/heic", "image/heif"];
 
 /**
  * Invia base64 (es. da camera) a process-document.
+ * Con isDemo: true usa X-Demo-Mode (anon upload, no login).
  */
 export async function processDocumentWithBase64(
   base64: string,
   mimeType: string,
-  options?: { caseId?: string }
+  options?: { caseId?: string; isDemo?: boolean }
 ): Promise<ProcessDocumentResult> {
   console.log("[DEBUG-processDocument] Chiamata funzione: processDocumentWithBase64", { base64Len: base64?.length, mimeType, options });
   const m = (mimeType || "").toLowerCase();
@@ -140,7 +156,11 @@ export async function processDocumentWithBase64(
     e.code = "HEIC_NOT_SUPPORTED";
     throw e;
   }
-  const token = await getToken();
+  const isDemo = options?.isDemo === true;
+  const authHeader = isDemo ? `Bearer ${getAnonKey()}` : `Bearer ${await getToken()}`;
+  const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: authHeader };
+  if (isDemo) headers["X-Demo-Mode"] = "true";
+
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const body = JSON.stringify({
     base64: base64.replace(/^data:[^;]+;base64,/, "").trim(),
@@ -150,7 +170,7 @@ export async function processDocumentWithBase64(
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers,
     body,
   });
 

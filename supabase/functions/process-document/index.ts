@@ -10,9 +10,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-demo-mode",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+/** User ID used for demo/anonymous uploads (no login). Must be a valid UUID. */
+const ANON_DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 const BUCKET = "documents";
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -140,28 +143,35 @@ serve(async (req) => {
     };
     await logStep(supabase, runId, null, null, "start", true, undefined, undefined, requestMeta);
 
-    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      await logStep(supabase, runId, null, null, "auth_failed", false, "MISSING_BEARER", "Authorization Bearer required");
-      return json(errPayload("auth", "MISSING_BEARER", "Authorization Bearer required"), 401);
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const isDemoMode = req.headers.get("x-demo-mode") === "true";
     let userId: string;
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser(token);
-      if (userError || !userData.user) {
-        await logStep(supabase, runId, null, null, "auth_failed", false, "INVALID_TOKEN", userError?.message ?? "Invalid token");
-        return json(errPayload("auth", "INVALID_TOKEN", userError?.message ?? "Invalid token"), 401);
+
+    if (isDemoMode) {
+      userId = ANON_DEMO_USER_ID;
+      await logStep(supabase, runId, userId, null, "auth_ok", true, "DEMO", "Demo mode: anonymous upload");
+    } else {
+      const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+      if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+        await logStep(supabase, runId, null, null, "auth_failed", false, "MISSING_BEARER", "Authorization Bearer required");
+        return json(errPayload("auth", "MISSING_BEARER", "Authorization Bearer required"), 401);
       }
-      userId = userData.user.id;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      await logStep(supabase, runId, null, null, "auth_failed", false, "AUTH_ERROR", msg);
-      return json(errPayload("auth", "AUTH_ERROR", msg), 401);
+      const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData.user) {
+          await logStep(supabase, runId, null, null, "auth_failed", false, "INVALID_TOKEN", userError?.message ?? "Invalid token");
+          return json(errPayload("auth", "INVALID_TOKEN", userError?.message ?? "Invalid token"), 401);
+        }
+        userId = userData.user.id;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await logStep(supabase, runId, null, null, "auth_failed", false, "AUTH_ERROR", msg);
+        return json(errPayload("auth", "AUTH_ERROR", msg), 401);
+      }
     }
 
     await supabase.from("pipeline_runs").update({ user_id: userId }).eq("run_id", runId).is("user_id", null);
-    await logStep(supabase, runId, userId, null, "auth_ok", true);
+    if (!isDemoMode) await logStep(supabase, runId, userId, null, "auth_ok", true);
 
     let fileBytes: Uint8Array;
     let fileName: string;

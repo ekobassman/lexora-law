@@ -11,7 +11,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 type OkResponse = { ok: true; reply: string; draftText: string | null; meta?: { model?: string; blocked?: boolean; confidence?: number }; webSources?: SearchResult[] };
 type ErrResponse = { ok: false; error: { code: string; message: string } };
 
-function json(status: number, body: OkResponse | ErrResponse) {
+function json(corsHeaders: HeadersInit, status: number, body: OkResponse | ErrResponse) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -243,7 +243,7 @@ serve(async (req) => {
     const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [], isDemo = false } = await req.json();
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
-      return json(400, {
+      return json(corsHeaders, 400, {
         ok: false,
         error: { code: "invalid_input", message: "Message is required" },
       });
@@ -262,7 +262,7 @@ serve(async (req) => {
       if (!scopeCheck.inScope && scopeCheck.confidence !== 'low') {
         console.log(`[homepage-trial-chat] Scope rejected: ${scopeCheck.reason}`);
         const refusalMessage = getRefusalMessage(lang);
-        return json(200, {
+        return json(corsHeaders, 200, {
           ok: true,
           reply: refusalMessage,
           draftText: null,
@@ -301,7 +301,7 @@ serve(async (req) => {
         console.log(`[homepage-trial-chat] High confidence result found (${intelligentSearchResult.confidence.toFixed(2)})`);
         
         // Return proposal instead of calling AI
-        return json(200, {
+        return json(corsHeaders, 200, {
           ok: true,
           reply: intelligentSearchResult.proposedAnswer + (intelligentSearchResult.sourcesSection || ''),
           draftText: null,
@@ -312,7 +312,7 @@ serve(async (req) => {
         // Low confidence - ask user for info, DON'T invent
         console.log(`[homepage-trial-chat] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
         
-        return json(200, {
+        return json(corsHeaders, 200, {
           ok: true,
           reply: intelligentSearchResult.userQuestion || "Could you provide the specific address or office?",
           draftText: null,
@@ -404,13 +404,13 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       console.error("[homepage-trial-chat] OpenAI error:", aiResult.error);
       
       if (aiResult.status === 429) {
-        return json(429, {
+        return json(corsHeaders, 429, {
           ok: false,
           error: { code: "rate_limited", message: "Too many requests" },
         });
       }
 
-      return json(500, {
+      return json(corsHeaders, 500, {
         ok: false,
         error: { code: "AI_PROVIDER_ERROR", message: "AI temporarily unavailable" },
       });
@@ -477,7 +477,7 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       finalReply = finalReply + sourcesSection;
     }
 
-    return json(200, {
+    return json(corsHeaders, 200, {
       ok: true,
       reply: finalReply,
       draftText: draftText,
@@ -487,7 +487,8 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
 
   } catch (error) {
     console.error("[homepage-trial-chat] Unhandled error:", error);
-    return json(500, {
+    const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
+    return json(corsHeaders, 500, {
       ok: false,
       error: {
         code: "internal_error",

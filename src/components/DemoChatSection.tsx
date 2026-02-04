@@ -1026,6 +1026,10 @@ export function DemoChatSection() {
       }
     }
 
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    const chatUrl = `${supabaseUrl}/functions/v1/homepage-trial-chat`;
+    console.log('[DEBUG CHAT] Chiamata a:', chatUrl);
+
     try {
       const { data, error } = await supabase.functions.invoke('homepage-trial-chat', {
         body: {
@@ -1039,7 +1043,9 @@ export function DemoChatSection() {
       });
 
       if (error) {
-        console.error('[DEBUG-demo-chat] API fallita (invoke error):', error);
+        console.error('[DEBUG CHAT] API fallita (invoke error):', error);
+        console.error('[DEBUG CHAT] error.message:', (error as { message?: string })?.message);
+        console.error('[DEBUG CHAT] error.context?:', (error as { context?: unknown })?.context);
         const fallbackMsg = demoMode
           ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
           : txt.errorToast;
@@ -1129,8 +1135,12 @@ export function DemoChatSection() {
       }
 
       setTimeout(scrollToBottom, 100);
-    } catch (err) {
-      console.error('[DEBUG-demo-chat] Eccezione sendMessage:', err);
+    } catch (err: unknown) {
+      const e = err as { message?: string; status?: number; response?: unknown };
+      console.error('[DEBUG CHAT] Errore completo:', err);
+      console.error('[DEBUG CHAT] Messaggio:', e?.message);
+      console.error('[DEBUG CHAT] Status:', e?.status);
+      console.error('[DEBUG CHAT] Response:', e?.response);
       // Non mostrare "Riprova tra poco o registrati" in demo: messaggio generico
       const fallbackMsg = demoMode
         ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
