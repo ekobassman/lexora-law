@@ -1054,8 +1054,9 @@ export function DemoChatSection() {
 
       if (!response.ok || !data?.ok) {
         console.error('[DEBUG-demo-chat] API fallita:', { status: response.status, ok: data?.ok, error: data?.error, message: data?.message });
+        // Non mostrare "Riprova tra poco o registrati" in demo: messaggio generico
         const fallbackMsg = demoMode
-          ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
+          ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
           : txt.errorToast;
         if (!demoMode) toast.error(txt.errorToast);
         setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
@@ -1135,8 +1136,9 @@ export function DemoChatSection() {
       setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error('[DEBUG-demo-chat] Eccezione sendMessage:', err);
+      // Non mostrare "Riprova tra poco o registrati" in demo: messaggio generico
       const fallbackMsg = demoMode
-        ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
+        ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
         : (lang === 'IT' ? 'Si è verificato un errore. Riprova.' : 'Something went wrong. Please try again.');
       setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
       scrollToBottom();
