@@ -1026,14 +1026,18 @@ export function DemoChatSection() {
     }
 
     try {
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+      };
+      if (anonKey) headers['Authorization'] = `Bearer ${anonKey}`;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
+          headers,
           body: JSON.stringify({ 
             message: messageContent.trim(), 
             language,
@@ -1048,6 +1052,7 @@ export function DemoChatSection() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.ok) {
+        console.error('[DEBUG-demo-chat] API fallita:', { status: response.status, ok: data?.ok, error: data?.error, message: data?.message });
         const fallbackMsg = demoMode
           ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
           : txt.errorToast;
@@ -1127,7 +1132,8 @@ export function DemoChatSection() {
       }
 
       setTimeout(scrollToBottom, 100);
-    } catch {
+    } catch (err) {
+      console.error('[DEBUG-demo-chat] Eccezione sendMessage:', err);
       const fallbackMsg = demoMode
         ? (lang === 'IT' ? 'Riprova tra poco o registrati per usare la chat completa.' : 'Try again in a moment or sign up to use the full chat.')
         : (lang === 'IT' ? 'Si è verificato un errore. Riprova.' : 'Something went wrong. Please try again.');
