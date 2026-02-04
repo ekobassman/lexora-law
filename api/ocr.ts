@@ -1,119 +1,132 @@
 /**
- * POST /api/ocr – Google Cloud Vision OCR (images + PDFs).
- * Credentials from GOOGLE_APPLICATION_CREDENTIALS_JSON only. Node runtime only.
- * Verification: GET /api/ocr/ping shows hasKey and projectIdFromKey; POST with { base64, mimeType } returns { text, pages? }.
+ * POST /api/ocr – OpenAI Vision OCR (images).
+ * Uses OPENAI_API_KEY on Vercel. CORS headers on all responses for browser clients.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ImageAnnotatorClient } from "@google-cloud/vision/build/src/v1";
 
 export const config = { runtime: "nodejs" };
 
-function getCredentials(): Record<string, unknown> | null {
-  const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (!raw || typeof raw !== "string" || !raw.trim()) return null;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return parsed;
-  } catch {
-    return null;
-  }
+function setCors(res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, apikey"
+  );
+  res.setHeader("Content-Type", "application/json");
 }
 
-/** If base64 contains a comma, strip prefix (e.g. data:image/jpeg;base64,) and keep content after comma. */
 function normalizeBase64(base64: string): string {
   const commaIdx = base64.indexOf(",");
   if (commaIdx !== -1) return base64.slice(commaIdx + 1).trim();
   return base64.trim();
 }
 
-function setCors(res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "content-type");
-  res.setHeader("Content-Type", "application/json");
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
-  if (req.method === "OPTIONS") return res.status(204).end();
+
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST, OPTIONS");
-    return res.status(405).json({ error: "OCR failed", details: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed", details: "Use POST" });
   }
 
   try {
-    const credentials = getCredentials();
-    if (!credentials) {
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY mancante su Vercel");
       return res.status(500).json({
         error: "Could not read document. Try again.",
-        details: "GOOGLE_APPLICATION_CREDENTIALS_JSON missing or invalid JSON",
+        details: "OpenAI API key not configured on server",
       });
     }
 
     const body = typeof req.body === "object" && req.body !== null ? (req.body as { base64?: string; mimeType?: string }) : {};
     const rawBase64 = body.base64;
     const mimeType = typeof body.mimeType === "string" ? body.mimeType : "image/jpeg";
+
     if (!rawBase64 || typeof rawBase64 !== "string") {
-      return res.status(400).json({ error: "Could not read document. Try again.", details: "Missing base64" });
+      return res.status(400).json({
+        error: "Could not read document. Try again.",
+        details: "Request must contain base64 image data",
+      });
     }
 
     const base64 = normalizeBase64(rawBase64);
-    let buffer: Buffer;
-    try {
-      buffer = Buffer.from(base64, "base64");
-    } catch {
-      return res.status(400).json({ error: "Could not read document. Try again.", details: "Invalid base64" });
-    }
-    if (buffer.length === 0) {
-      return res.status(400).json({ error: "Could not read document. Try again.", details: "Empty file" });
+
+    const estimatedSizeMB = (base64.length * 0.75) / 1024 / 1024;
+    if (estimatedSizeMB > 10) {
+      return res.status(400).json({
+        error: "Could not read document. Try again.",
+        details: `File too large (max 10MB). Estimated: ${estimatedSizeMB.toFixed(2)}MB`,
+      });
     }
 
-    const client = new ImageAnnotatorClient({ credentials });
-    const isPdf = mimeType.toLowerCase() === "application/pdf";
+    console.log(`[api/ocr] Processing via OpenAI Vision... Size: ${estimatedSizeMB.toFixed(2)}MB`);
 
-    if (isPdf) {
-      const [result] = await client.batchAnnotateFiles({
-        requests: [
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
           {
-            inputConfig: {
-              mimeType: "application/pdf",
-              content: buffer,
-            },
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" as const }],
-            pages: [1, 2, 3, 4, 5],
+            role: "system",
+            content:
+              "Extract all text from this document image. Preserve formatting as much as possible. Return only the extracted text without additional comments.",
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`,
+                  detail: "auto",
+                },
+              },
+            ],
           },
         ],
-      });
-
-      const fileResponses = result?.responses?.[0]?.responses ?? [];
-      const texts: string[] = [];
-      for (const r of fileResponses) {
-        const t = r?.fullTextAnnotation?.text;
-        if (typeof t === "string" && t) texts.push(t);
-      }
-      const text = texts.join("\n\n").trim() || "";
-      const pages = fileResponses.length;
-      return res.status(200).json({ text, pages });
-    }
-
-    const [response] = await client.batchAnnotateImages({
-      requests: [
-        {
-          image: { content: base64 },
-          features: [{ type: "DOCUMENT_TEXT_DETECTION" as const }],
-        },
-      ],
+        max_tokens: 4096,
+        temperature: 0.1,
+      }),
     });
 
-    const err = response?.responses?.[0]?.error;
-    if (err) {
-      const msg = err.message || String(err.code ?? "Unknown Vision API error");
-      return res.status(500).json({ error: "Could not read document. Try again.", details: msg });
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("[api/ocr] OpenAI error:", response.status, errText.slice(0, 200));
+      const isRateLimit = response.status === 429;
+      return res.status(500).json({
+        error: isRateLimit ? "Service busy. Try again in a moment." : "Could not read document. Try again.",
+        details: errText.slice(0, 300),
+      });
     }
 
-    const fullText = response?.responses?.[0]?.fullTextAnnotation?.text ?? "";
-    return res.status(200).json({ text: fullText.trim() });
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const extractedText = data?.choices?.[0]?.message?.content?.trim();
+
+    if (!extractedText) {
+      return res.status(422).json({
+        error: "Could not read document. Try again.",
+        details: "No text detected in image. Please try with better lighting and focus.",
+      });
+    }
+
+    console.log("[api/ocr] Success, length:", extractedText.length);
+    return res.status(200).json({ text: extractedText });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: "Could not read document. Try again.", details: message });
+    console.error("[api/ocr] Error:", err);
+    return res.status(500).json({
+      error: "Could not read document. Try again.",
+      details: message,
+    });
   }
 }
