@@ -162,13 +162,14 @@ serve(async (req) => {
   console.log("[ocr-document] downloading from storage...", { bucket, path: filePath });
   const { data: fileData, error: downloadError } = await supabase.storage.from(bucket).download(filePath);
   if (downloadError || !fileData) {
-    console.error("[ocr-document] Storage download failed", downloadError?.message);
+    const storageMsg = downloadError?.message ?? "Download failed";
+    console.error("[ocr-document] Storage download failed", { bucket, path: filePath, error: storageMsg });
     const { error: updateErr } = await supabase
       .from("documents")
-      .update({ status: "ocr_failed", ocr_error: downloadError?.message ?? "Download failed", updated_at: new Date().toISOString() })
+      .update({ status: "ocr_failed", ocr_error: storageMsg, updated_at: new Date().toISOString() })
       .eq("id", documentId);
     if (updateErr) console.error("[ocr-document] Update failed", updateErr.message);
-    return json({ ok: false, error: "STORAGE_ERROR", message: downloadError?.message ?? "Could not read file" }, 500, cors);
+    return json({ ok: false, error: "STORAGE_ERROR", message: storageMsg, bucket, path: filePath }, 500, cors);
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
