@@ -163,7 +163,7 @@ export function useGeoBlock(): GeoBlockResult {
       
       try {
         // Try ip-api.com directly from client (works for HTTP requests)
-        const response = await fetch('http://ip-api.com/json/?fields=status,countryCode', {
+        const response = await fetch('https://ip-api.com/json/?fields=status,countryCode', {
           signal: AbortSignal.timeout(5000),
         });
 

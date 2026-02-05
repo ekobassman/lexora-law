@@ -27,7 +27,9 @@ function safeFilename(name: string): string {
 
 serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get("Origin"));
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { status: 200, headers: cors });
+  }
   if (req.method !== "POST") {
     return json({ ok: false, error: "METHOD_NOT_ALLOWED", message: "Use POST" }, 405, cors);
   }
@@ -39,11 +41,11 @@ serve(async (req) => {
     return json({ ok: false, error: "ENV_MISSING", message: "Server configuration error" }, 500, cors);
   }
 
-  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  const demoHeader = req.headers.get("x-demo-mode") ?? "";
+  const isDemoMode = demoHeader === "true" || demoHeader === "1";
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "").trim() ?? "";
 
-  // Riconosci ANON_KEY: X-Demo-Mode, token = anon key, o heuristic (token corto / "publishable")
   const envAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const isAnonKey =
     (envAnonKey && token === envAnonKey) ||
@@ -56,12 +58,15 @@ serve(async (req) => {
     userId = ANON_DEMO_USER_ID;
     console.log("[upload-document] Using ANON_DEMO_USER_ID for anonymous upload");
   } else {
+    if (!authHeader || !token) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: "Missing Authorization header" }, 401, cors);
+    }
     const supabaseAnon = createClient(supabaseUrl, envAnonKey || "", {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
-      return json({ ok: false, error: "UNAUTHORIZED", message: error?.message ?? "Invalid JWT" }, 401, cors);
+      return json({ ok: false, error: "UNAUTHORIZED", message: "Invalid JWT" }, 401, cors);
     }
     userId = user.id;
   }

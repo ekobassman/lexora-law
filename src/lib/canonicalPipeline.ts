@@ -1,6 +1,9 @@
 /**
  * Canonical pipeline: upload-document → ocr-document → analyze-and-draft.
  * Single source for demo chat and case flow. No n8n, no mock, no legacy endpoints.
+ *
+ * Dev check: In browser Network tab, request to /functions/v1/upload-document should have
+ * Authorization: Bearer <token> for logged-in users; x-demo-mode: true for demo. No http://ip-api.com in repo.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,27 +72,22 @@ export async function uploadDocument(
   const headers: Record<string, string> = {};
 
   if (explicitDemo) {
-    headers["Authorization"] = `Bearer ${getAnonKey()}`;
     headers["X-Demo-Mode"] = "true";
+    headers["Authorization"] = `Bearer ${getAnonKey()}`;
+    console.log("[auth] upload-document: demo path", { hasAuthHeader: true });
   } else {
-    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      const err = new Error("Sessione scaduta. Effettua di nuovo l'accesso.") as Error & { code?: string };
-      err.code = "SESSION_EXPIRED";
-      throw err;
-    }
+    await supabase.auth.refreshSession();
     const { data } = await supabase.auth.getSession();
     const accessToken = data?.session?.access_token ?? null;
-    console.log("[auth] upload-document token info", {
-      hasAccessToken: !!accessToken,
-      tokenLen: accessToken ? accessToken.length : 0,
-      tokenPrefix: accessToken ? accessToken.slice(0, 16) : null,
-    });
+    const hasSession = !!data?.session;
+    const hasAuthHeader = !!accessToken;
+    console.log("[auth] upload-document token info", { hasSession, hasAuthHeader });
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
     } else {
-      headers["Authorization"] = `Bearer ${getAnonKey()}`;
-      headers["X-Demo-Mode"] = "true";
+      const err = new Error("Sessione scaduta. Effettua di nuovo l'accesso.") as Error & { code?: string };
+      err.code = "SESSION_EXPIRED";
+      throw err;
     }
   }
 

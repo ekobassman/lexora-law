@@ -39,7 +39,7 @@ async function getCountryFromIP(req: Request): Promise<string | null> {
   // Fallback to external API
   try {
     // ip-api.com is free for non-commercial use
-    const response = await fetch(`http://ip-api.com/json/${clientIP || ''}?fields=countryCode`, {
+    const response = await fetch(`https://ip-api.com/json/${clientIP || ''}?fields=countryCode`, {
       signal: AbortSignal.timeout(3000),
     });
     if (response.ok) {

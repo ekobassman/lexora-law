@@ -45,7 +45,7 @@ async function lookupCountry(ip: string): Promise<string | null> {
   
   // Try ip-api.com first (free, no key needed, 45 req/min)
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode`, {
+    const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,countryCode`, {
       signal: AbortSignal.timeout(3000),
     });
     
