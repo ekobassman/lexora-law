@@ -223,8 +223,29 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
 
   const totalPhotos = existingPhotos.length + capturedPhotos.length;
 
+  const handleTestFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      e.target.value = "";
+      if (files.length > 0) {
+        onPhotosCaptured([...existingPhotos, ...files]);
+        onClose();
+      }
+    },
+    [existingPhotos, onPhotosCaptured, onClose]
+  );
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* E2E: hidden file input to simulate photo (Playwright setInputFiles) */}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        aria-hidden
+        data-testid="camera-test-file-input"
+        onChange={handleTestFileInput}
+      />
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent">
         <Button
