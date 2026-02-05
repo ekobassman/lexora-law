@@ -25,7 +25,7 @@ function isAllowedOrigin(origin: string | null): boolean {
 
 const BASE_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-demo-mode",
-  "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
 };
 
 export function getCorsHeaders(origin: string | null): Record<string, string> {

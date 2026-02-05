@@ -28,7 +28,7 @@ function safeFilename(name: string): string {
 serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 200, headers: cors });
+    return new Response(null, { status: 204, headers: cors });
   }
   if (req.method !== "POST") {
     return json({ ok: false, error: "METHOD_NOT_ALLOWED", message: "Use POST" }, 405, cors);
@@ -53,6 +53,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
     const token = authHeader?.replace(/^Bearer\s+/i, "").trim() ?? "";
     if (!authHeader || !token) {
+      console.warn("[upload-document] Missing Authorization header");
       return json({ ok: false, error: "UNAUTHORIZED", message: "Missing Authorization header" }, 401, cors);
     }
     const envAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -61,6 +62,7 @@ serve(async (req) => {
     });
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
+      console.warn("[upload-document] Invalid JWT:", error?.message ?? "no user");
       return json({ ok: false, error: "UNAUTHORIZED", message: "Invalid JWT" }, 401, cors);
     }
     userId = user.id;
