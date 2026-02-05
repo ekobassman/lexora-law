@@ -98,13 +98,13 @@ export async function uploadDocument(
   const headers: Record<string, string> = {};
 
   if (explicitDemo) {
-    headers["X-Demo-Mode"] = "true";
     const demoToken = await getDemoToken();
+    headers["X-Demo-Mode"] = "true";
     headers["Authorization"] = `Bearer ${demoToken}`;
     console.log("[auth] upload-document: demo path", {
-      hasAuthHeader: !!demoToken,
-      tokenPreview: demoToken ? demoToken.substring(0, 20) + "..." : "NO TOKEN",
-      isDemo: explicitDemo,
+      hasAuthHeader: true,
+      tokenPreview: demoToken.substring(0, 20) + "...",
+      isDemo: true,
     });
   } else {
     await supabase.auth.refreshSession();
