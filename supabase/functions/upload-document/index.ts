@@ -40,22 +40,28 @@ serve(async (req) => {
   }
 
   const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+  const token = authHeader?.replace(/^Bearer\s+/i, "").trim() ?? "";
+
+  // Riconosci ANON_KEY: X-Demo-Mode, token = anon key, o heuristic (token corto / "publishable")
+  const envAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const isAnonKey =
+    (envAnonKey && token === envAnonKey) ||
+    token.includes("publishable") ||
+    token.length < 100;
+
   let userId: string;
 
-  if (isDemoMode) {
+  if (isDemoMode || isAnonKey) {
     userId = ANON_DEMO_USER_ID;
+    console.log("[upload-document] Using ANON_DEMO_USER_ID for anonymous upload");
   } else {
-    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    const supabaseAnon = createClient(supabaseUrl, envAnonKey || "", {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
-    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
-    if (userError || !user) {
-      return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+    if (error || !user) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: error?.message ?? "Invalid JWT" }, 401, cors);
     }
     userId = user.id;
   }
