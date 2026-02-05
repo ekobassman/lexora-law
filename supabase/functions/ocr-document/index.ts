@@ -122,8 +122,10 @@ serve(async (req) => {
   }
 
   let documentId: string;
+  let body: Record<string, unknown> & { document_id?: string };
   try {
-    const body = (await req.json()) as { document_id?: string };
+    body = (await req.json()) as typeof body;
+    console.log("[ocr-document] body keys:", Object.keys(body ?? {}));
     documentId = body?.document_id ?? "";
     if (!documentId) {
       return json({ ok: false, error: "BAD_REQUEST", message: "Missing document_id" }, 400, cors);
@@ -150,6 +152,14 @@ serve(async (req) => {
     return json({ ok: false, error: "BAD_STATE", message: "Document has no file_path" }, 400, cors);
   }
 
+  console.log("[ocr-document] input summary:", {
+    bucket,
+    path: filePath,
+    mime: doc.mime_type ?? null,
+    fileName: filePath?.split("/").pop() ?? null,
+  });
+
+  console.log("[ocr-document] downloading from storage...", { bucket, path: filePath });
   const { data: fileData, error: downloadError } = await supabase.storage.from(bucket).download(filePath);
   if (downloadError || !fileData) {
     console.error("[ocr-document] Storage download failed", downloadError?.message);
@@ -162,6 +172,12 @@ serve(async (req) => {
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
+  console.log("[ocr-document] downloaded bytes:", bytes?.byteLength ?? null);
+
+  if (!bytes || bytes.byteLength === 0) {
+    return json({ ok: false, error: "file_not_found_or_empty", bucket, path: filePath }, 400, cors);
+  }
+
   const mimeType = doc.mime_type || "image/jpeg";
 
   if (mimeType === "application/pdf") {
@@ -178,16 +194,25 @@ serve(async (req) => {
 
   let ocrText: string;
   if (googleKey) {
-    const result = await googleVisionOcr(base64, googleKey);
-    if ("error" in result) {
-      console.error("[ocr-document] Google Vision failed", result.error);
+    try {
+      const result = await googleVisionOcr(base64, googleKey);
+      if ("error" in result) {
+        console.error("[ocr-document] vision error:", result.error);
+        await supabase
+          .from("documents")
+          .update({ status: "ocr_failed", ocr_error: result.error, updated_at: new Date().toISOString() })
+          .eq("id", documentId);
+        return json({ ok: false, error: "vision_failed", message: String(result.error) }, 500, cors);
+      }
+      ocrText = result.text;
+    } catch (err) {
+      console.error("[ocr-document] vision error:", err);
       await supabase
         .from("documents")
-        .update({ status: "ocr_failed", ocr_error: result.error, updated_at: new Date().toISOString() })
+        .update({ status: "ocr_failed", ocr_error: err instanceof Error ? err.message : String(err), updated_at: new Date().toISOString() })
         .eq("id", documentId);
-      return json({ ok: false, error: "OCR_FAILED", message: result.error }, 500, cors);
+      return json({ ok: false, error: "vision_failed", message: String((err as Error)?.message ?? err) }, 500, cors);
     }
-    ocrText = result.text;
   } else if (openaiKey) {
     const dataUrl = `data:${mimeType};base64,${base64}`;
     const result = await openaiVisionOcr(dataUrl, openaiKey);

@@ -72,6 +72,12 @@ export async function uploadDocument(
     headers["Authorization"] = `Bearer ${getAnonKey()}`;
     headers["X-Demo-Mode"] = "true";
   } else {
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      const err = new Error("Sessione scaduta. Effettua di nuovo l'accesso.") as Error & { code?: string };
+      err.code = "SESSION_EXPIRED";
+      throw err;
+    }
     const { data } = await supabase.auth.getSession();
     const accessToken = data?.session?.access_token ?? null;
     console.log("[auth] upload-document token info", {
@@ -229,7 +235,17 @@ export async function runCanonicalPipeline(
   const isDemo = options?.isDemo === true;
   options?.onProgress?.("uploading");
   const upload = await uploadDocument(file, { caseId: options?.caseId, source: options?.source, isDemo });
+  console.log("[pipeline] upload-document response:", upload);
+
   options?.onProgress?.("ocr");
+  // No OCR skip branch: always call ocr-document after upload
+  console.log("[pipeline] calling ocr-document with:", {
+    documentId: upload.document_id,
+    path: upload.file_path,
+    bucket: "(from doc in EF)",
+    mimeType: "(from doc in EF)",
+    isDemo,
+  });
   await ocrDocument(upload.document_id, { isDemo });
   options?.onProgress?.("analyzing");
   const analysisResult = await analyzeAndDraft(upload.document_id, { userLanguage: options?.userLanguage, isDemo });
