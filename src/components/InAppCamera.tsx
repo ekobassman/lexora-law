@@ -9,6 +9,9 @@ interface InAppCameraProps {
   existingPhotos?: File[];
 }
 
+const blobToFile = (blob: Blob, fileName: string) =>
+  new File([blob], fileName, { type: blob.type || "image/jpeg" });
+
 // Compress image to reduce file size
 async function compressImage(blob: Blob, maxSizeMB: number = 2, maxDimension: number = 2000): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -82,7 +85,7 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [capturedPhotos, setCapturedPhotos] = useState<{ blob: Blob; url: string }[]>([]);
+  const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [showPreview, setShowPreview] = useState(false);
@@ -167,20 +170,28 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
       // Draw current frame
       ctx.drawImage(video, 0, 0);
 
-      // Get blob
-      const blob = await new Promise<Blob>((resolve, reject) => {
+      // Always produce JPEG File for upload
+      await new Promise<void>((resolve, reject) => {
         canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('Failed to capture'))),
+          (blob) => {
+            if (!blob || blob.size === 0) {
+              reject(new Error('Camera snapshot blob is empty'));
+              return;
+            }
+            const file = blobToFile(blob, 'scan.jpg');
+            console.log('[camera] captured file:', {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+            });
+            const url = URL.createObjectURL(file);
+            setCapturedPhotos((prev) => [...prev, { file, url }]);
+            resolve();
+          },
           'image/jpeg',
-          0.92
+          0.9
         );
       });
-
-      // Compress
-      const compressed = await compressImage(blob);
-      const url = URL.createObjectURL(compressed);
-
-      setCapturedPhotos(prev => [...prev, { blob: compressed, url }]);
 
       // Brief flash effect
       if (videoRef.current) {
@@ -205,12 +216,7 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   }, []);
 
   const handleConfirm = useCallback(() => {
-    // Convert blobs to Files
-    const files = capturedPhotos.map((photo, i) => {
-      return new File([photo.blob], `photo-${Date.now()}-${i}.jpg`, { type: 'image/jpeg' });
-    });
-
-    // Combine with existing photos
+    const files = capturedPhotos.map((p) => p.file);
     onPhotosCaptured([...existingPhotos, ...files]);
     onClose();
   }, [capturedPhotos, existingPhotos, onPhotosCaptured, onClose]);

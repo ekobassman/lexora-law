@@ -106,6 +106,7 @@ export default function ScanDocument() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        console.log('[scan] uploading file:', { name: file.name, type: file.type, size: file.size });
         if (isHeicFile(file)) {
           toast.error(`${file.name}: ${HEIC_NOT_SUPPORTED_MSG}`, { duration: 6000 });
           continue;
@@ -202,7 +203,7 @@ export default function ScanDocument() {
       console.log("[DEBUG-UPLOAD] ScanDocument: prima upload", { numFiles: files.length });
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        console.log("[DEBUG-UPLOAD] File:", file.name, file.size, file.type);
+        console.log('[scan] uploading file:', { name: file.name, type: file.type, size: file.size });
         if (isHeicFile(file)) {
           toast.error(`${file.name}: HEIC non supportato. Usa JPG/PNG.`, { duration: 6000 });
           continue;

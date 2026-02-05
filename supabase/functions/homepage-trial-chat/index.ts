@@ -125,14 +125,27 @@ function getSystemPrompt(lang: string): string {
   return UNIFIED_LEXORA_IDENTITY + langRule + UNIFIED_CHAT_BEHAVIOR;
 }
 
-// Demo mode: Lexora avvocato digitale, solo domande e raccolta info, niente documenti
+// Demo mode: Lexora avvocato digitale; può analizzare documenti caricati (OCR), raccogliere info, non generare documenti finali
 const DEMO_ADDON = `
 
 === DEMO MODE (unauthenticated user) ===
-Sei Lexora, avvocato digitale. Fai domande sulla situazione legale. Raccogli: tipo problema, date, importi, controparte. Non generare documenti, solo raccogliere info.
-- You are in DEMO mode. Do NOT generate the actual document. Do NOT output [LETTER]...[/LETTER].
-- Behave exactly like Lexora: ask 2-3 questions (type of problem, who is the counterpart, when it happened).
-- After you have enough info (2-3 exchanges), summarize and say something like:
+Sei Lexora, avvocato digitale. Puoi analizzare documenti caricati dall'utente (lettere, multe, contratti) e raccogliere informazioni. Non generare il documento finale in demo, solo raccogliere info e invitare alla registrazione.
+
+=== DOCUMENTI CARICATI (OBBLIGATORIO) ===
+- I can analyze uploaded documents (contracts, letters, fines) via OCR to extract text and identify key information.
+- Lexora PUÒ e DEVE analizzare i documenti che l'utente carica: contratti, lettere ufficiali, multe, diffide, ecc.
+- Quando l'utente carica una foto o un file, il sistema estrae il testo (OCR) e te lo fornisce nel contesto. Tu DEVI:
+  1. Leggere e analizzare il contenuto del documento
+  2. Estrarre informazioni chiave: mittente, scadenze, importi, tipo di atto
+  3. Identificare problemi legali rilevanti e rischi
+  4. Rispondere in modo utile (riassunto, cosa fare, eventuali termini)
+- Comportamento corretto: utente carica foto multa/contratto → Lexora la legge, estrae testo e analizza; utente scrive solo testo → Lexora lo usa per consiglio o per preparare documenti dopo registrazione.
+- NON dire mai "non analizzo documenti" o "non posso leggere file". Lexora supporta l'analisi dei documenti caricati.
+
+=== DEMO: RACCOLTA INFO E CTA ===
+- You are in DEMO mode. Do NOT generate the actual downloadable document. Do NOT output [LETTER]...[/LETTER].
+- Behave like Lexora: analizza i documenti se presenti; altrimenti fai 2-3 domande (tipo problema, controparte, date).
+- After you have enough info (2-3 exchanges) or after analyzing an uploaded document, summarize and say something like:
   "Ho capito, si tratta di [brief summary]. Nella versione completa genererei un [tipo documento]. Per generare il documento ufficiale e scaricarlo, registrati gratis. Vuoi procedere? Lasciami la tua email per ricevere il documento quando ti registri!"
 - Adapt the CTA to the user's language (IT/DE/EN/FR/ES etc.). Always end by inviting registration and asking for email.
 - Never generate a full letter in demo. draftText must remain empty.`;
@@ -240,7 +253,11 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [], isDemo = false } = await req.json();
+    const body = (await req.json()) as { message?: string; language?: string; isFirstMessage?: boolean; conversationHistory?: unknown[]; legalSearchContext?: unknown[]; isDemo?: boolean; uploadedDocumentText?: string };
+    console.log("[trial-chat] body keys:", Object.keys(body ?? {}));
+    console.log("[trial-chat] uploadedDocumentText length:", (body?.uploadedDocumentText ?? "").length);
+
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], legalSearchContext = [], isDemo = false, uploadedDocumentText } = body ?? {};
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return json(corsHeaders, 400, {
@@ -251,6 +268,8 @@ serve(async (req) => {
 
     // Limit message length for security
     const trimmedMessage = message.trim().slice(0, 4000);
+    const langRaw = String(language ?? "EN").toUpperCase();
+    const outLang = ["DE", "EN", "IT", "FR", "ES", "TR", "RO", "RU", "UK"].includes(langRaw) ? langRaw : "EN";
     const lang = normLang(language);
     
     // SCOPE GATE: Check if message is within allowed scope (bureaucratic/legal topics)
@@ -374,9 +393,10 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
     }
 
+    const langDirective = `OUTPUT LANGUAGE: ${outLang}. You MUST reply ONLY in ${outLang}. Do not switch languages.\n\n`;
     // Build messages array with conversation history for context
     const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-       { role: "system", content: systemPrompt + greetingInstruction + gateInstruction + webSearchContext },
+       { role: "system", content: langDirective + systemPrompt + greetingInstruction + gateInstruction + webSearchContext },
     ];
     
     // Add conversation history (limited to last 10 exchanges for token efficiency)
@@ -392,6 +412,47 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
         });
       }
     }
+
+    const docText = typeof uploadedDocumentText === "string" ? uploadedDocumentText.trim() : "";
+    if (docText.length > 0) {
+      aiMessages.push({
+        role: "user",
+        content: `[Documento caricato - testo estratto (OCR)]:\n\n${docText.slice(0, 12000)}`,
+      });
+    }
+
+    const hasOcr =
+      typeof uploadedDocumentText === "string" &&
+      uploadedDocumentText.trim().length > 0;
+    const formatBlock = `
+FORMAT REQUIRED:
+Return TWO sections exactly:
+[ANALYSIS]
+...short analysis + next steps...
+[/ANALYSIS]
+[DRAFT]
+...a formal reply letter only (no analysis), with placeholders...
+[/DRAFT]
+
+DRAFT REQUIREMENTS:
+- Use placeholders: [Your full name], [Your address], [Date], [Court/Authority address], [Reference/Az.], [Other party]
+- Formal tone
+- Subject line
+- Short, clear paragraphs
+- No analysis inside DRAFT
+`;
+    const currentUserContent = hasOcr
+      ? `[Istruzione: analizza il documento già fornito sopra. Estrai informazioni chiave, indica rischi e prossimi passi, proponi una bozza di risposta (anche se mancano dettagli). Non fare domande di contesto generiche; chiedi eventuali chiarimenti solo DOPO aver presentato l'analisi.]\n\n${trimmedMessage}${formatBlock}`
+      : trimmedMessage;
+    aiMessages.push({ role: "user", content: currentUserContent });
+
+    console.log(
+      "[trial-chat] messages summary:",
+      aiMessages.map(m => ({
+        role: m.role,
+        length: typeof m.content === "string" ? m.content.length : 0
+      }))
+    );
 
     // Use OpenAI API directly (no Lovable credits)
     const aiResult = await callOpenAI({
@@ -418,16 +479,30 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
 
     const responseText = aiResult.content || "";
 
-    // Extract letter using [LETTER]...[/LETTER] markers (primary) with pattern fallback
-    let draftText = extractLetterFromResponse(responseText);
-    let finalReply = responseText;
+    let finalReply: string;
+    let finalDraft: string | null;
+    let placeholderBlocked = false;
 
-    // =====================
-    // PLACEHOLDER HARD-STOP (same as dashboard-chat)
-    // =====================
-    // If the model returns bracket placeholders, REJECT the draft and ask for missing data
-    // IMPORTANT: Exclude system markers like [LETTER], [/LETTER] from detection
-    const SYSTEM_MARKERS = new Set(["[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]"]);
+    if (hasOcr) {
+      const full = (responseText ?? "").toString();
+      const analysisMatch = full.match(/\[ANALYSIS\]([\s\S]*?)\[\/ANALYSIS\]/i);
+      const draftMatch = full.match(/\[DRAFT\]([\s\S]*?)\[\/DRAFT\]/i);
+      const analysisText = (analysisMatch?.[1] ?? "").trim();
+      const draftOnly = (draftMatch?.[1] ?? "").trim();
+      finalReply = analysisText.length > 0 ? analysisText : full.trim();
+      finalDraft = draftOnly.length > 0 ? draftOnly : null;
+    } else {
+      // Extract letter using [LETTER]...[/LETTER] markers (primary) with pattern fallback
+      let draftText = extractLetterFromResponse(responseText);
+      finalReply = responseText;
+      finalDraft = draftText;
+
+      // =====================
+      // PLACEHOLDER HARD-STOP (same as dashboard-chat)
+      // =====================
+      // If the model returns bracket placeholders, REJECT the draft and ask for missing data
+      // IMPORTANT: Exclude system markers like [LETTER], [/LETTER] from detection
+      const SYSTEM_MARKERS = new Set(["[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]"]);
     
     const containsPlaceholders = (text: string): boolean => {
       if (!text) return false;
@@ -454,21 +529,17 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       ES: "Para crear una carta completa, necesito alguna información. Por favor indique:",
     };
 
-    const placeholderBlocked = containsPlaceholders(responseText) || containsPlaceholders(draftText || "");
-    
-    if (placeholderBlocked) {
-      // REJECT the draft - don't send it to frontend
-      draftText = null;
+      placeholderBlocked = containsPlaceholders(responseText) || containsPlaceholders(draftText || "");
       
-      // Build a question asking for missing data
-      const lang = (language || "EN").toUpperCase();
-      const intro = PLACEHOLDER_BLOCK_MESSAGES[lang] || PLACEHOLDER_BLOCK_MESSAGES.EN;
-      const placeholders = extractPlaceholders(responseText, 5);
-      const bullets = placeholders.map((p) => `• ${p}`).join("\n");
-      
-      finalReply = `${intro}\n${bullets}`;
-      
-      console.log(`[homepage-trial-chat] PLACEHOLDER BLOCKED: ${placeholders.join(", ")}`);
+      if (placeholderBlocked) {
+        finalDraft = null;
+        const langKey = (language || "EN").toUpperCase();
+        const intro = PLACEHOLDER_BLOCK_MESSAGES[langKey] || PLACEHOLDER_BLOCK_MESSAGES.EN;
+        const placeholders = extractPlaceholders(responseText, 5);
+        const bullets = placeholders.map((p) => `• ${p}`).join("\n");
+        finalReply = `${intro}\n${bullets}`;
+        console.log(`[homepage-trial-chat] PLACEHOLDER BLOCKED: ${placeholders.join(", ")}`);
+      }
     }
 
     // WEB ASSIST: Append sources section if web search was performed
@@ -480,7 +551,7 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
     return json(corsHeaders, 200, {
       ok: true,
       reply: finalReply,
-      draftText: draftText,
+      draftText: finalDraft,
       meta: { model: "gpt-4.1-mini" },
       webSources: webSearchResults.length > 0 ? webSearchResults : undefined,
     });
