@@ -11,6 +11,9 @@ const BUCKET = "uploads";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
+/** User ID for demo/anonymous uploads (no login). Must be a valid UUID. */
+const ANON_DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 function json(body: unknown, status: number, cors: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -36,18 +39,25 @@ serve(async (req) => {
     return json({ ok: false, error: "ENV_MISSING", message: "Server configuration error" }, 500, cors);
   }
 
-  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
-  }
+  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  let userId: string;
 
-  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
-  if (userError || !user) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+  if (isDemoMode) {
+    userId = ANON_DEMO_USER_ID;
+  } else {
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
+    if (userError || !user) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+    }
+    userId = user.id;
   }
 
   const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
@@ -86,7 +96,7 @@ serve(async (req) => {
     return json({ ok: false, error: "FILE_TOO_LARGE", message: `Max ${MAX_BYTES / 1024 / 1024}MB` }, 413, cors);
   }
 
-  const pathPrefix = caseId ? `${user.id}/${caseId}` : `${user.id}/no-case`;
+  const pathPrefix = caseId ? `${userId}/${caseId}` : `${userId}/no-case`;
   const pathSegment = `${Date.now()}-${safeFilename(file.name)}`;
   const filePath = `${pathPrefix}/${pathSegment}`;
 
@@ -104,7 +114,7 @@ serve(async (req) => {
   const signedUrl = signed?.signedUrl ?? null;
 
   const docRow = {
-    user_id: user.id,
+    user_id: userId,
     case_id: caseId,
     pratica_id: caseId,
     file_path: filePath,

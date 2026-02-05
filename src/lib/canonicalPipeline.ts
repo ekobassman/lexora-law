@@ -17,18 +17,29 @@ function getToken(): Promise<string> {
   });
 }
 
+function getAnonKey(): string {
+  const key =
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    import.meta.env.VITE_SUPABASE_ANON_KEY ??
+    "";
+  if (!key) throw new Error("Configurazione Supabase mancante.");
+  return key;
+}
+
 async function fetchJson<T>(
   path: string,
-  options: { method?: string; body?: unknown; token: string }
+  options: { method?: string; body?: unknown; token: string; headers?: Record<string, string> }
 ): Promise<{ data: T; ok: boolean; status: number }> {
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/${path}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${options.token}`,
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+    ...options.headers,
+  };
   const res = await fetch(url, {
     method: options.method ?? "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${options.token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
-    },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string };
@@ -51,10 +62,14 @@ export interface UploadDocumentError {
 
 export async function uploadDocument(
   file: File,
-  options?: { caseId?: string; source?: "upload" | "camera" }
+  options?: { caseId?: string; source?: "upload" | "camera"; isDemo?: boolean }
 ): Promise<UploadDocumentResult> {
   console.log("[DEBUG-processDocument] Chiamata funzione: uploadDocument (canonicalPipeline)", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
-  const token = await getToken();
+  const isDemo = options?.isDemo === true;
+  const token = isDemo ? getAnonKey() : await getToken();
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  if (isDemo) headers["X-Demo-Mode"] = "true";
+
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/upload-document`;
   const form = new FormData();
   form.append("file", file);
@@ -63,7 +78,7 @@ export async function uploadDocument(
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
     body: form,
   });
 
@@ -92,11 +107,16 @@ export interface OcrDocumentError {
   message: string;
 }
 
-export async function ocrDocument(documentId: string): Promise<OcrDocumentResult> {
-  const token = await getToken();
+export async function ocrDocument(
+  documentId: string,
+  options?: { isDemo?: boolean }
+): Promise<OcrDocumentResult> {
+  const isDemo = options?.isDemo === true;
+  const token = isDemo ? getAnonKey() : await getToken();
   const { data, ok, status } = await fetchJson<OcrDocumentResult | OcrDocumentError>("ocr-document", {
     token,
     body: { document_id: documentId },
+    headers: isDemo ? { "X-Demo-Mode": "true" } : undefined,
   });
   if (!ok) {
     const err = data as OcrDocumentError;
@@ -121,6 +141,8 @@ export interface AnalyzeAndDraftResult {
   status: string;
   analysis: AnalysisItem;
   draft_text: string;
+  /** Set by Edge Function so demo client can use it without reading from DB (RLS). */
+  ocr_text?: string;
 }
 
 export interface AnalyzeAndDraftError {
@@ -131,12 +153,14 @@ export interface AnalyzeAndDraftError {
 
 export async function analyzeAndDraft(
   documentId: string,
-  options?: { userLanguage?: string }
+  options?: { userLanguage?: string; isDemo?: boolean }
 ): Promise<AnalyzeAndDraftResult> {
-  const token = await getToken();
+  const isDemo = options?.isDemo === true;
+  const token = isDemo ? getAnonKey() : await getToken();
   const { data, ok, status } = await fetchJson<AnalyzeAndDraftResult | AnalyzeAndDraftError>("analyze-and-draft", {
     token,
     body: { document_id: documentId, user_language: options?.userLanguage ?? "DE" },
+    headers: isDemo ? { "X-Demo-Mode": "true" } : undefined,
   });
   if (!ok) {
     const err = data as AnalyzeAndDraftError;
@@ -156,28 +180,35 @@ export interface PipelineResult {
   draft_text: string;
 }
 
-/** Run full pipeline: upload → ocr → analyze-and-draft. Returns final doc data (ocr_text from DB). */
+/** Run full pipeline: upload → ocr → analyze-and-draft. Returns final doc data (ocr_text from DB or from last step in demo). */
 export async function runCanonicalPipeline(
   file: File,
-  options?: { caseId?: string; source?: "upload" | "camera"; userLanguage?: string; onProgress?: (step: string) => void }
+  options?: { caseId?: string; source?: "upload" | "camera"; userLanguage?: string; onProgress?: (step: string) => void; isDemo?: boolean }
 ): Promise<PipelineResult> {
+  const isDemo = options?.isDemo === true;
   options?.onProgress?.("uploading");
-  const upload = await uploadDocument(file, { caseId: options?.caseId, source: options?.source });
+  const upload = await uploadDocument(file, { caseId: options?.caseId, source: options?.source, isDemo });
   options?.onProgress?.("ocr");
-  await ocrDocument(upload.document_id);
+  await ocrDocument(upload.document_id, { isDemo });
   options?.onProgress?.("analyzing");
-  const analysisResult = await analyzeAndDraft(upload.document_id, { userLanguage: options?.userLanguage });
+  const analysisResult = await analyzeAndDraft(upload.document_id, { userLanguage: options?.userLanguage, isDemo });
 
-  const { data: docRow } = await supabase
-    .from("documents")
-    .select("ocr_text")
-    .eq("id", upload.document_id)
-    .single();
+  let ocrText: string;
+  if (isDemo && analysisResult.ocr_text) {
+    ocrText = analysisResult.ocr_text;
+  } else {
+    const { data: docRow } = await supabase
+      .from("documents")
+      .select("ocr_text")
+      .eq("id", upload.document_id)
+      .single();
+    ocrText = (docRow?.ocr_text as string) ?? "";
+  }
 
   return {
     document_id: upload.document_id,
     signed_url: upload.signed_url,
-    ocr_text: (docRow?.ocr_text as string) ?? "",
+    ocr_text: ocrText,
     analysis: analysisResult.analysis,
     draft_text: analysisResult.draft_text,
   };

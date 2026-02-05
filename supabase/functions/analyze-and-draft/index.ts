@@ -8,6 +8,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { callOpenAI } from "../_shared/openai.ts";
 
+/** User ID for demo/anonymous pipeline (no login). Must match upload-document / ocr-document. */
+const ANON_DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 const LANGUAGE_MAP: Record<string, string> = {
   IT: "Italian", DE: "German", EN: "English", FR: "French", ES: "Spanish",
   PL: "Polish", RO: "Romanian", TR: "Turkish", AR: "Arabic", UK: "Ukrainian", RU: "Russian",
@@ -37,18 +40,25 @@ serve(async (req) => {
     return json({ ok: false, error: "OPENAI_NOT_CONFIGURED", message: "OPENAI_API_KEY required" }, 500, cors);
   }
 
-  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
-  }
+  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  let userId: string;
 
-  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
-  if (userError || !user) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+  if (isDemoMode) {
+    userId = ANON_DEMO_USER_ID;
+  } else {
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
+    if (userError || !user) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+    }
+    userId = user.id;
   }
 
   let documentId: string;
@@ -69,7 +79,7 @@ serve(async (req) => {
     .from("documents")
     .select("id, user_id, ocr_text, status")
     .eq("id", documentId)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
   if (docError || !doc) {
@@ -160,6 +170,7 @@ After the JSON, write "---DRAFT---" on a new line, then the full reply letter in
       status: "done",
       analysis: analysisJson,
       draft_text: draftText,
+      ocr_text: ocrText,
     },
     200,
     cors

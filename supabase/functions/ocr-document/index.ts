@@ -7,6 +7,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+/** User ID for demo/anonymous pipeline (no login). Must match upload-document. */
+const ANON_DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 function json(body: unknown, status: number, cors: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
@@ -97,18 +100,25 @@ serve(async (req) => {
     return json({ ok: false, error: "ENV_MISSING", message: "Server configuration error" }, 500, cors);
   }
 
-  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
-  }
+  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  let userId: string;
 
-  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
-  if (userError || !user) {
-    return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+  if (isDemoMode) {
+    userId = ANON_DEMO_USER_ID;
+  } else {
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: "Authorization Bearer required" }, 401, cors);
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const supabaseAnon = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
+    if (userError || !user) {
+      return json({ ok: false, error: "UNAUTHORIZED", message: userError?.message ?? "Invalid token" }, 401, cors);
+    }
+    userId = user.id;
   }
 
   let documentId: string;
@@ -127,7 +137,7 @@ serve(async (req) => {
     .from("documents")
     .select("id, user_id, file_path, storage_bucket, mime_type")
     .eq("id", documentId)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
   if (docError || !doc) {
