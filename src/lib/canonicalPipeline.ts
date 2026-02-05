@@ -66,19 +66,23 @@ export async function uploadDocument(
 ): Promise<UploadDocumentResult> {
   console.log("[DEBUG-processDocument] Chiamata funzione: uploadDocument (canonicalPipeline)", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
   const explicitDemo = options?.isDemo === true;
-  let token: string;
   const headers: Record<string, string> = {};
+
   if (explicitDemo) {
-    token = getAnonKey();
-    headers["Authorization"] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${getAnonKey()}`;
     headers["X-Demo-Mode"] = "true";
   } else {
-    try {
-      token = await getToken();
-      headers["Authorization"] = `Bearer ${token}`;
-    } catch {
-      token = getAnonKey();
-      headers["Authorization"] = `Bearer ${token}`;
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data?.session?.access_token ?? null;
+    console.log("[auth] upload-document token info", {
+      hasAccessToken: !!accessToken,
+      tokenLen: accessToken ? accessToken.length : 0,
+      tokenPrefix: accessToken ? accessToken.slice(0, 16) : null,
+    });
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    } else {
+      headers["Authorization"] = `Bearer ${getAnonKey()}`;
       headers["X-Demo-Mode"] = "true";
     }
   }
