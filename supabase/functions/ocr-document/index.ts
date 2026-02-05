@@ -100,7 +100,8 @@ serve(async (req) => {
     return json({ ok: false, error: "ENV_MISSING", message: "Server configuration error" }, 500, cors);
   }
 
-  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  const demoHeader = (req.headers.get("x-demo-mode") ?? "").trim().toLowerCase();
+  const isDemoMode = /^(true|1|yes)$/.test(demoHeader);
   let userId: string;
 
   if (isDemoMode) {

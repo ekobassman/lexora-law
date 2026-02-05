@@ -40,7 +40,8 @@ serve(async (req) => {
     return json({ ok: false, error: "OPENAI_NOT_CONFIGURED", message: "OPENAI_API_KEY required" }, 500, cors);
   }
 
-  const isDemoMode = req.headers.get("x-demo-mode") === "true";
+  const demoHeader = (req.headers.get("x-demo-mode") ?? "").trim().toLowerCase();
+  const isDemoMode = /^(true|1|yes)$/.test(demoHeader);
   let userId: string;
 
   if (isDemoMode) {

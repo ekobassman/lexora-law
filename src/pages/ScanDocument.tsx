@@ -661,6 +661,7 @@ export default function ScanDocument() {
                           type="button"
                           onClick={handleOpenCamera}
                           disabled={isAtLimit}
+                          data-testid="scan-page-open-camera"
                           className={`block w-full text-left touch-manipulation [-webkit-tap-highlight-color:rgba(0,0,0,0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 ${isAtLimit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                           style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
                         >

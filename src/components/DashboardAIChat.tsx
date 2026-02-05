@@ -1659,6 +1659,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
             onClick={handleCameraClick} 
             disabled={isLoading || isProcessingFile || effectiveLimitReached} 
             className="dashboard-action-btn"
+            data-testid="dashboard-scan-document-btn"
           >
             <Camera className="h-5 w-5" />
             <span>{txt.scanDocument}</span>

@@ -29,6 +29,20 @@ function getAnonKey(): string {
   return key;
 }
 
+/**
+ * For demo mode: use valid session token if present (refresh if expired), otherwise anon key.
+ * Always send X-Demo-Mode: true so Edge Functions bypass JWT validation and use ANON_DEMO_USER_ID.
+ */
+async function getDemoToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token ?? null;
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token ?? null;
+  }
+  return token ?? getAnonKey();
+}
+
 async function fetchJson<T>(
   path: string,
   options: { method?: string; body?: unknown; token: string; headers?: Record<string, string> }
@@ -73,7 +87,8 @@ export async function uploadDocument(
 
   if (explicitDemo) {
     headers["X-Demo-Mode"] = "true";
-    headers["Authorization"] = `Bearer ${getAnonKey()}`;
+    const demoToken = await getDemoToken();
+    headers["Authorization"] = `Bearer ${demoToken}`;
     console.log("[auth] upload-document: demo path", { hasAuthHeader: true });
   } else {
     await supabase.auth.refreshSession();
@@ -136,13 +151,13 @@ export async function ocrDocument(
   let token: string;
   let extraHeaders: Record<string, string> | undefined;
   if (explicitDemo) {
-    token = getAnonKey();
+    token = await getDemoToken();
     extraHeaders = { "X-Demo-Mode": "true" };
   } else {
     try {
       token = await getToken();
     } catch {
-      token = getAnonKey();
+      token = await getDemoToken();
       extraHeaders = { "X-Demo-Mode": "true" };
     }
   }
@@ -192,13 +207,13 @@ export async function analyzeAndDraft(
   let token: string;
   let extraHeaders: Record<string, string> | undefined;
   if (explicitDemo) {
-    token = getAnonKey();
+    token = await getDemoToken();
     extraHeaders = { "X-Demo-Mode": "true" };
   } else {
     try {
       token = await getToken();
     } catch {
-      token = getAnonKey();
+      token = await getDemoToken();
       extraHeaders = { "X-Demo-Mode": "true" };
     }
   }
