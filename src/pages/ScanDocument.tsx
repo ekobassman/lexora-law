@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { callEdgeFunction } from '@/lib/edgeFetch';
-import { runCanonicalPipeline, isHeicFile } from '@/lib/canonicalPipeline';
+import { runCanonicalPipeline, isHeicFile, HEIC_NOT_SUPPORTED_MSG } from '@/lib/canonicalPipeline';
 import { getProcessDocumentErrorToast } from '@/lib/processDocumentClient';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -93,75 +93,56 @@ export default function ScanDocument() {
     fileInputRef.current?.click();
   }, [isAtLimit, isAnonymous]);
 
-  // OCR via Vercel /api/ocr (Google Cloud Vision)
+  // Anonymous: use canonical pipeline with isDemo (ANON_KEY + X-Demo-Mode), no camera
   const processFilesAnonymous = async (files: File[]) => {
     if (files.length === 0) return;
     setIsProcessing(true);
     setProcessingStep(t('analysis.uploading'));
-    
+    const lang = language?.toUpperCase().slice(0, 2) || 'DE';
+
     try {
       let combinedText = '';
-      
+      let lastAnalysis: { summary?: string; risks?: string[]; draft_text?: string } | null = null;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setProcessingStep(`${t('analysis.extracting')} (${i + 1}/${files.length})`);
-        
-        // OCR via Vercel /api/ocr (Google Cloud Vision)
-        const ocrResult = await (await import('@/lib/ocrClient')).ocrFromFile(file);
-        if (ocrResult.text) {
-          combinedText += (combinedText ? '\n\n---\n\n' : '') + ocrResult.text;
-        } else {
-          toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || t('demoChat.ocrError')}`, { duration: 7000 });
+        if (isHeicFile(file)) {
+          toast.error(`${file.name}: ${HEIC_NOT_SUPPORTED_MSG}`, { duration: 6000 });
+          continue;
+        }
+        setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
+        const result = await runCanonicalPipeline(file, {
+          isDemo: true,
+          userLanguage: lang,
+          onProgress: (step) => {
+            if (step === 'uploading') setProcessingStep(`${t('scan.step.uploading')} (${i + 1}/${files.length})`);
+            else if (step === 'ocr') setProcessingStep(`${t('scan.step.ocr')} (${i + 1}/${files.length})`);
+            else setProcessingStep(t('scan.step.analyzing'));
+          },
+        });
+        if (result.ocr_text) combinedText += (combinedText ? '\n\n---\n\n' : '') + result.ocr_text;
+        if (result.analysis || result.draft_text) {
+          lastAnalysis = {
+            summary: result.analysis?.summary,
+            risks: result.analysis?.risks,
+            draft_text: result.draft_text,
+          };
         }
       }
-      
+
       if (combinedText) {
-        setProcessingStep(t('analysis.analyzing'));
-        
-        // Use anonymous-analyze endpoint for AI analysis
-        const analyzeResponse = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-analyze`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ 
-              letterText: combinedText, 
-              language 
-            }),
-          }
-        );
-        
-        const analysisData = await analyzeResponse.json().catch(() => null);
-        
-        // anonymous-analyze returns { analysis, structured } not { explanation, risks, draft_response }
-        const analysisText = analysisData?.analysis || analysisData?.explanation || '';
-        
-        // Parse risks from analysis text if present (they're in the "Risks" section)
-        let parsedRisks: string[] = [];
-        const risksMatch = analysisText.match(/\*\*Risks?\*\*[:\s]*([^*]+?)(?=\n\*\*|$)/is);
-        if (risksMatch?.[1]) {
-          parsedRisks = risksMatch[1]
-            .split(/\n[-•]|\n\d+\./)
-            .map((r: string) => r.trim())
-            .filter((r: string) => r.length > 0);
-        }
-        
         setAnonymousAnalysis({
           extractedText: combinedText,
-          explanation: analysisText,
-          risks: parsedRisks.length > 0 ? parsedRisks : analysisData?.risks,
-          draft: analysisData?.draft_response || analysisData?.draft,
+          explanation: lastAnalysis?.summary ?? undefined,
+          risks: lastAnalysis?.risks,
+          draft: lastAnalysis?.draft_text,
         });
-        
         toast.success(t('analysis.completed'));
       } else {
-        toast.error(t('scan.error') + (typeof window !== 'undefined' ? '. ' + (t('analysis.ocrError') || 'Nessun testo estratto. Riprova con un\'immagine più nitida.') : ''), { duration: 6000 });
+        toast.error(t('scan.error') + (typeof window !== 'undefined' ? '. ' + (t('analysis.ocrError') || 'Nessun testo estratto. Riprova.') : ''), { duration: 6000 });
       }
     } catch (error) {
-      console.error('Error processing files:', error);
+      console.error('Error processing files (anon):', error);
       const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
       toast.error(`${t('scan.error')}: ${message}`, {
         duration: 8000,
@@ -470,8 +451,8 @@ export default function ScanDocument() {
       <Header />
       <PlanLimitPopup open={showLimitPopup} onClose={() => setShowLimitPopup(false)} />
       
-      {/* In-App Camera */}
-      {showCamera && (
+      {/* In-App Camera - only for logged-in users (anon: no camera, upload file only) */}
+      {showCamera && !isAnonymous && (
         <InAppCamera
           onPhotosCaptured={handleCameraPhotos}
           onClose={() => setShowCamera(false)}
@@ -671,44 +652,43 @@ export default function ScanDocument() {
                     </div>
                   )}
                   
-                  {/* Camera Card - Luxury Design */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={handleOpenCamera}
-                        disabled={isAtLimit}
-                        className={`block w-full text-left touch-manipulation [-webkit-tap-highlight-color:rgba(0,0,0,0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 ${isAtLimit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
-                      >
-                        <div className={`relative transition-transform ${!isAtLimit && 'hover:-translate-y-1 active:translate-y-0'}`}>
-                          {/* Navy shadow/depth layer */}
-                          <div className="absolute inset-0 bg-navy rounded-2xl translate-x-2 translate-y-2" />
-                          {/* Main card with gold border */}
-                          <div className="relative rounded-2xl border-4 border-gold bg-gradient-to-b from-[#fdfaf6] to-[#f5f0e6] p-8 md:p-10">
-                            {/* Inner gold accent border */}
-                            <div className="absolute inset-3 border-2 border-gold/40 rounded-xl pointer-events-none" />
-                            <div className="relative flex flex-col items-center justify-center text-center space-y-4">
-                              <Camera className="h-16 w-16 md:h-20 md:w-20 text-gold drop-shadow-lg" strokeWidth={1.5} />
-                              <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-gold drop-shadow-[0_1px_2px_rgba(201,162,77,0.3)]">
-                                {t('scan.camera') || 'Scatta una foto'}
-                              </h2>
-                              <p className="text-base md:text-lg text-navy/70 max-w-xs">
-                                {t('scan.cameraDescMulti') || t('scan.cameraDesc')}
-                              </p>
+                  {/* Camera Card - only for logged-in users (anon: no camera, avoid permission issues) */}
+                  {!isAnonymous && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={handleOpenCamera}
+                          disabled={isAtLimit}
+                          className={`block w-full text-left touch-manipulation [-webkit-tap-highlight-color:rgba(0,0,0,0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 ${isAtLimit ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                          style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+                        >
+                          <div className={`relative transition-transform ${!isAtLimit && 'hover:-translate-y-1 active:translate-y-0'}`}>
+                            <div className="absolute inset-0 bg-navy rounded-2xl translate-x-2 translate-y-2" />
+                            <div className="relative rounded-2xl border-4 border-gold bg-gradient-to-b from-[#fdfaf6] to-[#f5f0e6] p-8 md:p-10">
+                              <div className="absolute inset-3 border-2 border-gold/40 rounded-xl pointer-events-none" />
+                              <div className="relative flex flex-col items-center justify-center text-center space-y-4">
+                                <Camera className="h-16 w-16 md:h-20 md:w-20 text-gold drop-shadow-lg" strokeWidth={1.5} />
+                                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-gold drop-shadow-[0_1px_2px_rgba(201,162,77,0.3)]">
+                                  {t('scan.camera') || 'Scatta una foto'}
+                                </h2>
+                                <p className="text-base md:text-lg text-navy/70 max-w-xs">
+                                  {t('scan.cameraDescMulti') || t('scan.cameraDesc')}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    </TooltipTrigger>
-                    {isAtLimit && (
-                      <TooltipContent>
-                        <p>{t('credits.limitReachedWarning')}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                  
-                  {/* Upload Card - Luxury Design */}
+                        </button>
+                      </TooltipTrigger>
+                      {isAtLimit && (
+                        <TooltipContent>
+                          <p>{t('credits.limitReachedWarning')}</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  )}
+
+                  {/* Upload Card - Luxury Design (only option for anon: "Carica una foto dal dispositivo") */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -728,10 +708,10 @@ export default function ScanDocument() {
                             <div className="relative flex flex-col items-center justify-center text-center space-y-4">
                               <Upload className="h-16 w-16 md:h-20 md:w-20 text-gold drop-shadow-lg" strokeWidth={1.5} />
                               <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-gold drop-shadow-[0_1px_2px_rgba(201,162,77,0.3)]">
-                                {t('scan.upload') || 'Carica un file'}
+                                {isAnonymous ? (t('scan.uploadPhotoFromDevice') || 'Carica una foto dal tuo dispositivo') : (t('scan.upload') || 'Carica un file')}
                               </h2>
                               <p className="text-base md:text-lg text-navy/70 max-w-xs">
-                                {t('scan.uploadDesc')}
+                                {isAnonymous ? (t('scan.uploadPhotoFromDeviceDesc') || 'Scegli un\'immagine o PDF dalla galleria o dal PC') : t('scan.uploadDesc')}
                               </p>
                             </div>
                           </div>
@@ -744,7 +724,7 @@ export default function ScanDocument() {
                       </TooltipContent>
                     )}
                   </Tooltip>
-                  
+
                 </div>
               </TooltipProvider>
             )}
