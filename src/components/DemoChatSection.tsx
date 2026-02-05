@@ -901,13 +901,13 @@ export function DemoChatSection() {
     isDemo?: boolean,
     source?: 'upload' | 'camera'
   ): Promise<{ text: string | null; analysis?: AnalysisItem; draft?: string; error?: string; details?: string }> => {
-    if (isDemo) return { text: null };
     if (isHeicFile(file)) {
       toast.error(HEIC_NOT_SUPPORTED_MSG, { duration: 6000 });
       return { text: null, error: 'HEIC_NOT_SUPPORTED', details: HEIC_NOT_SUPPORTED_MSG };
     }
     try {
       const result = await runCanonicalPipeline(file, {
+        isDemo: isDemo ?? false,
         source: source ?? 'upload',
         onProgress: (step) => {
           if (step === 'uploading') setProcessingStep('uploading');
