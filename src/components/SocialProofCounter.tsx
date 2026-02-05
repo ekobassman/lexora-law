@@ -83,17 +83,23 @@ export function SocialProofCounter() {
   const totalCount = dbCount + BASE_COUNT;
   const text = translations[language] || translations.EN;
 
-  // Fetch initial count
+  // Fetch initial count (optional: table may not exist yet; default to 0 on 404/error)
   useEffect(() => {
     async function fetchCount() {
-      const { data, error } = await supabase
-        .from('global_stats')
-        .select('documents_processed')
-        .eq('id', 'main')
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('global_stats')
+          .select('documents_processed')
+          .eq('id', 'main')
+          .maybeSingle();
 
-      if (!error && data) {
-        setDbCount(data.documents_processed);
+        if (!error && data != null) {
+          setDbCount(Number(data.documents_processed) || 0);
+        } else {
+          setDbCount(0);
+        }
+      } catch {
+        setDbCount(0);
       }
     }
     fetchCount();
