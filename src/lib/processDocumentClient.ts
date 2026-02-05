@@ -101,10 +101,23 @@ export async function processDocumentWithFile(
     e.code = "HEIC_NOT_SUPPORTED";
     throw e;
   }
-  const isDemo = options?.isDemo === true;
-  const authHeader = isDemo ? `Bearer ${getAnonKey()}` : `Bearer ${await getToken()}`;
-  const headers: Record<string, string> = { Authorization: authHeader };
-  if (isDemo) headers["X-Demo-Mode"] = "true";
+  const explicitDemo = options?.isDemo === true;
+  let authHeader: string;
+  const headers: Record<string, string> = {};
+  if (explicitDemo) {
+    authHeader = `Bearer ${getAnonKey()}`;
+    headers["Authorization"] = authHeader;
+    headers["X-Demo-Mode"] = "true";
+  } else {
+    try {
+      authHeader = `Bearer ${await getToken()}`;
+      headers["Authorization"] = authHeader;
+    } catch {
+      authHeader = `Bearer ${getAnonKey()}`;
+      headers["Authorization"] = authHeader;
+      headers["X-Demo-Mode"] = "true";
+    }
+  }
 
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const form = new FormData();
@@ -156,10 +169,23 @@ export async function processDocumentWithBase64(
     e.code = "HEIC_NOT_SUPPORTED";
     throw e;
   }
-  const isDemo = options?.isDemo === true;
-  const authHeader = isDemo ? `Bearer ${getAnonKey()}` : `Bearer ${await getToken()}`;
-  const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: authHeader };
-  if (isDemo) headers["X-Demo-Mode"] = "true";
+  const explicitDemo = options?.isDemo === true;
+  let authHeader: string;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (explicitDemo) {
+    authHeader = `Bearer ${getAnonKey()}`;
+    headers["Authorization"] = authHeader;
+    headers["X-Demo-Mode"] = "true";
+  } else {
+    try {
+      authHeader = `Bearer ${await getToken()}`;
+      headers["Authorization"] = authHeader;
+    } catch {
+      authHeader = `Bearer ${getAnonKey()}`;
+      headers["Authorization"] = authHeader;
+      headers["X-Demo-Mode"] = "true";
+    }
+  }
 
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/process-document`;
   const body = JSON.stringify({

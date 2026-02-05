@@ -65,10 +65,23 @@ export async function uploadDocument(
   options?: { caseId?: string; source?: "upload" | "camera"; isDemo?: boolean }
 ): Promise<UploadDocumentResult> {
   console.log("[DEBUG-processDocument] Chiamata funzione: uploadDocument (canonicalPipeline)", { file: file?.name, fileSize: file?.size, fileType: file?.type, options });
-  const isDemo = options?.isDemo === true;
-  const token = isDemo ? getAnonKey() : await getToken();
-  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-  if (isDemo) headers["X-Demo-Mode"] = "true";
+  const explicitDemo = options?.isDemo === true;
+  let token: string;
+  const headers: Record<string, string> = {};
+  if (explicitDemo) {
+    token = getAnonKey();
+    headers["Authorization"] = `Bearer ${token}`;
+    headers["X-Demo-Mode"] = "true";
+  } else {
+    try {
+      token = await getToken();
+      headers["Authorization"] = `Bearer ${token}`;
+    } catch {
+      token = getAnonKey();
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["X-Demo-Mode"] = "true";
+    }
+  }
 
   const url = `${BASE.replace(/\/$/, "")}/functions/v1/upload-document`;
   const form = new FormData();
@@ -111,12 +124,24 @@ export async function ocrDocument(
   documentId: string,
   options?: { isDemo?: boolean }
 ): Promise<OcrDocumentResult> {
-  const isDemo = options?.isDemo === true;
-  const token = isDemo ? getAnonKey() : await getToken();
+  const explicitDemo = options?.isDemo === true;
+  let token: string;
+  let extraHeaders: Record<string, string> | undefined;
+  if (explicitDemo) {
+    token = getAnonKey();
+    extraHeaders = { "X-Demo-Mode": "true" };
+  } else {
+    try {
+      token = await getToken();
+    } catch {
+      token = getAnonKey();
+      extraHeaders = { "X-Demo-Mode": "true" };
+    }
+  }
   const { data, ok, status } = await fetchJson<OcrDocumentResult | OcrDocumentError>("ocr-document", {
     token,
     body: { document_id: documentId },
-    headers: isDemo ? { "X-Demo-Mode": "true" } : undefined,
+    headers: extraHeaders,
   });
   if (!ok) {
     const err = data as OcrDocumentError;
@@ -155,12 +180,24 @@ export async function analyzeAndDraft(
   documentId: string,
   options?: { userLanguage?: string; isDemo?: boolean }
 ): Promise<AnalyzeAndDraftResult> {
-  const isDemo = options?.isDemo === true;
-  const token = isDemo ? getAnonKey() : await getToken();
+  const explicitDemo = options?.isDemo === true;
+  let token: string;
+  let extraHeaders: Record<string, string> | undefined;
+  if (explicitDemo) {
+    token = getAnonKey();
+    extraHeaders = { "X-Demo-Mode": "true" };
+  } else {
+    try {
+      token = await getToken();
+    } catch {
+      token = getAnonKey();
+      extraHeaders = { "X-Demo-Mode": "true" };
+    }
+  }
   const { data, ok, status } = await fetchJson<AnalyzeAndDraftResult | AnalyzeAndDraftError>("analyze-and-draft", {
     token,
     body: { document_id: documentId, user_language: options?.userLanguage ?? "DE" },
-    headers: isDemo ? { "X-Demo-Mode": "true" } : undefined,
+    headers: extraHeaders,
   });
   if (!ok) {
     const err = data as AnalyzeAndDraftError;
@@ -194,7 +231,7 @@ export async function runCanonicalPipeline(
   const analysisResult = await analyzeAndDraft(upload.document_id, { userLanguage: options?.userLanguage, isDemo });
 
   let ocrText: string;
-  if (isDemo && analysisResult.ocr_text) {
+  if (analysisResult.ocr_text) {
     ocrText = analysisResult.ocr_text;
   } else {
     const { data: docRow } = await supabase
