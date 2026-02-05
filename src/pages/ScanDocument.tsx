@@ -64,10 +64,12 @@ export default function ScanDocument() {
   const isAtLimit = !isAnonymous && !entitlementsLoading && !entitlements.can_create_case;
 
   const handleOpenCamera = useCallback(() => {
+    console.log('DEBUG: ScanDocument handleOpenCamera clicked', { isAnonymous, isAtLimit });
     if (!isAnonymous && isAtLimit) {
       setShowLimitPopup(true);
       return;
     }
+    console.log('DEBUG: ScanDocument setShowCamera(true) - apertura camera');
     setShowCamera(true);
   }, [isAtLimit, isAnonymous]);
 

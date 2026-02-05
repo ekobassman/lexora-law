@@ -77,7 +77,9 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  
+
+  console.log('DEBUG: InAppCamera render', { existingPhotosCount: existingPhotos.length });
+
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<{ blob: Blob; url: string }[]>([]);
@@ -86,6 +88,7 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   const [showPreview, setShowPreview] = useState(false);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
+    console.log('DEBUG: Apertura camera...', { facing });
     setIsInitializing(true);
     setError(null);
 
@@ -104,7 +107,12 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
         audio: false,
       };
 
+      console.log('DEBUG: getUserMedia chiamato', { constraints });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia non disponibile (HTTPS o browser non supportato)');
+      }
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('DEBUG: Stream ottenuto', { tracks: stream.getTracks().length });
       streamRef.current = stream;
 
       if (videoRef.current) {
@@ -112,7 +120,8 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
         await videoRef.current.play();
       }
     } catch (err) {
-      console.error('Camera error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('DEBUG: Errore camera:', msg, err);
       setError(t('inAppCamera.errorAccess') || 'Cannot access camera. Please check permissions.');
     } finally {
       setIsInitializing(false);
@@ -120,9 +129,11 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   }, [t]);
 
   useEffect(() => {
+    console.log('DEBUG: InAppCamera useEffect mount - avvio startCamera');
     startCamera(facingMode);
 
     return () => {
+      console.log('DEBUG: InAppCamera cleanup - stop stream');
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
