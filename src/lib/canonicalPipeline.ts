@@ -30,17 +30,32 @@ function getAnonKey(): string {
 }
 
 /**
- * For demo mode: use valid session token if present (refresh if expired), otherwise anon key.
- * Always send X-Demo-Mode: true so Edge Functions bypass JWT validation and use ANON_DEMO_USER_ID.
+ * For demo mode: use valid session token (or create anonymous session so we always send a real JWT).
+ * Always send X-Demo-Mode: true so Edge Functions accept the request and use ANON_DEMO_USER_ID.
  */
 async function getDemoToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  let token = data.session?.access_token ?? null;
-  if (!token) {
-    const { data: refreshed } = await supabase.auth.refreshSession();
-    token = refreshed.session?.access_token ?? null;
+  // 1. Prova a prendere sessione esistente
+  let {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // 2. Se non c'è, fai login anonimo (crea JWT valido)
+  if (!session) {
+    const { data: anonSession, error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      console.error("[getDemoToken] Errore signInAnonymously:", error);
+      throw error;
+    }
+    session = anonSession.session;
   }
-  return token ?? getAnonKey();
+
+  // 3. Se ancora non c'è, errore
+  if (!session?.access_token) {
+    throw new Error("Impossibile ottenere token demo");
+  }
+
+  console.log("[getDemoToken] Token JWT ottenuto:", session.access_token.substring(0, 20) + "...");
+  return session.access_token; // JWT (eyJ...), non anon key
 }
 
 async function fetchJson<T>(
