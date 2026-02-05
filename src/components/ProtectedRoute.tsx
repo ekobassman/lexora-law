@@ -20,6 +20,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('loading');
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [isAnonymousUser, setIsAnonymousUser] = useState(false);
 
   // Terms check hook
   const { loading: termsLoading, termsOutdated, privacyOutdated, ageNotConfirmed, needsReaccept, refresh: refreshTerms } = useTermsCheck(userId);
@@ -37,12 +38,23 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         if (!session?.access_token) {
           setSessionStatus('unauthenticated');
           setUserId(null);
+          setIsAnonymousUser(false);
+          return;
+        }
+
+        const isAnonymous =
+          session.user?.is_anonymous === true || session.user?.app_metadata?.is_anonymous === true;
+        if (isAnonymous) {
+          setSessionStatus('unauthenticated');
+          setUserId(null);
+          setIsAnonymousUser(true);
           return;
         }
 
         setSessionStatus('authenticated');
         setUserId(session.user.id);
         setUserEmail(session.user.email ?? '');
+        setIsAnonymousUser(false);
 
         // Debug: log user / metadata (admin check)
         const u = session.user;
@@ -98,6 +110,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         if (!cancelled) {
           setSessionStatus('unauthenticated');
           setUserId(null);
+          setIsAnonymousUser(false);
         }
       }
     };
@@ -111,12 +124,23 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
       if (!session?.access_token) {
         setSessionStatus('unauthenticated');
         setUserId(null);
+        setIsAnonymousUser(false);
         setAdminStatus('loading'); // Reset admin status
+        return;
+      }
+
+      const isAnonymous =
+        session.user?.is_anonymous === true || session.user?.app_metadata?.is_anonymous === true;
+      if (isAnonymous) {
+        setSessionStatus('unauthenticated');
+        setUserId(null);
+        setIsAnonymousUser(true);
         return;
       }
 
       setSessionStatus('authenticated');
       setUserId(session.user.id);
+      setIsAnonymousUser(false);
 
       // Re-check admin status on auth change if required
       if (requireAdmin) {
@@ -154,8 +178,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  // NOT AUTHENTICATED: redirect to /auth
+  // NOT AUTHENTICATED: anonymous users go to homepage (/), others to /auth
   if (sessionStatus === 'unauthenticated') {
+    if (isAnonymousUser) {
+      return <Navigate to="/" replace />;
+    }
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

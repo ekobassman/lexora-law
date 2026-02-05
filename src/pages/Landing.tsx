@@ -39,12 +39,14 @@ export default function Landing() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users to /app
+  // Redirect only real (non-anonymous) authenticated users to /app.
+  // Anonymous users (from demo signInAnonymously) stay on homepage so analysis shows in chat.
+  const isAnonymous = user?.is_anonymous === true || user?.app_metadata?.is_anonymous === true;
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && !isAnonymous) {
       navigate('/app', { replace: true });
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isAnonymous]);
 
   const txt = {
     heroTitle: getSafeText(t, 'landing.hero.title', 'Behördenschreiben verstehen.\nSouverän antworten.'),
