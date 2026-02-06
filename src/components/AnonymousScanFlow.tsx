@@ -303,8 +303,8 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
   // RESULT STEP
   if (step === 'result') {
     return (
-      <div className="fixed inset-0 z-50 bg-background overflow-auto">
-        <div className="container max-w-2xl py-6 px-4">
+      <div className="fixed inset-0 z-50 bg-background overflow-y-auto overflow-x-hidden">
+        <div className="container max-w-2xl py-6 px-4 pb-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <Button variant="ghost" size="sm" onClick={onClose}>
@@ -345,6 +345,21 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
+          {/* Extracted document text - scrollable */}
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                {t('anonymousFlow.documentText', 'Testo del documento')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded border bg-muted/30 p-4 text-sm whitespace-pre-wrap break-words">
+                {extractedText || '—'}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Analysis */}
           <Card className="mb-6">
             <CardHeader className="pb-3">
@@ -354,9 +369,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="max-h-[280px] overflow-y-auto overflow-x-hidden prose prose-sm max-w-none dark:prose-invert">
                 {analysis.split('\n').map((line, i) => (
-                  <p key={i} className="mb-2 last:mb-0">{line}</p>
+                  <p key={i} className="mb-2 last:mb-0 break-words">{line}</p>
                 ))}
               </div>
             </CardContent>
@@ -390,9 +405,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
 
   // CHAT STEP
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col min-h-0">
       {/* Header */}
-      <div className="border-b px-4 py-3 flex items-center justify-between">
+      <div className="flex-shrink-0 border-b px-4 py-3 flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => setStep('result')}>
           {t('common.back', 'Back')}
         </Button>
@@ -404,7 +419,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea ref={chatScrollRef} className="flex-1">
+      <ScrollArea ref={chatScrollRef} className="flex-1 min-h-0">
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {chatMessages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -413,12 +428,12 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
               )}
-              <div className={`max-w-[85%] rounded-xl px-4 py-3 ${
+              <div className={`max-w-[85%] min-w-0 rounded-xl px-4 py-3 break-words ${
                 msg.role === 'user'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-card border shadow-sm'
               }`}>
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
               </div>
               {msg.role === 'user' && (
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -442,7 +457,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t p-4">
+      <div className="flex-shrink-0 border-t p-4">
         <div className="max-w-2xl mx-auto flex gap-2">
           <Textarea
             value={chatInput}
