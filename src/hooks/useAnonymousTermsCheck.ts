@@ -21,26 +21,21 @@ interface AnonymousTermsCheckResult {
  * Returns whether acceptance is needed and a function to record acceptance
  */
 export function useAnonymousTermsCheck(): AnonymousTermsCheckResult {
-  const [needsAcceptance, setNeedsAcceptance] = useState(true);
+  const [needsAcceptance, setNeedsAcceptance] = useState(false);
 
   const checkTerms = useCallback(() => {
     try {
-      const data = localStorage.getItem(ANONYMOUS_TERMS_KEY);
-      if (!data) {
-        setNeedsAcceptance(true);
-        return;
-      }
-
-      const parsed: AnonymousTermsData = JSON.parse(data);
-      
-      // Check if all versions match current
-      const termsOk = parsed.termsVersion === TERMS_VERSION;
-      const privacyOk = parsed.privacyVersion === PRIVACY_VERSION;
-      const ageOk = parsed.agePolicyVersion === AGE_POLICY_VERSION;
-
-      setNeedsAcceptance(!termsOk || !privacyOk || !ageOk);
+      // Auto-accept: always consider terms as accepted, persist immediately
+      const data: AnonymousTermsData = {
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
+        agePolicyVersion: AGE_POLICY_VERSION,
+        acceptedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(ANONYMOUS_TERMS_KEY, JSON.stringify(data));
+      setNeedsAcceptance(false);
     } catch {
-      setNeedsAcceptance(true);
+      setNeedsAcceptance(false);
     }
   }, []);
 

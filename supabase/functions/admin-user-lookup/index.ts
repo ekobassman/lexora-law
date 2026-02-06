@@ -3,7 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-// Blocked country codes
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
 
 function checkGeoBlock(req: Request): { blocked: boolean; countryCode: string | null } {
@@ -23,7 +22,7 @@ const PLANS: Record<string, number> = {
   unlimited: 999999,
 };
 
-function jsonResponse(body: unknown, status = 200) {
+function jsonResponse(corsHeaders: Record<string, string>, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -48,18 +47,18 @@ serve(async (req) => {
   const geoCheck = checkGeoBlock(req);
   if (geoCheck.blocked) {
     console.log('[admin-user-lookup] Jurisdiction blocked:', geoCheck.countryCode);
-    return jsonResponse({ code: 'JURISDICTION_BLOCKED', countryCode: geoCheck.countryCode }, 451);
+    return jsonResponse(corsHeaders,{ code: 'JURISDICTION_BLOCKED', countryCode: geoCheck.countryCode }, 451);
   }
 
   const hasAuth = req.headers.has("authorization") || req.headers.has("Authorization");
   console.info("[admin-user-lookup]", { method: req.method, has_authorization: hasAuth });
 
-  // B) Method check
+  // Method check
   if (req.method !== "POST") {
-    return jsonResponse({ found: false, reason: "METHOD_NOT_ALLOWED" }, 200);
+    return jsonResponse(corsHeaders,{ found: false, reason: "METHOD_NOT_ALLOWED" }, 200);
   }
 
-  // C) Parse body safely
+  // Parse body safely
   let body: any = {};
   try {
     body = await req.json();
@@ -67,33 +66,30 @@ serve(async (req) => {
     body = {};
   }
 
-  // D) PUBLIC PING (NO AUTH, NO DB)
+  // PUBLIC PING (NO AUTH, NO DB)
   if (body?.ping === true) {
     console.info("[admin-user-lookup]", { path: "ping", executed: true });
-    return jsonResponse({ ok: true, function: "admin-user-lookup", ts: Date.now() }, 200);
+    return jsonResponse(corsHeaders,{ ok: true, function: "admin-user-lookup", ts: Date.now() }, 200);
   }
 
-  // === LOOKUP PATH: AUTH REQUIRED ===
-
+  // LOOKUP PATH: AUTH REQUIRED
   const authHeaderRaw = req.headers.get("Authorization") ?? "";
   const token = authHeaderRaw.startsWith("Bearer ") ? authHeaderRaw.slice(7) : authHeaderRaw;
 
-  // DEBUG: Log lookup request
   console.info("[admin-user-lookup] LOOKUP_EMAIL", body?.email ?? "(none)");
 
   if (!authHeaderRaw || !token) {
     console.log("[admin-user-lookup] exit: no token");
-    return jsonResponse({ ok: false, reason: "unauthorized" }, 200);
+    return jsonResponse(corsHeaders,{ ok: false, reason: "unauthorized" }, 200);
   }
 
   try {
-    console.log("[admin-user-lookup] entry");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("[admin-user-lookup] MISSING_ENV");
-      return jsonResponse({ found: false, reason: "MISSING_ENV" }, 200);
+      return jsonResponse(corsHeaders,{ found: false, reason: "MISSING_ENV" }, 200);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -104,7 +100,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData?.user) {
       console.error("[admin-user-lookup] AUTH_FAILED", userError?.message);
-      return jsonResponse({ found: false, reason: "AUTH_FAILED", detail: userError?.message }, 200);
+      return jsonResponse(corsHeaders,{ found: false, reason: "AUTH_FAILED", detail: userError?.message }, 200);
     }
 
     const caller_uid = userData.user.id;
@@ -114,16 +110,16 @@ serve(async (req) => {
     const callerEmail = (userData.user.email ?? "").toLowerCase();
     if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail)) {
       console.log("[admin-user-lookup] exit: not_admin");
-      return jsonResponse({ ok: false, reason: "not_admin" }, 200);
+      return jsonResponse(corsHeaders,{ ok: false, reason: "not_admin" }, 200);
     }
 
     // Validate email
     const email = String(body?.email ?? "").trim().toLowerCase();
     if (!email) {
-      return jsonResponse({ found: false, reason: "EMAIL_REQUIRED" }, 200);
+      return jsonResponse(corsHeaders,{ found: false, reason: "EMAIL_REQUIRED" }, 200);
     }
     if (!isValidEmail(email)) {
-      return jsonResponse({ found: false, reason: "INVALID_EMAIL" }, 200);
+      return jsonResponse(corsHeaders,{ found: false, reason: "INVALID_EMAIL" }, 200);
     }
 
     // Lookup user
@@ -141,7 +137,7 @@ serve(async (req) => {
 
       if (pageError) {
         console.error("[admin-user-lookup] LOOKUP_ERROR", pageError.message);
-        return jsonResponse({ found: false, reason: "LOOKUP_ERROR", detail: pageError.message }, 200);
+        return jsonResponse(corsHeaders,{ found: false, reason: "LOOKUP_ERROR", detail: pageError.message }, 200);
       }
 
       if (!usersPage.users.length) break;
@@ -161,7 +157,7 @@ serve(async (req) => {
 
     if (!targetUserId) {
       console.info("[admin-user-lookup] USER_NOT_FOUND", email);
-      return jsonResponse({ found: false, reason: "USER_NOT_FOUND" }, 200);
+      return jsonResponse(corsHeaders,{ found: false, reason: "USER_NOT_FOUND" }, 200);
     }
 
     console.info("[admin-user-lookup] USER_FOUND", { id: targetUserId, email: targetEmail });
@@ -208,7 +204,7 @@ serve(async (req) => {
       .select("id", { count: "exact", head: true })
       .eq("user_id", targetUserId);
 
-    return jsonResponse({
+    return jsonResponse(corsHeaders,{
       found: true,
       user: {
         id: targetUserId,
@@ -237,6 +233,6 @@ serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[admin-user-lookup] EXCEPTION", msg);
-    return jsonResponse({ found: false, reason: "SERVER_ERROR", detail: msg }, 200);
+    return jsonResponse(corsHeaders,{ found: false, reason: "SERVER_ERROR", detail: msg }, 200);
   }
 });
