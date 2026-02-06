@@ -99,7 +99,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log(`[api/ocr] Processing via OpenAI Vision... Size: ${estimatedSizeMB.toFixed(2)}MB`);
+    console.log(`[api/ocr] Processing via OpenAI Vision (gpt-4o)... Size: ${estimatedSizeMB.toFixed(2)}MB`);
+
+    const GERMAN_OCR_PROMPT = `OCR per documenti ufficiali tedeschi (Finanzamt, Amt, Behörden).
+Estrai TUTTO il testo visibile. Mantieni formattazione, nomi, indirizzi, importi.
+Correzioni obbligatorie: "pinanzamt"→"Finanzamt", "£"→"€", "Herm"→"Herrn", "Raden-" + spazi → "Baden-Württemberg".
+Ignora macchie e sfocature. Ritorna SOLO il testo estratto, niente commenti.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -108,13 +113,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
+        temperature: 0.0,
+        max_tokens: 4096,
         messages: [
-          {
-            role: "system",
-            content:
-              "Extract all text from this document image. Preserve formatting as much as possible. Return only the extracted text without additional comments.",
-          },
           {
             role: "user",
             content: [
@@ -122,14 +124,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 type: "image_url",
                 image_url: {
                   url: `data:${mimeType};base64,${base64}`,
-                  detail: "auto",
+                  detail: "high",
                 },
+              },
+              {
+                type: "text",
+                text: GERMAN_OCR_PROMPT,
               },
             ],
           },
         ],
-        max_tokens: 4096,
-        temperature: 0.1,
       }),
     });
 

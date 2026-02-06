@@ -98,10 +98,29 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       });
       setCurrentCase(newCase);
 
-      // OCR via Tesseract (client-side, no CORS)
-      const ocrResult = await extractTextWithTesseract(file, (p) => setOcrProgress(p));
-      if (!ocrResult?.text?.trim()) throw new Error('OCR failed or no text found');
-      const text = ocrResult.text.trim();
+      // OCR: prefer anonymous-ocr (GPT-4o Vision), fallback to Tesseract
+      let text = '';
+      try {
+        const ocrRes = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+            body: JSON.stringify({ base64, mimeType }),
+          }
+        );
+        const ocrData = await ocrRes.json();
+        if (ocrRes.ok && ocrData?.ok && ocrData?.text?.trim()) {
+          text = ocrData.text.trim();
+          setOcrProgress(100);
+        } else throw new Error(ocrData?.error ?? 'anonymous-ocr failed');
+      } catch (apiErr) {
+        console.warn('[AnonymousScanFlow] anonymous-ocr failed, using Tesseract fallback:', apiErr);
+        toast.warning(t('anonymousFlow.ocrFallback', 'Using basic OCR (for best results ensure good lighting).'));
+        const ocrResult = await extractTextWithTesseract(file, (p) => setOcrProgress(p));
+        if (!ocrResult?.text?.trim()) throw new Error('OCR failed or no text found');
+        text = ocrResult.text.trim();
+      }
       setExtractedText(text);
       updateAnonymousCase(newCase.id, { letterText: text, ocrResult: text });
 
