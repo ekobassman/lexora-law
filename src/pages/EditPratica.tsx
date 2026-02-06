@@ -17,6 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
+import { extractTextWithTesseract, isImageType } from '@/lib/tesseractOcr';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, CalendarPlus, FileText, Building2, Hash, Sparkles, FileCheck, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { ChatWithAI } from '@/components/ChatWithAI';
@@ -465,11 +466,20 @@ export default function EditPratica() {
     });
   };
 
-  const extractTextFromFile = async (file: File): Promise<string | null> => {
+  const extractTextFromFile = async (
+    file: File,
+    onProgress?: (percent: number) => void
+  ): Promise<string | null> => {
     try {
+      // Use Tesseract for images (client-side, no CORS)
+      if (isImageType(file.type)) {
+        const result = await extractTextWithTesseract(file, onProgress);
+        return result?.text ?? null;
+      }
+
+      // PDF: fallback to API
       const base64 = await fileToBase64(file);
 
-      // Use centralized invoke wrapper with auth validation
       const result = await invokeExtractText({
         base64,
         mimeType: file.type,
@@ -477,7 +487,6 @@ export default function EditPratica() {
         navigate,
       });
 
-      // null means auth failed and user was redirected
       if (result === null) return null;
 
       if (result.error) {
@@ -551,11 +560,13 @@ export default function EditPratica() {
       setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
 
-      // Run OCR for both images AND PDFs
+      // Run OCR for both images AND PDFs (Tesseract for images)
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
       
-      const extractedText = await extractTextFromFile(selectedFile);
+      const extractedText = await extractTextFromFile(selectedFile, (p) =>
+        setAnalysisProgress(50 + Math.round((p / 100) * 40))
+      );
       
       if (extractedText && extractedText.trim().length > 0) {
         setFormData(prev => ({ ...prev, letter_text: extractedText }));
@@ -618,11 +629,13 @@ export default function EditPratica() {
       setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
 
-      // Run OCR
+      // Run OCR (Tesseract for images)
       setAnalysisStep('extracting');
       setAnalysisProgress(50);
       
-      const extractedText = await extractTextFromFile(capturedFile);
+      const extractedText = await extractTextFromFile(capturedFile, (p) =>
+        setAnalysisProgress(50 + Math.round((p / 100) * 40))
+      );
       
       if (extractedText && extractedText.trim().length > 0) {
         setFormData(prev => ({ ...prev, letter_text: extractedText }));

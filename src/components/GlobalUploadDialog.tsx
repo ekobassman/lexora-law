@@ -27,6 +27,7 @@ import { LegalLoader } from '@/components/LegalLoader';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { DeadlineConflictDialog } from '@/components/DeadlineConflictDialog';
+import { extractTextWithTesseract, isImageType } from '@/lib/tesseractOcr';
 
 interface GlobalUploadDialogProps {
   open: boolean;
@@ -108,8 +109,20 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
     setStep('matching');
 
     try {
-      const textToAnalyze = rawText.trim();
-      let analysis = null;
+      let textToAnalyze = rawText.trim();
+      let analysis: any = null;
+
+      // Extract text from image file if no raw text (Tesseract client-side)
+      if (!textToAnalyze && file && isImageType(file.type)) {
+        const result = await extractTextWithTesseract(file);
+        textToAnalyze = result?.text?.trim() ?? '';
+        if (textToAnalyze) setRawText(textToAnalyze);
+      }
+      if (!textToAnalyze && file && !isImageType(file.type)) {
+        toast.error(t('documents.pdfManualHint', 'Per i PDF inserisci il testo manualmente o carica un\'immagine.'));
+        setStep('upload');
+        return;
+      }
 
       // Analyze the document
       if (textToAnalyze) {
@@ -132,7 +145,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
       if (!pratiche || pratiche.length === 0) {
         // No existing pratiche, will create new
         setCreateNew(true);
-        await saveDocument(null, analysis);
+        await saveDocument(null, analysis, textToAnalyze || undefined);
         return;
       }
 
@@ -195,7 +208,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
       // Decision logic
       if (matches.length === 1 && matches[0].matchType === 'exact') {
         // Exact match, save directly
-        await saveDocument(matches[0].id, analysis);
+        await saveDocument(matches[0].id, analysis, textToAnalyze || undefined);
       } else if (matches.length > 0) {
         // Multiple or uncertain matches, show selection
         setStep('select');
@@ -203,7 +216,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
       } else {
         // No matches, create new pratica
         setCreateNew(true);
-        await saveDocument(null, analysis);
+        await saveDocument(null, analysis, textToAnalyze || undefined);
       }
 
     } catch (err) {
@@ -215,7 +228,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
     }
   };
 
-  const saveDocument = async (praticaId: string | null, analysis: any) => {
+  const saveDocument = async (praticaId: string | null, analysis: any, extractedTextOverride?: string) => {
     if (!user) return;
 
     setUploading(true);
@@ -252,6 +265,8 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
         mimeType = file.type;
       }
 
+      const letterText = extractedTextOverride ?? rawText.trim();
+
       let targetPraticaId = praticaId;
 
       // Create new pratica if needed
@@ -269,7 +284,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
             aktenzeichen: analysis?.aktenzeichen || null,
             deadline: analysis?.deadline || null,
             status: 'new',
-            letter_text: rawText.trim() || null,
+            letter_text: letterText || null,
           })
           .select()
           .single();
@@ -286,7 +301,7 @@ export function GlobalUploadDialog({ open, onOpenChange, onSuccess }: GlobalUplo
         file_name: fileName,
         mime_type: mimeType,
         direction,
-        raw_text: rawText.trim() || null,
+        raw_text: letterText || null,
         detected_authority: analysis?.authority || null,
         detected_aktenzeichen: analysis?.aktenzeichen || null,
         detected_date: analysis?.documentDate || null,

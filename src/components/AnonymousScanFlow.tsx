@@ -27,6 +27,7 @@ import {
   addChatMessage as addAnonChatMessage,
   type AnonymousCase 
 } from '@/lib/anonymousSession';
+import { extractTextWithTesseract } from '@/lib/tesseractOcr';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RegistrationGate } from '@/components/RegistrationGate';
 
@@ -45,6 +46,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<FlowStep>('camera');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStage, setProcessingStage] = useState<'ocr' | 'analyze'>('ocr');
+  const [ocrProgress, setOcrProgress] = useState(0);
   const [currentCase, setCurrentCase] = useState<AnonymousCase | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [analysis, setAnalysis] = useState('');
@@ -82,9 +84,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
     setStep('processing');
     setIsProcessing(true);
     setProcessingStage('ocr');
+    setOcrProgress(0);
 
     try {
-      // Convert first file to base64
       const file = files[0];
       const base64 = await fileToBase64(file);
       const mimeType = file.type || 'image/jpeg';
@@ -96,10 +98,10 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       });
       setCurrentCase(newCase);
 
-      // OCR via Vercel /api/ocr (Google Cloud Vision)
-      const ocrResult = await (await import('@/lib/ocrClient')).ocrWithBase64(base64, mimeType);
-      if (!ocrResult.text) throw new Error(ocrResult.details || ocrResult.error || 'OCR failed');
-      const text = ocrResult.text;
+      // OCR via Tesseract (client-side, no CORS)
+      const ocrResult = await extractTextWithTesseract(file, (p) => setOcrProgress(p));
+      if (!ocrResult?.text?.trim()) throw new Error('OCR failed or no text found');
+      const text = ocrResult.text.trim();
       setExtractedText(text);
       updateAnonymousCase(newCase.id, { letterText: text, ocrResult: text });
 
@@ -269,7 +271,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
             </h3>
             <p className="text-muted-foreground text-sm">
               {processingStage === 'ocr'
-                ? t('anonymousFlow.extractingHint', 'Extracting text from your document')
+                ? `${t('anonymousFlow.extractingHint', 'Extracting text from your document')} ${ocrProgress}%`
                 : t('anonymousFlow.analyzingHint', 'Understanding content, risks, and next steps')
               }
             </p>
