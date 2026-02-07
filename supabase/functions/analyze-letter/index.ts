@@ -303,6 +303,7 @@ serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  console.log("[analyze-letter] POST request start");
   try {
     const geoCheck = checkGeoBlock(req);
     if (geoCheck.blocked) {
@@ -321,12 +322,13 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error("[analyze-letter] Auth error:", authError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - please log in' }),
+        JSON.stringify({ error: "Unauthorized - please log in" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    console.log("[analyze-letter] user", user.id);
 
     // Get user's preferred language from profile
     const { data: profile } = await supabaseClient
@@ -335,9 +337,25 @@ serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    const { letterText, userLanguage, senderData, legalClassification, caseContext } = await req.json();
+    let letterText: string, userLanguage: string, senderData: unknown, legalClassification: unknown, caseContext: unknown;
+    try {
+      const body = await req.json();
+      letterText = body.letterText;
+      userLanguage = body.userLanguage;
+      senderData = body.senderData;
+      legalClassification = body.legalClassification;
+      caseContext = body.caseContext;
+    } catch (parseErr) {
+      console.error("[analyze-letter] Body parse error:", parseErr);
+      return new Response(
+        JSON.stringify({ error: "Invalid request body", message: parseErr instanceof Error ? parseErr.message : "Bad JSON" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    console.log("[analyze-letter] body letterText length", letterText?.length ?? 0);
 
     if (!letterText || letterText.trim().length === 0) {
+      console.log("[analyze-letter] return 400: no letter text");
       return new Response(
         JSON.stringify({ error: "No letter text provided" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -562,29 +580,39 @@ OUTPUT FORMAT - STRICT JSON
     }
 
     const content = aiResult.content;
+    console.log("[analyze-letter] AI raw content length", content?.length ?? 0);
 
     if (!content) {
-      throw new Error("No response from AI");
+      console.error("[analyze-letter] No content from AI");
+      return new Response(
+        JSON.stringify({ error: "No response from AI", message: "AI returned empty content" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    let parsedResult;
+    let parsedResult: Record<string, unknown>;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      const jsonString = jsonMatch[1] || content;
-      parsedResult = JSON.parse(jsonString.trim());
+      const jsonString = (jsonMatch[1] ?? content) as string;
+      parsedResult = JSON.parse(jsonString.trim()) as Record<string, unknown>;
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response as JSON");
+      console.error("[analyze-letter] Failed to parse AI response:", String(content).slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "Failed to parse AI response as JSON", message: parseError instanceof Error ? parseError.message : "Parse error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // DETERMINISTIC SERVER-SIDE VALIDATION (Non-AI)
     // ═══════════════════════════════════════════════════════════════════════
 
-    const standardDraft = parsedResult.level5_drafts?.version_standard || '';
-    const reinforcedDraft = parsedResult.level5_drafts?.version_reinforced || '';
-    const legalBasisCited = parsedResult.level2_analysis?.rechtsgrundlage_detail || null;
-    const deadlinesDetected = parsedResult.level2_analysis?.frist_vorhanden || false;
+    const level5 = parsedResult.level5_drafts as Record<string, string> | undefined;
+    const level2 = parsedResult.level2_analysis as Record<string, unknown> | undefined;
+    const standardDraft = level5?.version_standard || '';
+    const reinforcedDraft = level5?.version_reinforced || '';
+    const legalBasisCited = (level2?.rechtsgrundlage_detail as string | null) ?? null;
+    const deadlinesDetected = (level2?.frist_vorhanden as boolean) ?? false;
 
     // Validate standard draft
     const standardValidation = runAllValidators(standardDraft, legalBasisCited, outputLangCode, deadlinesDetected);
@@ -596,7 +624,7 @@ OUTPUT FORMAT - STRICT JSON
     console.log(`[VALIDATORS] Warnings: ${[...standardValidation.validation_warnings, ...reinforcedValidation.validation_warnings].join(', ')}`);
 
     // Combine AI quality check with deterministic validation
-    const aiQualityCheck = parsedResult.quality_check || {};
+    const aiQualityCheck = (parsedResult.quality_check as Record<string, unknown>) || {};
     const deterministicQuality = standardValidation.quality_passed && reinforcedValidation.quality_passed;
     const overallQualityPassed = 
       aiQualityCheck.no_invented_laws !== false &&
@@ -606,7 +634,7 @@ OUTPUT FORMAT - STRICT JSON
 
     // Merge all warnings
     const allWarnings = [
-      ...(parsedResult.warnings || []),
+      ...((parsedResult.warnings as string[]) || []),
       ...standardValidation.validation_warnings,
       ...reinforcedValidation.validation_warnings.filter(w => !standardValidation.validation_warnings.includes(w))
     ];
@@ -626,33 +654,46 @@ OUTPUT FORMAT - STRICT JSON
       parsedResult.quality_warning = "Quality check detected potential issues - please review carefully";
     }
 
-    console.log(`[LEVEL-2-5] Analysis SUCCESS for user ${user.id}, template: ${parsedResult.level3_template?.template_type}, quality: ${overallQualityPassed}`);
+    const level3 = parsedResult.level3_template as Record<string, unknown> | undefined;
+    const risiken = (level2?.risiken as string[] | undefined) ?? [];
+    const explanationFromAi = parsedResult.explanation as string | undefined;
+    const fallbackExplanation = level2?.forderung_detail
+      ? String(level2.forderung_detail)
+      : level2?.zusammenfassung
+        ? String(level2.zusammenfassung)
+        : risiken.length > 0
+          ? risiken.join(". ")
+          : "Analysis completed.";
+    const explanation = (explanationFromAi && explanationFromAi.trim()) ? explanationFromAi : fallbackExplanation;
+
+    console.log(`[LEVEL-2-5] Analysis SUCCESS for user ${user.id}, template: ${level3?.template_type}, quality: ${overallQualityPassed}`);
+    console.log("[analyze-letter] response explanation length:", explanation?.length, "risks count:", risiken?.length);
 
     // Map to response format with enhanced quality data
     const legacyResponse = {
       // New structured analysis (Levels 2-5)
-      legal_analysis: parsedResult.level2_analysis,
-      template_info: parsedResult.level3_template,
-      drafts: parsedResult.level5_drafts,
+      legal_analysis: level2,
+      template_info: level3,
+      drafts: level5,
       quality_check: enhancedQualityCheck,
       quality_passed: overallQualityPassed,
       warnings: allWarnings,
-      ai_disclaimer: parsedResult.ai_disclaimer || "⚠️ AI-generated draft - verify before sending",
-      
-      // Legacy fields for backward compatibility
-      explanation: parsedResult.explanation,
-      risks: parsedResult.level2_analysis?.risiken || [],
-      draft_response: parsedResult.level5_drafts?.version_standard,
-      draft_response_reinforced: parsedResult.level5_drafts?.version_reinforced,
+      ai_disclaimer: (parsedResult.ai_disclaimer as string) || "⚠️ AI-generated draft - verify before sending",
+      // Legacy fields for backward compatibility (UI reads these)
+      explanation,
+      risks: risiken,
+      draft_response: level5?.version_standard ?? null,
+      draft_response_reinforced: level5?.version_reinforced ?? null,
     };
 
     return new Response(JSON.stringify(legacyResponse), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("analyze-letter error:", error);
+    console.error("[analyze-letter] error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: message, message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

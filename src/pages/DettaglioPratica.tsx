@@ -291,11 +291,11 @@ export default function DettaglioPratica() {
         return;
       }
 
-      if (data.error) {
+      if (data?.error) {
         console.error('AI error:', data.error);
-        if (data.error.includes('Rate limit')) {
+        if (String(data.error).includes('Rate limit')) {
           toast.error(t('pratica.detail.rateLimitError'));
-        } else if (data.error.includes('credits')) {
+        } else if (String(data.error).includes('credits')) {
           toast.error(t('pratica.detail.creditsError'));
         } else {
           toast.error(t('pratica.detail.analyzeError'));
@@ -303,13 +303,27 @@ export default function DettaglioPratica() {
         return;
       }
 
-      // Save results to database
+      // Use response as source of truth (edge function returns explanation, risks, draft_response)
+      const explanation = data?.explanation ?? '';
+      const risks = Array.isArray(data?.risks) ? data.risks : [];
+      const draft_response = data?.draft_response ?? null;
+
+      // Update local state first so AI Analysis section shows immediately
+      setPratica(prev => prev ? {
+        ...prev,
+        explanation,
+        risks,
+        draft_response,
+        status: 'in_progress',
+      } : null);
+
+      // Persist to database (same columns the UI reads: explanation, risks, draft_response)
       const { error: updateError } = await supabase
         .from('pratiche')
         .update({
-          explanation: data.explanation,
-          risks: data.risks,
-          draft_response: data.draft_response,
+          explanation,
+          risks,
+          draft_response,
           status: 'in_progress',
         })
         .eq('id', pratica.id);
@@ -317,17 +331,8 @@ export default function DettaglioPratica() {
       if (updateError) {
         console.error('Update error:', updateError);
         toast.error(t('pratica.detail.saveError'));
-        return;
+        // State already updated above so user still sees the analysis
       }
-
-      // Update local state
-      setPratica(prev => prev ? {
-        ...prev,
-        explanation: data.explanation,
-        risks: data.risks,
-        draft_response: data.draft_response,
-        status: 'in_progress',
-      } : null);
 
       // MANDATORY: Force open all sections after AI analysis completes
       setAllSectionsForceOpen(true);
