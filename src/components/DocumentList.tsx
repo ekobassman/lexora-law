@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabaseClient';
+import { getPraticheFilesStoragePath } from '@/lib/storagePath';
 import { format } from 'date-fns';
 import { ArrowDownLeft, ArrowUpRight, Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,10 +31,12 @@ export function DocumentList({ documents, loading, userId }: DocumentListProps) 
 
   const handleDownload = async (fileUrl: string | null) => {
     if (!fileUrl) return;
-    
-    const filePath = fileUrl.split('/').slice(-2).join('/');
+    const filePath = getPraticheFilesStoragePath(fileUrl);
+    if (!filePath) {
+      toast.error(t('pratica.detail.downloadError'));
+      return;
+    }
     const { data } = await supabase.storage.from('pratiche-files').createSignedUrl(filePath, 3600);
-    
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
     } else {

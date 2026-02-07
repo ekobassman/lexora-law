@@ -16,6 +16,7 @@ import { AIDisclaimer } from '@/components/AIDisclaimer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
+import { getPraticheFilesStoragePath } from '@/lib/storagePath';
 import {
   ArrowLeft,
   Building2,
@@ -357,11 +358,11 @@ export default function DettaglioPratica() {
     if (!pratica) return;
     setDeleting(true);
 
-    // Delete file from storage if exists
-    if (pratica.file_url) {
-      const filePath = pratica.file_url.split('/').pop();
+    // Delete file from storage if exists (path must match storage: userId/...)
+    if (pratica.file_url && user?.id) {
+      const filePath = getPraticheFilesStoragePath(pratica.file_url);
       if (filePath) {
-        await supabase.storage.from('pratiche-files').remove([`${user?.id}/${filePath}`]);
+        await supabase.storage.from('pratiche-files').remove([filePath]);
       }
     }
 
@@ -378,7 +379,8 @@ export default function DettaglioPratica() {
 
   const getFileDownloadUrl = async () => {
     if (!pratica?.file_url) return null;
-    const filePath = pratica.file_url.split('/').slice(-2).join('/');
+    const filePath = getPraticheFilesStoragePath(pratica.file_url);
+    if (!filePath) return null;
     const { data } = await supabase.storage.from('pratiche-files').createSignedUrl(filePath, 3600);
     return data?.signedUrl;
   };

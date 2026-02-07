@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabaseClient';
+import { getPraticheFilesStoragePath } from '@/lib/storagePath';
 import { format } from 'date-fns';
 import {
   ArrowDownLeft,
@@ -104,23 +105,9 @@ export function DocumentsSection({
     setImageLoadErrors(prev => new Set(prev).add(docId));
   }, []);
 
-  // Helper to get file path from stored URL (handles both legacy signed URLs and new paths)
-  const getFilePath = (fileUrl: string): string => {
-    // If it's a signed URL, extract the path
-    if (fileUrl.includes('?')) {
-      const urlParts = fileUrl.split('?')[0];
-      return urlParts.split('/').slice(-2).join('/');
-    }
-    // If it starts with http, extract path
-    if (fileUrl.startsWith('http')) {
-      return fileUrl.split('/').slice(-2).join('/');
-    }
-    // It's already a path
-    return fileUrl;
-  };
-
   const getSignedUrl = async (fileUrl: string) => {
-    const filePath = getFilePath(fileUrl);
+    const filePath = getPraticheFilesStoragePath(fileUrl);
+    if (!filePath) return null;
     const { data } = await supabase.storage.from('pratiche-files').createSignedUrl(filePath, 3600);
     return data?.signedUrl || null;
   };
@@ -217,8 +204,8 @@ export function DocumentsSection({
     try {
       // Delete file from storage
       if (deleteDoc.file_url) {
-        const filePath = getFilePath(deleteDoc.file_url);
-        await supabase.storage.from('pratiche-files').remove([filePath]);
+        const filePath = getPraticheFilesStoragePath(deleteDoc.file_url);
+        if (filePath) await supabase.storage.from('pratiche-files').remove([filePath]);
       }
 
       // Delete record
