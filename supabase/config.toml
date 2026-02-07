@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.credits-get-status]
 verify_jwt = false
+
+[functions.analyze-letter]
+verify_jwt = false
