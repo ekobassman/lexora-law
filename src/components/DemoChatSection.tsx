@@ -745,26 +745,8 @@ export function DemoChatSection() {
   }, []);
 
   const exportText = draftText.trim();
-  // Chat contains a formal letter if any assistant message looks like one (so buttons stay on after navigate back / preview)
-  // Strict: only treat as "letter ready" when content is a real formal letter (prevents summaries/recaps from enabling buttons)
-  const looksLikeFormalLetter = useCallback((content: string) => {
-    if (!content || content.length < 200) return false;
-    const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(content);
-    const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(content);
-    const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(content);
-    return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
-  }, []);
-  const chatContainsLetter = useMemo(() =>
-    messages.some(m => m.role === 'assistant' && looksLikeFormalLetter(m.content)),
-    [messages, looksLikeFormalLetter]
-  );
-  // Buttons ONLY when we have a real formal letter (not a summary/recap) – strict check
-  const hasLetterDraft = useMemo(() =>
-    exportText.length >= 200 &&
-    looksLikeFormalLetter(exportText) &&
-    (generatedInSession || chatContainsLetter),
-    [exportText, generatedInSession, chatContainsLetter, looksLikeFormalLetter]
-  );
+  // Buttons ONLY when the AI has generated the letter (backend sent draftText after user confirmed). No character/layout logic.
+  const hasLetterDraft = exportText.length > 0;
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
   // When letter becomes ready: green frame + play sound once
@@ -995,17 +977,13 @@ export function DemoChatSection() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Check if we got a valid letter draft from backend – only accept real formal letters
-      // Reject summaries/recaps so we never enable preview/print/email/copy until a real letter exists
+      // Only set draft when the AI has generated the letter (backend sends draftText only after user confirmed). We trust the backend.
       let newDraft: string | null = null;
-      if (data.draftText && typeof data.draftText === 'string' && data.draftText.trim().length >= 200) {
+      if (data.draftText && typeof data.draftText === 'string' && data.draftText.trim().length > 0) {
         const draftContent = data.draftText.trim();
         const isSummaryPattern = /^(thank you|grazie|danke|merci).*:\s*\n.*- (sender|mittente|absender|expéditeur):/i.test(draftContent) ||
           (draftContent.split(/\n\s*-\s+/).length > 3 && draftContent.length < 800);
-        const isFormalLetter = looksLikeFormalLetter(draftContent);
-        if (!isSummaryPattern && isFormalLetter) {
-          newDraft = draftContent;
-        }
+        if (!isSummaryPattern) newDraft = draftContent;
       }
 
       if (newDraft) {

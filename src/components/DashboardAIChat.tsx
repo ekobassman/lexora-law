@@ -389,15 +389,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   
   const MIN_DRAFT_LENGTH = 200;
 
-  // Strict: only treat as "letter ready" when content is a real formal letter (not summary/recap)
-  const looksLikeFormalLetter = useCallback((content: string) => {
-    if (!content || content.length < MIN_DRAFT_LENGTH) return false;
-    const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(content);
-    const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(content);
-    const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(content);
-    return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
-  }, []);
-  
   // Sync case chat messages to local state
   useEffect(() => {
     if (caseChatMessages.length > 0) {
@@ -411,41 +402,22 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     }
     setIsLoadingHistory(isChatLoading);
   }, [caseChatMessages, isChatLoading, selectedCaseId]);
-  
-  // Client-side letter detection – only real formal letters enable buttons
+
+  // Fallback: extract draft only when last message contains [LETTER]...[/LETTER] (AI explicitly generated). Used only for "create case" when lastDraftText is missing.
   const detectDraftFromMessages = useCallback((): { hasDraft: boolean; draftText: string | null } => {
     const lastAssistant = messages.filter(m => m.role === 'assistant').pop();
-    if (!lastAssistant) return { hasDraft: false, draftText: null };
-    
-    const content = lastAssistant.content || '';
+    if (!lastAssistant?.content) return { hasDraft: false, draftText: null };
+    const m = lastAssistant.content.match(/\[LETTER\]([\s\S]*?)\[\/LETTER\]/i);
+    if (!m || !m[1]) return { hasDraft: false, draftText: null };
+    const extracted = m[1].trim();
+    if (extracted.length < MIN_DRAFT_LENGTH || containsPlaceholders(extracted)) return { hasDraft: false, draftText: null };
+    return { hasDraft: true, draftText: sanitizeDraftForCase(extracted) };
+  }, [messages]);
 
-    if (containsPlaceholders(content)) return { hasDraft: false, draftText: null };
-    
-    const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(content);
-    const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(content);
-    const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(content);
-    
-    const markerCount = [hasSubject, hasOpening, hasClosing].filter(Boolean).length;
-    if (markerCount < 2 || content.length < MIN_DRAFT_LENGTH) return { hasDraft: false, draftText: null };
-    
-    const cleaned = sanitizeDraftForCase(content);
-    if (cleaned.length < MIN_DRAFT_LENGTH || !looksLikeFormalLetter(cleaned)) return { hasDraft: false, draftText: null };
-    return { hasDraft: true, draftText: cleaned };
-  }, [messages, looksLikeFormalLetter]);
-  
-  const clientDraftCheck = detectDraftFromMessages();
-  const isDocumentReady = 
-    (draftReady === true && typeof lastDraftText === 'string' && lastDraftText.length >= MIN_DRAFT_LENGTH && looksLikeFormalLetter(lastDraftText)) ||
-    (clientDraftCheck.hasDraft && clientDraftCheck.draftText !== null);
-
-  // Export text for buttons – only when it's a real letter
-  const exportText = useMemo(() => {
-    const fromBackend = lastDraftText && lastDraftText.length >= MIN_DRAFT_LENGTH && !containsPlaceholders(lastDraftText) && looksLikeFormalLetter(lastDraftText) ? lastDraftText : '';
-    const fromClient = clientDraftCheck.draftText && clientDraftCheck.draftText.length >= MIN_DRAFT_LENGTH && !containsPlaceholders(clientDraftCheck.draftText) ? clientDraftCheck.draftText : '';
-    return fromBackend || fromClient;
-  }, [lastDraftText, clientDraftCheck.draftText, looksLikeFormalLetter]);
-
-  const hasLetterDraft = exportText.length >= MIN_DRAFT_LENGTH && looksLikeFormalLetter(exportText);
+  // Buttons ONLY when the AI has generated the letter (backend sent draftReady + draftResponse). No character/layout logic.
+  const exportText = (lastDraftText && lastDraftText.trim().length > 0 && !containsPlaceholders(lastDraftText)) ? lastDraftText : '';
+  const hasLetterDraft = exportText.length > 0;
+  const isDocumentReady = draftReady && hasLetterDraft;
   const letterReadyPlayedRef = useRef(false);
   useEffect(() => {
     if (!hasLetterDraft || letterReadyPlayedRef.current) return;
@@ -738,7 +710,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                   });
                 }
                 
-                if (migrationData.draftText && migrationData.draftText.trim().length >= MIN_DRAFT_LENGTH && looksLikeFormalLetter(migrationData.draftText.trim())) {
+                if (migrationData.draftText && migrationData.draftText.trim().length > 0) {
                   setLastDraftText(migrationData.draftText);
                   setDraftReady(true);
                 }
@@ -1063,8 +1035,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       setMessagesLimit(data.messagesLimit);
       
       const backendDraft = (data?.suggestedAction?.payload?.draftResponse ?? data?.draftResponse ?? null) as string | null;
-      const isRealLetter = backendDraft && backendDraft.trim().length >= MIN_DRAFT_LENGTH && !containsPlaceholders(backendDraft) && looksLikeFormalLetter(backendDraft.trim());
-      const backendDraftReady = Boolean(data?.draftReady) && Boolean(isRealLetter);
+      const backendDraftReady = Boolean(data?.draftReady) && Boolean(backendDraft && backendDraft.trim().length > 0);
 
       if (data.suggestedAction && data.suggestedAction.type === 'CREATE_CASE_FROM_CHAT') {
         setSuggestedAction(data.suggestedAction);
@@ -1073,10 +1044,10 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         setSuggestedAction(null);
       }
 
-      setLastDraftText(isRealLetter ? backendDraft : null);
+      setLastDraftText(backendDraftReady ? backendDraft : null);
       setDraftReady(backendDraftReady);
       
-      if (backendDraftReady && isRealLetter && !hasPromptedForName) {
+      if (backendDraftReady && backendDraft && !hasPromptedForName) {
         setHasPromptedForName(true);
         setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
         setShowCaseNameDialog(true);
