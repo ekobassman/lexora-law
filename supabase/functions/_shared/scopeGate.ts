@@ -1,17 +1,17 @@
 import { normLang, SupportedLang } from "./lang.ts";
 
 export const SCOPE_REFUSAL_MESSAGES: Record<SupportedLang, string> = {
-  IT: "Posso aiutarti solo con documenti e burocrazia (lettere, uffici, scadenze, moduli). Se hai bisogno di assistenza con un ufficio o un documento, dimmi pure!",
-  DE: "Ich kann dir nur bei Dokumenten und Behördenangelegenheiten helfen (Briefe, Ämter, Fristen, Formulare). Wenn du Hilfe bei einem Amt oder Dokument brauchst, sag mir Bescheid!",
-  EN: "I can only help with documents and bureaucratic matters (letters, offices, deadlines, forms). If you need help with an office or document, let me know!",
-  FR: "Je ne peux vous aider qu'avec les documents et les démarches administratives (lettres, bureaux, délais, formulaires). Si vous avez besoin d'aide avec un bureau ou un document, dites-le moi!",
-  ES: "Solo puedo ayudarte con documentos y trámites burocráticos (cartas, oficinas, plazos, formularios). Si necesitas ayuda con una oficina o documento, ¡dímelo!",
-  PL: "Mogę Ci pomóc tylko w sprawach dokumentów i biurokracji (listy, urzędy, terminy, formularze). Jeśli potrzebujesz pomocy z urzędem lub dokumentem, daj mi znać!",
-  RO: "Pot să te ajut doar cu documente și chestiuni birocratice (scrisori, birouri, termene, formulare). Dacă ai nevoie de ajutor cu un birou sau document, spune-mi!",
-  TR: "Size yalnızca belgeler ve bürokratik konularda yardımcı olabilirim (mektuplar, ofisler, son tarihler, formlar). Bir ofis veya belge ile ilgili yardıma ihtiyacınız varsa, bana söyleyin!",
-  AR: "يمكنني مساعدتك فقط في المستندات والأمور البيروقراطية (الرسائل، المكاتب، المواعيد النهائية، النماذج). إذا كنت بحاجة إلى مساعدة في مكتب أو مستند، أخبرني!",
-  UK: "Я можу допомогти лише з документами та бюрократичними питаннями (листи, офіси, терміни, форми). Якщо вам потрібна допомога з офісом або документом, скажіть!",
-  RU: "Я могу помочь только с документами и бюрократическими вопросами (письма, офисы, сроки, формы). Если вам нужна помощь с офисом или документом, скажите!",
+  IT: "Mi occupo solo di questioni legali e amministrative: lettere, uffici, scadenze, divorzi, consulenze legali, lettura e generazione di documenti. Non posso aiutare con diete, amore, sesso, meccanica o altri argomenti fuori ambito. Per un documento o una lettera, dimmi pure!",
+  DE: "Ich helfe nur bei rechtlichen und behördlichen Angelegenheiten: Briefe, Ämter, Fristen, Scheidung, Rechtsberatung, Dokumente lesen und erstellen. Keine Diäten, Liebe, Sex, Mechanik oder andere Themen. Bei einem Dokument oder Brief sag Bescheid!",
+  EN: "I only help with legal and administrative matters: letters, offices, deadlines, divorce, legal advice, reading and generating documents. I don't do diets, love, sex, mechanics or other off-topic subjects. For a document or letter, let me know!",
+  FR: "Je n'aide qu'en matière juridique et administrative : lettres, administrations, délais, divorce, conseils juridiques, lecture et rédaction de documents. Pas de régimes, amour, sexe, mécanique ou autres sujets. Pour un document ou une lettre, dites-moi !",
+  ES: "Solo ayudo en asuntos legales y administrativos: cartas, oficinas, plazos, divorcio, asesoramiento legal, lectura y redacción de documentos. No dietas, amor, sexo, mecánica ni otros temas. Para un documento o carta, ¡dímelo!",
+  PL: "Pomagam tylko w sprawach prawnych i administracyjnych: listy, urzędy, terminy, rozwód, porady prawne, dokumenty. Nie diety, miłość, seks, mechanika ani inne tematy. W sprawie dokumentu lub listu daj znać!",
+  RO: "Vă ajut doar cu aspecte juridice și administrative: scrisori, birouri, termene, divorț, consultanță juridică, citire și redactare documente. Fără diete, dragoste, sex, mecanică sau alte subiecte. Pentru un document sau o scrisoare, spune-mi!",
+  TR: "Sadece hukuki ve idari konularda yardımcı olurum: mektuplar, ofisler, son tarihler, boşanma, hukuki danışmanlık, belge okuma ve oluşturma. Diyet, aşk, cinsellik, mekanik veya diğer konularda yardımcı olamam. Belge veya mektup için söyleyin!",
+  AR: "أساعد فقط في الأمور القانونية والإدارية: رسائل، مكاتب، مواعيد، طلاق، استشارات قانونية، قراءة وكتابة المستندات. لا أنظمات غذائية ولا حب ولا جنس ولا ميكانيكا. للمستند أو الرسالة أخبرني!",
+  UK: "Допомагаю лише з юридичними та адміністративними питаннями: листи, офіси, терміни, розлучення, юридичні консультації, документи. Без дієт, кохання, сексу, механіки тощо. Для документа чи листа — напишіть!",
+  RU: "Помогаю только по юридическим и административным вопросам: письма, офисы, сроки, развод, юридические консультации, документы. Без диет, любви, секса, механики и т.д. Для документа или письма — напишите!",
 };
 
 export interface ScopeCheckResult {
@@ -27,12 +27,20 @@ const IN_SCOPE_PATTERNS: RegExp[] = [
 ];
 
 const OUT_OF_SCOPE_PATTERNS: RegExp[] = [
-  // ricette/cibo (including German compound words)
-  /\b(ricetta|cucin|patate|kartoffel|kartoffelsalat|pizza|pasta|torta|dolce|ingredienti|rezept|kochen|backen)\b/i,
+  // diete / diet / nutrition (no legal)
+  /\b(dieta|diete|diet|dimagrire|perdere peso|calorie|nutrizione|nutrition|regime alimentare)\b/i,
+  // amore / love / relazioni non legali
+  /\b(amore|love|innamoramento|storia d'amore|romance|dating|appuntamento romantico)\b/i,
+  // sesso / sex (no legal/medical context)
+  /\b(sesso|sex|sessualità|sexual|erotico|erotic)\b/i,
+  // meccanico / auto / riparazioni
+  /\b(meccanico|mechanic|riparare auto|car repair|motore|engine|cambio|clutch|freni|brakes)\b/i,
+  // ricette/cibo
+  /\b(ricetta|cucin|patate|kartoffel|pizza|pasta|torta|dolce|ingredienti|rezept|kochen|backen)\b/i,
   // entertainment
   /\b(film|movie|serie|netflix|music|song|tiktok|capcut|youtube|spotify|kino)\b/i,
-  // gaming/fitness ecc
-  /\b(videogioco|gaming|ps5|xbox|workout|gym|dieta|calorie|fitness)\b/i,
+  // gaming/fitness (non legale)
+  /\b(videogioco|gaming|ps5|xbox|workout|gym|fitness)\b/i,
 ];
 
 export function checkScope(message: string): ScopeCheckResult {

@@ -711,7 +711,7 @@ Usa questi dati automaticamente quando generi lettere.
 L'utente ha caricato/scannerizzato questo documento. DEVI considerarlo GIÀ LETTO. Le informazioni sono QUI SOTTO; NON chiedere all'utente dove trovarle.
 ${snippet}
 
-REGOLA OBBLIGATORIA (tutte le lingue): NON chiedere MAI dati che compaiono nel documento sopra. NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; per la firma usa nome a stampa o "________________". Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA (tutte le lingue): VIETATO dire "non ho ricevuto la lettera" o chiedere di "riportare i dati". Se il doc c'è usalo; se non c'è di' solo di caricare/incollare la lettera. NON chiedere MAI dati che compaiono nel documento sopra. NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; per la firma usa nome a stampa o "________________". Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
       }
     }

@@ -51,6 +51,15 @@ export const DOCUMENT_LETTER_RULE = `
 - Se manca qualcosa che non è nel documento → cerca online prima; solo se non trovato chiedi una volta in modo specifico.
 `;
 
+/** VIETATO: dire che non hai ricevuto la lettera o chiedere all'utente di "riportare i dati". Comportati come ChatGPT: se il doc c'è usalo; se non c'è invita solo a caricare/incollare. */
+export const NEVER_ASK_LETTER_DATA_RULE = `
+=== VIETATO – MAI DIRE QUESTO (TUTTE LE LINGUE) ===
+- VIETATO dire: "non ho ricevuto il testo della lettera", "I have not received the letter", "ti chiedo di riportare i dati anagrafici/della lettera", "please provide the details from the letter", "forniscimi i dati contenuti nella lettera", o frasi equivalenti.
+- Se il documento/lettera È nel contesto (upload/OCR in chat): USALO. Non dire mai che non l'hai ricevuto.
+- Se il documento NON c'è ancora: di' SOLO una frase breve tipo "Carica o incolla qui la lettera per analizzarla" / "Upload or paste the letter here to analyze it". NON chiedere mai all'utente di scrivere a mano i dati della lettera.
+- Comportati come ChatGPT: risposta diretta, utile, nessuna richiesta di "riportare i dati" o "fornire i dati della lettera".
+`;
+
 /** After user confirms ("sì"/"ok"/"genera"/"no, niente"/etc.): generate the document ONLY. No further questions, no signature request. */
 export const AFTER_CONFIRMATION_RULE = `
 === DOPO CONFERMA UTENTE (TUTTE LE LINGUE) ===
@@ -86,10 +95,10 @@ NEVER ask for signature. Signature is private; client signs on paper after print
 `;
 
 /** Combined policy for document/case chat (inside case view) */
-export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
+export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
 
 /** Combined policy for edit/modify text mode */
-export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
+export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
 
 /** Combined policy for demo and dashboard chat */
-export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
+export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
