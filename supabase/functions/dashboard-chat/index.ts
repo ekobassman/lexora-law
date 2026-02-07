@@ -671,6 +671,38 @@ Usa questi dati automaticamente quando generi lettere.
       }
     }
 
+    // When no case or no letter in case: derive document from current/last user message (OCR pasted in chat)
+    const looksLikeLetter = (text: string): boolean => {
+      if (!text || text.length < 350) return false;
+      const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
+      const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen|sincerely|best\s+regards|hochachtungsvoll|con\s+osservanza)\b/i.test(text);
+      const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+      return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+    };
+    if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
+      const msg = message.trim();
+      const history = Array.isArray(chatHistory) ? chatHistory : [];
+      let docText = "";
+      if (msg.length >= 350 && looksLikeLetter(msg)) {
+        docText = msg.slice(0, 12000);
+      } else {
+        const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
+        const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
+        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) docText = lastContent.slice(0, 12000);
+      }
+      if (docText.length > 0) {
+        const snippet = docText.length > 8000 ? docText.slice(0, 8000) + "...[troncato]" : docText;
+        systemPrompt += `
+
+=== LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
+Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
+${snippet}
+
+REGOLA OBBLIGATORIA: NON chiedere MAI dati che compaiono nel documento sopra. Usali SEMPRE direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+`;
+      }
+    }
+
     // If case context is provided, inject it so AI has full case awareness
     if (caseContext) {
       systemPrompt += `

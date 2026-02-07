@@ -939,6 +939,24 @@ export function DemoChatSection() {
       }
     }
 
+    // So the AI always has the scanned letter: pass it explicitly when the message (or last user msg) is the document
+    const looksLikeLetter = (text: string) => {
+      if (!text || text.length < 350) return false;
+      const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
+      const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen|sincerely|best\s+regards|hochachtungsvoll|con\s+osservanza)\b/i.test(text);
+      const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+      return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+    };
+    const currentTrimmed = messageContent.trim();
+    const lastUserMsg = conversationHistory.filter((m) => m.role === 'user').pop();
+    const lastUserContent = lastUserMsg?.content?.trim() ?? '';
+    const documentTextToSend =
+      currentTrimmed.length >= 350 && looksLikeLetter(currentTrimmed)
+        ? currentTrimmed.slice(0, 12000)
+        : lastUserContent.length >= 350 && looksLikeLetter(lastUserContent)
+          ? lastUserContent.slice(0, 12000)
+          : undefined;
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
@@ -953,6 +971,7 @@ export function DemoChatSection() {
             language,
             isFirstMessage,
             conversationHistory,
+            ...(documentTextToSend ? { documentText: documentTextToSend } : {}),
           }),
         }
       );

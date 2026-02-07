@@ -402,16 +402,39 @@ serve(async (req) => {
     
     let systemPrompt = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.EN;
 
-    // When user has uploaded/scanned a letter: inject it so AI uses it and never asks for data already in it
-    const letterOrDocText = (letterText || documentText || "").trim();
+    // Helper: detect if text looks like a scanned/pasted letter (so we treat it as THE document)
+    const looksLikeLetter = (text: string): boolean => {
+      if (!text || text.length < 350) return false;
+      const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
+      const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen|sincerely|best\s+regards|hochachtungsvoll|con\s+osservanza)\b/i.test(text);
+      const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+      return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+    };
+
+    // Document: explicit (letterText/documentText) OR derived from current/last user message in chat (OCR in bubble)
+    let letterOrDocText = (letterText || documentText || "").trim();
+    if (letterOrDocText.length === 0) {
+      const fullMessage = message.trim();
+      const history = Array.isArray(conversationHistory) ? conversationHistory : [];
+      if (fullMessage.length >= 350 && looksLikeLetter(fullMessage)) {
+        letterOrDocText = fullMessage.slice(0, 12000);
+      } else {
+        const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
+        const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
+        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) {
+          letterOrDocText = lastContent.slice(0, 12000);
+        }
+      }
+    }
     if (letterOrDocText.length > 0) {
-      const snippet = letterOrDocText.length > 5000 ? letterOrDocText.slice(0, 5000) + "...[troncato]" : letterOrDocText;
+      const snippet = letterOrDocText.length > 8000 ? letterOrDocText.slice(0, 8000) + "...[troncato]" : letterOrDocText;
       systemPrompt += `
 
-=== LETTERA/DOCUMENTO CARICATO (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE ===
+=== LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
+Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
 ${snippet}
 
-REGOLA CRITICA: Non chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA: NON chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
     }
     
