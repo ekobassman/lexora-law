@@ -1,10 +1,28 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- LEXORA SCHEMA REBUILD
--- Stripe payments, credits, subscriptions, dashboard, legal versions.
--- Solo struttura: CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS.
--- Nessun dato di produzione, nessuna cancellazione dati.
--- Eseguire in Supabase → SQL Editor.
--- ═══════════════════════════════════════════════════════════════════════════
+-- Lexora schema rebuild (Stripe / credits / dashboard / legal)
+--
+-- PROCEDURA DI DEPLOY
+-- 1) Backup
+--    - Crea uno snapshot del database da Supabase Dashboard:
+--      Database → Backups → New backup (progetto di produzione).
+--
+-- 2) Staging
+--    - Esegui questo script nel SQL Editor del progetto di STAGING.
+--    - Verifica che:
+--        * non ci siano errori,
+--        * tabelle e colonne siano presenti come previsto,
+--        * le query di diagnostica finali funzionino.
+--
+-- 3) Produzione
+--    - Se staging è OK, esegui lo stesso script nel SQL Editor del progetto di PRODUZIONE.
+--
+-- 4) Test RLS
+--    - Verifica l'accesso ai dati usando la client app (chiavi anon / service)
+--      e non l'utente postgres superuser, perché le policy RLS si applicano
+--      solo alle connessioni "normali".
+--
+-- NOTE
+--    - Lo script è idempotente: usa solo CREATE TABLE IF NOT EXISTS e
+--      ALTER TABLE ... ADD COLUMN IF NOT EXISTS e non rimuove dati.
 
 -- Helper: funzione updated_at (se non esiste)
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
