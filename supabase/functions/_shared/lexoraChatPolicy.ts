@@ -41,14 +41,23 @@ export const CONTEXT_DEMO_DASHBOARD = `
 - When a letter/document is provided in context: use DOCUMENT_LETTER_RULE (use its data; never ask for info already in it; only additional or web).
 `;
 
-/** When letter/document OCR is in context: use it; never ask for info already there. */
+/** When letter/document OCR is in context: use it; never ask for info already there. Applies in ALL 11 languages. */
 export const DOCUMENT_LETTER_RULE = `
-=== REGOLA DOCUMENTO/LETTERA (QUANDO PRESENTE NEL CONTESTO) ===
-- Tutte le informazioni estratte dalla lettera/documento (OCR) sono GIÀ NEL CONTESTO sotto.
-- DEVI usare SEMPRE quei dati: destinatario, riferimento, scadenza, oggetto, contenuto, dati personali già presenti.
-- VIETATO chiedere all'utente dati che compaiono nella lettera/documento (nome, data, autorità, aktenzeichen, indirizzi, numeri, ecc.).
+=== REGOLA DOCUMENTO/LETTERA (QUANDO PRESENTE NEL CONTESTO – TUTTE LE LINGUE) ===
+- Tutte le informazioni nella lettera/documento (OCR) in chat sono GIÀ NOTE. È la FONTE UNICA DI VERITÀ.
+- DEVI usare SEMPRE quei dati: destinatario, riferimento, scadenza, oggetto, contenuto, nomi, date, numeri, indirizzi, autorità.
+- VIETATO ASSOLUTO chiedere all'utente QUALSIASI dato che compaia nel documento (inclusa la FIRMA: mai chiedere firma/signature/Unterschrift).
 - Chiedi SOLO: (1) informazioni AGGIUNTIVE non presenti nel documento, oppure (2) cerca sul web.
 - Se manca qualcosa che non è nel documento → cerca online prima; solo se non trovato chiedi una volta in modo specifico.
+`;
+
+/** After user confirms ("sì"/"ok"/"genera"/"no, niente"/etc.): generate the document ONLY. No further questions, no signature request. */
+export const AFTER_CONFIRMATION_RULE = `
+=== DOPO CONFERMA UTENTE (TUTTE LE LINGUE) ===
+- Quando l'utente conferma ("sì", "ok", "genera", "va bene", "no non aggiungere", "yes", "ja", "oui", etc.) che puoi creare il documento:
+  → Genera SUBITO il documento con [LETTER]...[/LETTER]. NIENTE ALTRO.
+- VIETATO dopo la conferma: chiedere firma, chiedere altri dati, chiedere "vuole aggiungere altro?", fare altre domande.
+- Output: solo la lettera formale (e una breve frase tipo "Ecco la lettera."). Mai richieste aggiuntive dopo la conferma.
 `;
 
 export const CONTEXT_DOCUMENT_CHAT = `
@@ -58,13 +67,14 @@ export const CONTEXT_DOCUMENT_CHAT = `
 - Do not ask for data that is in the case or documents. Use DOCUMENT_LETTER_RULE when letter/documents are provided.
 `;
 
-/** NEVER ask for signature. Client signs on printed document only. */
+/** NEVER ask for signature. Client signs on printed document only. Applies in ALL 11 languages (IT, DE, EN, FR, ES, PL, RO, TR, AR, UK, RU). */
 export const NO_SIGNATURE_RULE = `
-=== FIRMA – REGOLA ASSOLUTA (APPLY EVERYWHERE) ===
-- VIETATO ASSOLUTO chiedere all'utente la firma (signature, firma, Unterschrift). La firma è PRIVATA.
-- Il cliente appone la firma SOLO sul documento DOPO averlo stampato. Non si firma sullo schermo.
-- Nella bozza/lettera: usa SOLO il nome a stampa (typed name) sotto la chiusura, oppure una riga "________________" dove il cliente firmerà a mano dopo la stampa.
-- NON usare mai [Signature], [Firma], [Unterschrift] come dato da chiedere. Se li usi nella lettera, sostituisci con nome a stampa o "________________".
+=== FIRMA – REGOLA ASSOLUTA (TUTTE LE CHAT, TUTTE LE 11 LINGUE) ===
+- VIETATO ASSOLUTO chiedere ALL'UTENTE la firma (signature, firma, Unterschrift, signature, firma, 签名, imza, etc.). La firma è PRIVATA.
+- Il cliente firma SOLO sul documento STAMPATO, a mano. Mai sullo schermo. Mai da fornire in chat.
+- Nella lettera generata: usa SOLO nome a stampa sotto la chiusura, oppure la riga "________________" dove firmerà dopo la stampa.
+- NON chiedere MAI "firma", "signature", "Unterschrift", "parafa", "sign here", né alcun dato aggiuntivo per la firma.
+- Se il modello vuole inserire [Signature]/[Firma]: sostituisci con nome a stampa o "________________". Non chiedere nulla all'utente.
 `;
 
 export const ABSOLUTE_RULE = `
@@ -76,10 +86,10 @@ NEVER ask for signature. Signature is private; client signs on paper after print
 `;
 
 /** Combined policy for document/case chat (inside case view) */
-export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
+export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
 
 /** Combined policy for edit/modify text mode */
-export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
+export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
 
 /** Combined policy for demo and dashboard chat */
-export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
+export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;

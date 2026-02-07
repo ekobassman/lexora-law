@@ -707,7 +707,7 @@ Usa questi dati automaticamente quando generi lettere.
 Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
 ${snippet}
 
-REGOLA OBBLIGATORIA: NON chiedere MAI dati che compaiono nel documento sopra. Usali SEMPRE direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA (tutte le lingue): NON chiedere MAI dati che compaiono nel documento sopra. NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; per la firma usa nome a stampa o "________________". Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
       }
     }
@@ -730,6 +730,8 @@ ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
         systemPrompt += `
 === LETTERA PRINCIPALE (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE ===
 ${letterSnippet}
+
+NON chiedere MAI la firma (signature/firma/Unterschrift). Il cliente firma su carta dopo la stampa.
 
 `;
       }
@@ -764,7 +766,7 @@ ${letterSnippet}
 
       systemPrompt += `
 REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
-- Tutte le informazioni nella LETTERA PRINCIPALE e nei DOCUMENTI sopra sono GIÀ NOTE. NON chiedere MAI dati che vi compaiono (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente.
+- Tutte le informazioni nella LETTERA PRINCIPALE e nei DOCUMENTI sopra sono GIÀ NOTE. NON chiedere MAI dati che vi compaiono (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; firma = nome a stampa o "________________" dopo la stampa.
 - Chiedi SOLO informazioni AGGIUNTIVE non presenti nei documenti, oppure cerca sul web.
 - NON chiedere "chi ti scrive" se authority/dati sono già nei documenti.
 - Usa i riferimenti (aktenzeichen) automaticamente. Mantieni coerenza con la corrispondenza precedente.
@@ -941,15 +943,15 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     if (!allowDocumentGeneration) {
       gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
 CRITICAL: Before generating ANY final document/letter, you MUST:
-1. First show a SUMMARY of all data you will use (sender, recipient, subject, etc.)
-2. Ask for explicit confirmation with "CONFERMO" / "CONFIRM" / "BESTÄTIGEN" / "OK"
-3. ONLY after user confirms, generate the letter with [LETTER]...[/LETTER] tags
+1. First show a SUMMARY of all data you will use (from the document in context – do NOT ask for data already there; do NOT ask for signature/firma).
+2. Ask ONE question only: "Posso creare il documento / vuole aggiungere altro?" (or equivalent: "Can I create the document or do you want to add something?").
+3. Then WAIT. Do NOT ask for signature or any other data. ONLY after user confirms (yes/ok/genera/no), generate the letter with [LETTER]...[/LETTER].
 
-The user has NOT confirmed yet. Do NOT generate final letters yet.
-If you have all the data, show a summary and ask for confirmation.`;
+The user has NOT confirmed yet. Do NOT generate final letters yet. Do NOT ask for signature or extra data.`;
     } else {
       gateInstruction = `\n\n=== CONFIRMATION RECEIVED ===
-User has confirmed document generation. You may now generate the final letter with [LETTER]...[/LETTER] tags.`;
+User has confirmed. Generate IMMEDIATELY the final letter with [LETTER]...[/LETTER] tags.
+DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiungere altro?". Generate ONLY the letter. One brief phrase then [LETTER]...[/LETTER] only.`;
       console.log(`[DASHBOARD-CHAT] Document generation ALLOWED after confirmation`);
     }
     messages[0].content += gateInstruction;

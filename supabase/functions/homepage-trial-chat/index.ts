@@ -61,7 +61,7 @@ Search autonomously; propose result and ask simple confirmation before using in 
 One summary + explicit confirmation, then generate. No multi-step interviews. Use defaults for missing data.
 
 === 4) LETTER FORMAT ===
-Wrap in [LETTER] and [/LETTER]. Structure: Sender → Recipient → Place+Date → Subject → Body → Closing → typed name or ________________ (line for hand signature after printing). NEVER use [Signature] or ask the user for a signature; the client signs on the printed document only. Current date: ${new Date().toLocaleDateString('it-IT')}
+Wrap in [LETTER] and [/LETTER]. Structure: Sender → Recipient → Place+Date → Subject → Body → Closing → typed name or ________________ (line for hand signature after printing). NEVER use [Signature] or ask the user for a signature in ANY language (IT, DE, EN, FR, ES, PL, RO, TR, AR, UK, RU); the client signs on the printed document only. After user confirms ("sì"/"ok"/"genera"/etc.), generate ONLY the letter – do not ask for anything else. Current date: ${new Date().toLocaleDateString('it-IT')}
 `;
 
 // System prompts - DYNAMIC LANGUAGE from UI locale
@@ -444,7 +444,10 @@ serve(async (req) => {
 Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
 ${snippet}
 
-REGOLA OBBLIGATORIA: NON chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA (tutte le lingue):
+- NON chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente.
+- NON chiedere MAI la firma (signature, firma, Unterschrift). Il cliente firma su carta dopo la stampa. Nella lettera usa solo nome a stampa o "________________".
+- Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
     }
     
@@ -520,16 +523,16 @@ REGOLA OBBLIGATORIA: NON chiedere MAI all'utente dati che compaiono nel document
     if (!allowDocumentGeneration) {
       gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
 CRITICAL: Before generating ANY final document/letter, you MUST:
-1. First show a SUMMARY of all data you will use (sender, recipient, subject, etc.)
-2. Ask for confirmation (any affirmative response like "yes", "ok", "confirm", "proceed", "go ahead" is valid)
-3. ONLY after user confirms, generate the letter with [LETTER]...[/LETTER] tags
+1. First show a SUMMARY of all data you will use (from the document in chat – do NOT ask for data already there; do NOT ask for signature).
+2. Ask ONE question only: "Posso creare il documento / vuole aggiungere altro?" (or equivalent in user language: "Can I create the document or do you want to add something?").
+3. Then WAIT. Do NOT ask for signature, firma, or any other data. ONLY after user confirms (yes/ok/genera/no), generate the letter with [LETTER]...[/LETTER].
 
-The user has NOT confirmed yet. Do NOT generate final letters yet.
-If you have all the data, show a summary and ask for confirmation.`;
+The user has NOT confirmed yet. Do NOT generate final letters yet. Do NOT ask for signature or extra data.`;
     } else {
       gateInstruction = `\n\n=== CONFIRMATION RECEIVED ===
-User has confirmed. Proceed IMMEDIATELY to create the letter. Say something brief like "I will proceed to create the letter now." then generate it with [LETTER]...[/LETTER] tags.
-DO NOT mention or correct any typos in the user's confirmation. DO NOT comment on how they confirmed. Just proceed directly.`;
+User has confirmed. Proceed IMMEDIATELY to create the letter with [LETTER]...[/LETTER] tags.
+DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiungere altro?". Generate ONLY the letter. Say one brief phrase (e.g. "Ecco la lettera.") then output [LETTER]...[/LETTER] only.
+DO NOT mention or correct typos in the user's confirmation. Just generate the document.`;
       console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
     }
 

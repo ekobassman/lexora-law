@@ -176,8 +176,8 @@ serve(async (req) => {
 
     const policyBlock = mode === "modify" ? POLICY_EDIT_MODIFY : POLICY_DOCUMENT_CHAT;
     const modeInstruction = mode === "modify"
-      ? `\n\nMODIFY MODE: The user asked to change the draft. You have letter text, current draft, and case data above. Apply the requested modification DIRECTLY. Use smart defaults: authority address → standard; signature → typed name; date → current date; tone → formal. NEVER ask "can you provide..." or "please confirm...". Return the modified draft text (formal letter only). Do not use [placeholder] brackets; use real values or standard defaults. Language: ${outputLanguage}.`
-      : `\n\nDOCUMENT CHAT: Propose actions and answers based on the case. Do not ask for data already in the context. Language: ${outputLanguage}.`;
+      ? `\n\nMODIFY MODE: The user asked to change the draft. You have letter text, current draft, and case data above. Apply the requested modification DIRECTLY. Use smart defaults: authority address → standard; signature → typed name or "________________" (NEVER ask user for signature); date → current date; tone → formal. NEVER ask "can you provide...", "please confirm...", or for signature/firma. Return the modified draft text (formal letter only). Do not use [placeholder] brackets; use real values or standard defaults. Language: ${outputLanguage}.`
+      : `\n\nDOCUMENT CHAT: Propose actions and answers based on the case. Do not ask for data already in the context. NEVER ask for signature (firma/signature/Unterschrift). Language: ${outputLanguage}.`;
 
     const systemPromptBase = `You are Lexora, a precise legal assistant. For every legal question: analyze OCR, cite norms and deadlines, search for updated data when needed, then respond with clear strategy and draft when relevant.
 
@@ -191,10 +191,10 @@ Autorità: ${praticaData?.authority || "N/A"}
 Riferimento: ${praticaData?.aktenzeichen || "N/A"}
 Scadenza: ${praticaData?.deadline || "N/A"}
 
-DOCUMENTO ORIGINALE (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE:
+DOCUMENTO ORIGINALE (OCR) – FONTE UNICA DI VERITÀ – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE:
 ${letterSnippet || "Nessun documento."}
 
-REGOLA CRITICA: Non chiedere MAI all'utente dati che compaiono nel DOCUMENTO ORIGINALE sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA CRITICA (tutte le lingue): Non chiedere MAI all'utente dati che compaiono nel DOCUMENTO sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Non chiedere MAI la firma (signature/firma/Unterschrift): il cliente firma su carta dopo la stampa; nella bozza usa nome a stampa o "________________". Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 
 BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
