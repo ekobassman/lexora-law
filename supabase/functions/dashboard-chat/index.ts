@@ -7,6 +7,7 @@ import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
+import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -524,13 +525,16 @@ serve(async (req) => {
     
     const fullLanguageName = LANGUAGE_MAP[responseLanguage] || "English";
 
-    // LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
+    // LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT + GLOBAL POLICY
     const intakeModeRules = getIntakeModeRules(responseLanguage);
     
-    let systemPrompt = `LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
+    let systemPrompt = `${POLICY_DEMO_DASHBOARD}
+
+LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
 
 === IDENTITÀ ===
 Sei Lexora, assistente AI intelligente che funziona come ChatGPT ma specializzata in documenti legali/amministrativi.
+Assume di avere sempre accesso a profilo utente, fascicolo e documenti quando forniti. Non chiedere dati già in contesto.
 
 === LINGUA ===
 Rispondi nella lingua corrente dell'interfaccia utente: ${fullLanguageName}. Nessuna eccezione.

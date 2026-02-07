@@ -6,6 +6,7 @@ import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
+import { POLICY_EDIT_MODIFY, POLICY_DOCUMENT_CHAT } from "../_shared/lexoraChatPolicy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -168,27 +169,17 @@ serve(async (req) => {
       }
     }
 
-    const systemPromptBase = `You are the world's best lawyer. For EVERY legal question:
+    const policyBlock = mode === "modify" ? POLICY_EDIT_MODIFY : POLICY_DOCUMENT_CHAT;
+    const modeInstruction = mode === "modify"
+      ? `\n\nMODIFY MODE: The user asked to change the draft. You have letter text, current draft, and case data above. Apply the requested modification DIRECTLY. Use smart defaults: authority address → standard; signature → typed name; date → current date; tone → formal. NEVER ask "can you provide..." or "please confirm...". Return the modified draft text (formal letter only). Do not use [placeholder] brackets; use real values or standard defaults. Language: ${outputLanguage}.`
+      : `\n\nDOCUMENT CHAT: Propose actions and answers based on the case. Do not ask for data already in the context. Language: ${outputLanguage}.`;
 
-ANALYZZA: leggi OCR, identifica norme, articoli, scadenze, obblighi
-
-RICERCA: se NON sai qualcosa, cerca SU INTERNET dati aggiornati (normativa, sentenze 2026)
-
-VERIFICA: cita fonti ufficiali (Gazzetta Ufficiale, Cassazione, siti gov.it)
-
-RISPONDI: spiegazione semplice + strategia legale + bozza risposta
-
-MAI INDOVINARE: 'Non ho dati aggiornati, cerco online' → ricerca reale
-
-Esempio risposta:
-'ART. 123 CDF: multa 150€ entro 30gg. SENTENZA Cass. 456/2026 conferma.
-RISPONDI: Contestazione + ricorso. Bozza: [testo completo]'
-
-CERCA SEMPRE prima di rispondere. Usa dati 2026 aggiornati.
+    const systemPromptBase = `You are Lexora, a precise legal assistant. For every legal question: analyze OCR, cite norms and deadlines, search for updated data when needed, then respond with clear strategy and draft when relevant.
 
 Lingua risposta: ${outputLanguage}.`;
 
     const contextBlock = `
+=== CONTESTO PRATICA ===
 PRATICA ID: ${praticaId || "N/A"}
 Titolo: ${praticaData?.title || "N/A"}
 Autorità: ${praticaData?.authority || "N/A"}
@@ -202,7 +193,7 @@ BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
 ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nUsa questi dati per citare articoli e sentenze.` : ""}`;
 
-    const systemPrompt = systemPromptBase + "\n\n=== CONTESTO PRATICA ===\n" + contextBlock;
+    const systemPrompt = policyBlock + modeInstruction + "\n\n" + systemPromptBase + contextBlock;
 
     // Build messages array
     const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -301,28 +292,27 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PLACEHOLDER HARD-STOP: Block responses with forbidden placeholders
+    // MODIFY MODE: Never ask user for placeholders; apply defaults and return
     // ═══════════════════════════════════════════════════════════════════════
     const placeholderCheck = containsForbiddenPlaceholders(content);
     if (placeholderCheck.hasForbidden && mode === "modify") {
-      console.log(`[CHAT-AI] BLOCKED: Response contains forbidden placeholders:`, placeholderCheck.found);
-      
-      // Instead of returning the draft, ask for missing information
-      const missingDataPrompt = langCode === 'DE' 
-        ? `Ich benötige noch einige Informationen, um die Bozza zu vervollständigen. Bitte geben Sie folgende Daten an: ${placeholderCheck.found.join(', ')}`
-        : langCode === 'IT'
-        ? `Ho bisogno di alcune informazioni per completare la bozza. Per favore fornisci i seguenti dati: ${placeholderCheck.found.join(', ')}`
-        : `I need some information to complete the draft. Please provide the following: ${placeholderCheck.found.join(', ')}`;
-      
-      return new Response(
-        JSON.stringify({ 
-          response: missingDataPrompt,
-          contains_modified_draft: false,
-          placeholder_blocked: true,
-          blocked_placeholders: placeholderCheck.found
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`[CHAT-AI] Modify mode: replacing placeholders with defaults:`, placeholderCheck.found);
+      const today = new Date().toISOString().slice(0, 10);
+      let cleaned = content;
+      const defaults: Record<string, string> = {
+        "[Data]": today, "[DATA]": today, "[Date]": today, "[Datum]": today,
+        "[Ort]": "—", "[Luogo]": "—", "[Place]": "—", "[Stadt]": "—",
+        "[Name]": "—", "[Nome]": "—", "[Vorname]": "—", "[Nachname]": "—",
+      };
+      for (const [ph, value] of Object.entries(defaults)) {
+        cleaned = cleaned.replace(new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), value);
+      }
+      const appliedNote = langCode === "DE"
+        ? "Ich habe Ihre Änderungen übernommen und Standardangaben verwendet, wo nötig.\n\n"
+        : langCode === "IT"
+        ? "Ho applicato le modifiche e usato dati standard dove necessario.\n\n"
+        : "I applied your changes and used standard defaults where needed.\n\n";
+      content = appliedNote + cleaned;
     }
 
     // Check if response contains a modified draft (for apply functionality)
