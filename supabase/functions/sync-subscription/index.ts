@@ -4,8 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://lexora-law.com",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // Price ID to plan mapping - MUST match Stripe products
@@ -58,7 +58,6 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  // Preflight: must return 200 with CORS headers so browser allows POST
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
   }
