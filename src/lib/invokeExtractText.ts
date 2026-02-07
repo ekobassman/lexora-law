@@ -28,16 +28,15 @@ export async function invokeExtractText(params: InvokeParams): Promise<InvokeRes
     return null;
   }
 
-  // AUTH HEALTH via fetch (bypass invoke)
-  const health = await callEdgeFunction("auth-health", token, { ping: true });
-  console.info("[auth-health] fetch", {
+  // public-health: usa publishable key in header (legacy secret); OK solo se 200 e ok: true
+  const health = await callEdgeFunction("public-health", token, { ping: true });
+  console.info("[public-health] fetch", {
     status: health.status,
     ok: health.ok,
-    step: health.data?.step ?? null,
+    dataOk: health.data?.ok ?? null,
   });
 
-  if (!health.ok || !health.data?.ok) {
-    await hardResetAuth(navigate);
+  if (health.status !== 200 || !health.data?.ok) {
     return null;
   }
 

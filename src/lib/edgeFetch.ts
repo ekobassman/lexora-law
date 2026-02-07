@@ -17,19 +17,23 @@ export async function callEdgeFunction(functionName: string, token: string, body
 
   const endpoint = `${url}/functions/v1/${functionName}`;
 
+  // public-health: Supabase "legacy secret" richiede Authorization + apikey con publishable key (non token utente)
+  const isPublicHealth = functionName === "public-health";
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    apikey: anon,
+    Authorization: `Bearer ${isPublicHealth ? anon : token}`,
+  };
+
   console.info(`[edgeFetch] calling ${functionName}`, {
     endpoint,
     hasToken: !!token,
-    tokenLen: token?.length ?? 0,
+    useAnonKey: isPublicHealth,
   });
 
   const res = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: anon,
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify(body ?? {}),
   });
 

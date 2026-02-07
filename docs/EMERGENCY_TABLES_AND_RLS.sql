@@ -28,13 +28,13 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
--- ─── 2) LEGAL_VERSIONS
+-- ─── 2) LEGAL_VERSIONS (doc_type, version, published_at, summary)
 CREATE TABLE IF NOT EXISTS public.legal_versions (
   id serial PRIMARY KEY,
-  doc_type text,
-  version text,
+  doc_type text NOT NULL,
+  version text NOT NULL,
   published_at timestamptz,
-  summary text
+  summary text DEFAULT ''
 );
 
 -- ─── 3) DASHBOARD_CHAT_MESSAGES
@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS public.dashboard_chat_messages (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   messages_count int,
-  message_date date
+  message_date date,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- ─── 4) DASHBOARD_CHAT_HISTORY
@@ -79,3 +81,11 @@ CREATE POLICY "Users own dashboard_chat_history"
   ON public.dashboard_chat_history FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Colonne extra su dashboard_chat_messages se la tabella esisteva già
+DO $$
+BEGIN
+  ALTER TABLE public.dashboard_chat_messages ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+  ALTER TABLE public.dashboard_chat_messages ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

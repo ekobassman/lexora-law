@@ -52,6 +52,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Supabase Edge Function public-health (diagnostica; verify_jwt: false)
+    const anonKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      process.env.SUPABASE_ANON_KEY ??
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+      "";
+    let authHealthPayload: { ok: boolean; healthy?: boolean; ts?: string | null; status?: number; message?: string } = { ok: false };
+    try {
+      const authHealthRes = await fetch(
+        "https://wzpxxlkfxymelrodjarl.supabase.co/functions/v1/public-health",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${anonKey}`,
+            apikey: anonKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: "Functions" }),
+        }
+      );
+      const json = (await authHealthRes.json()) as { ok?: boolean; healthy?: boolean; ts?: string };
+      if (authHealthRes.status === 200 && json?.ok) {
+        authHealthPayload = { ok: true, healthy: json.healthy, ts: json.ts ?? null };
+        console.log("[api/ocr] public-health ok, ts:", json?.ts ?? "n/a");
+      } else if (authHealthRes.status === 401) {
+        authHealthPayload = { ok: false, status: 401, message: "not authenticated" };
+        console.warn("[api/ocr] public-health 401 (no user token in backend), continuing scan");
+      } else {
+        authHealthPayload = { ok: false, status: authHealthRes.status, message: "request_failed" };
+        console.warn("[api/ocr] public-health non-ok, status:", authHealthRes.status);
+      }
+    } catch (authHealthErr) {
+      console.warn("[api/ocr] public-health fetch failed (continuing scan):", authHealthErr instanceof Error ? authHealthErr.message : "unknown");
+    }
+
     // Support both parsed object and raw JSON string (Vercel can send either)
     let body: { base64?: string; mimeType?: string } = {};
     if (typeof req.body === "object" && req.body !== null) {
@@ -158,7 +193,16 @@ Ignora macchie e sfocature. Ritorna SOLO il testo estratto, niente commenti.`;
     }
 
     console.log("[api/ocr] Success, length:", extractedText.length);
-    return res.status(200).json({ text: extractedText });
+    return res.status(200).json({
+      text: extractedText,
+      auth_health: {
+        ok: authHealthPayload.ok,
+        healthy: authHealthPayload.healthy ?? false,
+        ts: authHealthPayload.ts ?? null,
+        ...(authHealthPayload.status != null && { status: authHealthPayload.status }),
+        ...(authHealthPayload.message && { message: authHealthPayload.message }),
+      },
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[api/ocr] Error:", err);

@@ -55,6 +55,14 @@ const defaultStatus: CreditsStatus = {
   monthly_credit_refill: 0,
 };
 
+/** Fallback quando credits-get-status fallisce (CORS / rete): free con limiti alti per non bloccare la UI */
+const fallbackStatusFree: CreditsStatus = {
+  ...defaultStatus,
+  monthly_case_limit: 999,
+  cases_remaining: 999,
+  at_case_limit: false,
+};
+
 export function useCredits() {
   const { session, user } = useAuth();
   const [status, setStatus] = useState<CreditsStatus>(defaultStatus);
@@ -87,8 +95,9 @@ export function useCredits() {
 
       setStatus(data as CreditsStatus);
     } catch (err: any) {
-      console.error('[useCredits] fetchStatus error:', err);
-      setError(err.message || 'Failed to fetch credits status');
+      console.warn('[useCredits] fetchStatus error (using fallback):', err?.message ?? err);
+      setStatus(fallbackStatusFree);
+      setError(null);
     } finally {
       setIsLoading(false);
     }

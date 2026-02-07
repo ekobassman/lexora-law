@@ -44,15 +44,15 @@ export function AuthOCRSelfTest() {
         return;
       }
 
-      // Call auth-health
-      const health = await callEdgeFunction("auth-health", token, { ping: true });
+      // Call public-health
+      const health = await callEdgeFunction("public-health", token, { ping: true });
       result.authHealth = {
         status: health.status,
         ok: health.ok && health.data?.ok === true,
         step: health.data?.step ?? null,
       };
 
-      // If auth-health failed, do not call extract-text
+      // If public-health failed, do not call extract-text
       if (!result.authHealth.ok) {
         console.log("[AuthOCRSelfTest]", JSON.stringify(result, null, 2));
         setOutput(result);
