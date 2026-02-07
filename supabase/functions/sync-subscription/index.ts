@@ -58,8 +58,9 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
+  // Preflight: must return 200 with CORS headers so browser allows POST
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
