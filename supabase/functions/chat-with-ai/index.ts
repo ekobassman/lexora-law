@@ -21,10 +21,11 @@ interface ChatMessage {
 
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
 
-// Whitelist of system markers that should NOT be treated as placeholders
+// Whitelist of system markers and SIGNATURE (never ask for signature – client signs on printed doc)
 const PLACEHOLDER_WHITELIST = [
   '[LETTER]', '[/LETTER]', '[BRIEF]', '[/BRIEF]', 
-  '[LETTERA]', '[/LETTERA]', '[DOCUMENT]', '[/DOCUMENT]'
+  '[LETTERA]', '[/LETTERA]', '[DOCUMENT]', '[/DOCUMENT]',
+  '[SIGNATURE]', '[FIRMA]', '[UNTERSCHRIFT]', '[FIRMA DEL MITTENTE]',
 ];
 
 // Check for forbidden placeholders in AI output
@@ -33,10 +34,14 @@ function containsForbiddenPlaceholders(text: string): { hasForbidden: boolean; f
   const placeholderPattern = /\[([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s]{0,30})\]/g;
   const matches = text.match(placeholderPattern) || [];
   
-  // Filter out whitelisted markers
-  const forbidden = matches.filter(m => 
-    !PLACEHOLDER_WHITELIST.some(w => w.toLowerCase() === m.toLowerCase())
-  );
+  // Filter out whitelisted markers and any signature-related (never ask user for signature)
+  const forbidden = matches.filter(m => {
+    const lower = m.toLowerCase().trim();
+    if (PLACEHOLDER_WHITELIST.some(w => w.toLowerCase() === lower)) return false;
+    if (/^\[(signature|firma|unterschrift|signatura|parafa)\s*\]$/.test(lower)) return false;
+    if (/^\[.*(firma|signature|unterschrift).*\]$/.test(lower)) return false;
+    return true;
+  });
   
   return {
     hasForbidden: forbidden.length > 0,
@@ -305,10 +310,13 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
         "[Data]": today, "[DATA]": today, "[Date]": today, "[Datum]": today,
         "[Ort]": "—", "[Luogo]": "—", "[Place]": "—", "[Stadt]": "—",
         "[Name]": "—", "[Nome]": "—", "[Vorname]": "—", "[Nachname]": "—",
+        "[Signature]": "________________", "[Firma]": "________________", "[Unterschrift]": "________________",
       };
       for (const [ph, value] of Object.entries(defaults)) {
         cleaned = cleaned.replace(new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), value);
       }
+      // Any remaining [.*signature.*] / [.*firma.*] → line (never ask user for signature)
+      cleaned = cleaned.replace(/\s*\[[^\]]*(?:signature|firma|unterschrift)[^\]]*\]\s*/gi, "\n________________\n");
       const appliedNote = langCode === "DE"
         ? "Ich habe Ihre Änderungen übernommen und Standardangaben verwendet, wo nötig.\n\n"
         : langCode === "IT"

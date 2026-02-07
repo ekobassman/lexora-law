@@ -60,7 +60,7 @@ Search autonomously; propose result and ask simple confirmation before using in 
 One summary + explicit confirmation, then generate. No multi-step interviews. Use defaults for missing data.
 
 === 4) LETTER FORMAT ===
-Wrap in [LETTER] and [/LETTER]. Structure: Sender → Recipient → Place+Date → Subject → Body → Closing → Signature. Current date: ${new Date().toLocaleDateString('it-IT')}
+Wrap in [LETTER] and [/LETTER]. Structure: Sender → Recipient → Place+Date → Subject → Body → Closing → typed name or ________________ (line for hand signature after printing). NEVER use [Signature] or ask the user for a signature; the client signs on the printed document only. Current date: ${new Date().toLocaleDateString('it-IT')}
 `;
 
 // System prompts - DYNAMIC LANGUAGE from UI locale
@@ -344,6 +344,17 @@ function extractFormalLetterFallback(text: string): string | null {
   return cleaned.length >= 100 ? cleaned : null;
 }
 
+// Replace signature placeholders with line (client signs on printed document only – never ask for signature)
+function replaceSignaturePlaceholders(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\s*\[Signature\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Firma\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Unterschrift\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Firma del mittente\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[.*?(?:signature|firma|unterschrift).*?\]\s*/gi, "\n________________\n");
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -541,22 +552,28 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
     // PLACEHOLDER HARD-STOP (same as dashboard-chat)
     // =====================
     // If the model returns bracket placeholders, REJECT the draft and ask for missing data
-    // IMPORTANT: Exclude system markers like [LETTER], [/LETTER] from detection
-    const SYSTEM_MARKERS = new Set(["[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]"]);
-    
+    // Exclude system markers and SIGNATURE (never ask for signature – client signs on printed doc)
+    const SYSTEM_MARKERS = new Set([
+      "[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]",
+      "[SIGNATURE]", "[FIRMA]", "[UNTERSCHRIFT]", "[FIRMA DEL MITTENTE]", "[SIGNATURE DU DESTINATAIRE]",
+    ]);
+    const isExcludedPlaceholder = (m: string): boolean => {
+      const u = m.toUpperCase().trim();
+      if (SYSTEM_MARKERS.has(u)) return true;
+      if (/^\[(SIGNATURE|FIRMA|UNTERSCHRIFT|SIGNATURA|PARAFA)\s*\]$/.test(u)) return true;
+      if (/^\[.*(FIRMA|SIGNATURE|UNTERSCHRIFT).*\]$/.test(u)) return true;
+      return false;
+    };
     const containsPlaceholders = (text: string): boolean => {
       if (!text) return false;
       const matches = text.match(/\[[^\]]+\]/g) || [];
-      // Filter out system markers
-      const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+      const realPlaceholders = matches.filter(m => !isExcludedPlaceholder(m));
       return realPlaceholders.length > 0;
     };
-
     const extractPlaceholders = (text: string, max = 5): string[] => {
       if (!text) return [];
       const matches = text.match(/\[[^\]]+\]/g) || [];
-      // Filter out system markers
-      const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+      const realPlaceholders = matches.filter(m => !isExcludedPlaceholder(m));
       const unique = [...new Set(realPlaceholders)];
       return unique.slice(0, max);
     };
@@ -584,6 +601,10 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       finalReply = `${intro}\n${bullets}`;
       
       console.log(`[homepage-trial-chat] PLACEHOLDER BLOCKED: ${placeholders.join(", ")}`);
+    } else {
+      // Signature: never ask user. Replace [Signature]/[Firma] with line for signing after print.
+      finalReply = replaceSignaturePlaceholders(finalReply);
+      if (draftText) draftText = replaceSignaturePlaceholders(draftText);
     }
 
     // WEB ASSIST: Append sources section if web search was performed

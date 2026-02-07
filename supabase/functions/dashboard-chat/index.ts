@@ -129,22 +129,31 @@ const NOT_READY_HINT: Record<string, string> = {
 // If the model ever returns bracket placeholders (e.g. [Luogo], [CAP, Città]),
 // we must NEVER treat it as a printable/savable draft. Instead we ask for the
 // missing info.
-// IMPORTANT: Exclude system markers like [LETTER], [/LETTER] from detection
-const SYSTEM_MARKERS = new Set(["[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]"]);
+// IMPORTANT: Exclude system markers and SIGNATURE (never ask user for signature – client signs on printed doc)
+const SYSTEM_MARKERS = new Set([
+  "[LETTER]", "[/LETTER]", "[BRIEF]", "[/BRIEF]", "[LETTRE]", "[/LETTRE]", "[CARTA]", "[/CARTA]",
+  "[SIGNATURE]", "[FIRMA]", "[UNTERSCHRIFT]", "[FIRMA DEL MITTENTE]", "[SIGNATURE DU DESTINATAIRE]",
+]);
 
+function isExcludedPlaceholder(m: string): boolean {
+  const u = m.toUpperCase().trim();
+  if (SYSTEM_MARKERS.has(u)) return true;
+  // Signature-related: never ask user (client signs on paper)
+  if (/^\[(SIGNATURE|FIRMA|UNTERSCHRIFT|SIGNATURA|PARAFA)\s*\]$/.test(u)) return true;
+  if (/^\[.*(FIRMA|SIGNATURE|UNTERSCHRIFT).*\]$/.test(u)) return true;
+  return false;
+}
 function containsBracketPlaceholders(text: string): boolean {
   if (!text) return false;
   const matches = text.match(/\[[^\]]+\]/g) || [];
-  // Filter out system markers
-  const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+  const realPlaceholders = matches.filter(m => !isExcludedPlaceholder(m));
   return realPlaceholders.length > 0;
 }
 
 function extractBracketPlaceholders(text: string, max = 6): string[] {
   if (!text) return [];
   const matches = text.match(/\[[^\]]+\]/g) || [];
-  // Filter out system markers
-  const realPlaceholders = matches.filter(m => !SYSTEM_MARKERS.has(m.toUpperCase()));
+  const realPlaceholders = matches.filter(m => !isExcludedPlaceholder(m));
   const seen = new Set<string>();
   const out: string[] = [];
   for (const m of realPlaceholders) {
@@ -156,6 +165,17 @@ function extractBracketPlaceholders(text: string, max = 6): string[] {
     if (out.length >= max) break;
   }
   return out;
+}
+
+// Replace signature placeholders with line (client signs on printed document only – never ask for signature)
+function replaceSignaturePlaceholders(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\s*\[Signature\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Firma\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Unterschrift\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[Firma del mittente\]\s*/gi, "\n________________\n")
+    .replace(/\s*\[.*?(?:signature|firma|unterschrift).*?\]\s*/gi, "\n________________\n");
 }
 
 const PLACEHOLDER_BLOCK_MESSAGE: Record<string, string> = {
@@ -614,13 +634,14 @@ PIANO UTENTE: ${userPlan.toUpperCase()}
 NON usare MAI placeholder tra parentesi quadre:
 - [Nome], [Data], [Luogo], [CAP], [Indirizzo], [Città]
 - [Name], [Datum], [Ort], [PLZ], [Adresse], [Stadt]
+- [Signature], [Firma], [Unterschrift]: VIETATO chiedere la firma. Usare nome a stampa o ________________ (il cliente firma sul documento stampato).
 
 Se mancano informazioni: CHIEDI all'utente, NON generare la lettera con placeholder.
 
 FORMATO OUTPUT (BOZZE - SOLO DOPO CONFERMA):
 Quando generi una lettera FINALE (dopo conferma), output SOLO il testo della lettera.
 VIETATO: Spiegazioni, "SPIEGAZIONE", "---LETTERA---", meta-commenti, separatori.
-Struttura: Mittente → Destinatario → Luogo+Data → Oggetto → Corpo → Chiusura → Firma.
+Struttura: Mittente → Destinatario → Luogo+Data → Oggetto → Corpo → Chiusura → nome a stampa o ________________ (riga per firma a mano dopo la stampa). VIETATO chiedere la firma: il cliente firma solo sul documento stampato.
 `;
 
     // =====================
@@ -938,8 +959,9 @@ User has confirmed document generation. You may now generate the final letter wi
     // IMPORTANT: extract from RAW assistant content (no CTA appended).
     let { draftReady, draftResponse, extractedTitle } = extractStrictDraft(rawAssistant);
 
-    // assistantMessage may contain explanations/CTA; draftResponse is ONLY the formal letter.
-    let assistantMessage = normalizeAssistantCopy(responseLanguage, rawAssistant);
+    // Signature: never ask user. Replace [Signature]/[Firma] with line for signing after print.
+    if (draftResponse) draftResponse = replaceSignaturePlaceholders(draftResponse);
+    let assistantMessage = normalizeAssistantCopy(responseLanguage, replaceSignaturePlaceholders(rawAssistant));
 
     // HARD-STOP: Never allow drafts with placeholders.
     // If placeholders appear anywhere in the raw assistant output OR extracted draft,

@@ -58,18 +58,28 @@ export const CONTEXT_DOCUMENT_CHAT = `
 - Do not ask for data that is in the case or documents. Use DOCUMENT_LETTER_RULE when letter/documents are provided.
 `;
 
+/** NEVER ask for signature. Client signs on printed document only. */
+export const NO_SIGNATURE_RULE = `
+=== FIRMA – REGOLA ASSOLUTA (APPLY EVERYWHERE) ===
+- VIETATO ASSOLUTO chiedere all'utente la firma (signature, firma, Unterschrift). La firma è PRIVATA.
+- Il cliente appone la firma SOLO sul documento DOPO averlo stampato. Non si firma sullo schermo.
+- Nella bozza/lettera: usa SOLO il nome a stampa (typed name) sotto la chiusura, oppure una riga "________________" dove il cliente firmerà a mano dopo la stampa.
+- NON usare mai [Signature], [Firma], [Unterschrift] come dato da chiedere. Se li usi nella lettera, sostituisci con nome a stampa o "________________".
+`;
+
 export const ABSOLUTE_RULE = `
 === ABSOLUTE RULE ===
 If the AI can act → IT MUST ACT.
 If the AI can assume → IT MUST ASSUME.
 If the AI asks unnecessary questions → THIS IS A BUG.
+NEVER ask for signature. Signature is private; client signs on paper after printing.
 `;
 
 /** Combined policy for document/case chat (inside case view) */
-export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
+export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
 
 /** Combined policy for edit/modify text mode */
-export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
+export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
 
 /** Combined policy for demo and dashboard chat */
-export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
+export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + DOCUMENT_LETTER_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
