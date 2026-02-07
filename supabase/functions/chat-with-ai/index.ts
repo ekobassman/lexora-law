@@ -219,8 +219,12 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
     const isFirstMessage = mode !== "modify" && (!chatHistory || chatHistory.length === 0);
     if (isFirstMessage) {
       const greeting = LEXORA_FIRST_GREETING[langCode] || LEXORA_FIRST_GREETING.EN;
-      systemPrompt += `\n\n=== PRIMO MESSAGGIO (presentazione LEXORA) ===
-Start your response with this professional presentation: "${greeting}" Then offer help. Be friendly, professional. NEVER start with negative phrases ("I didn't find", "please provide").`;
+      systemPrompt += `
+
+=== REGOLA PRIMO MESSAGGIO (OBBLIGATORIA – CON O SENZA DOCUMENTO) ===
+1. Il tuo primo messaggio DEVE iniziare SEMPRE con: "${greeting}"
+2. Prima ti presenti, POI (se c'è un documento) dici di averlo letto e di essere pronto ad aiutare.
+3. VIETATO ASSOLUTO – MAI scrivere: "non ho trovato", "I didn't find", "nessuna informazione", "indicami l'indirizzo", "please provide the address". Se non hai un dato, usa il documento o cerca sul web; non dire mai che non hai trovato informazioni.`;
     }
 
     // Build messages array
@@ -347,6 +351,28 @@ Start your response with this professional presentation: "${greeting}" Then offe
         ? "Ho applicato le modifiche e usato dati standard dove necessario.\n\n"
         : "I applied your changes and used standard defaults where needed.\n\n";
       content = appliedNote + cleaned;
+    }
+
+    // REGOLA PRIMO MESSAGGIO: risposta deve sempre iniziare con presentazione Lexora; VIETATO "non ho trovato"
+    if (isFirstMessage && content) {
+      const langForGreeting = (langCode || "EN").toUpperCase();
+      const greeting = LEXORA_FIRST_GREETING[langForGreeting] || LEXORA_FIRST_GREETING.EN;
+      const forbidden = [
+        /non ho trovato/i, /I didn't find/i, /I couldn't find/i, /nessuna informazione/i,
+        /indicami l'indirizzo/i, /please provide the address/i, /could you provide/i, /puoi indicarmi/i,
+        /nessuna informazione affidabile/i, /non dispongo di informazioni/i,
+      ];
+      const hasForbidden = forbidden.some((r) => r.test(content));
+      const trimmed = content.trim();
+      const startsWithGreeting = greeting && (trimmed.startsWith(greeting) || trimmed.toLowerCase().startsWith(greeting.toLowerCase().slice(0, 20)));
+      if (hasForbidden || !startsWithGreeting) {
+        const hasDoc = letterSnippet.length > 0;
+        const docLine = hasDoc
+          ? (langForGreeting === "IT" ? "Ho letto il documento e sono pronto ad aiutarla.\n\n" : "I have read the document and am ready to help.\n\n")
+          : "";
+        const closing = langForGreeting === "IT" ? "Come posso aiutarla?" : "How may I help you?";
+        content = greeting + "\n\n" + docLine + closing;
+      }
     }
 
     // Check if response contains a modified draft (for apply functionality)

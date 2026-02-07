@@ -467,9 +467,15 @@ REGOLA OBBLIGATORIA (tutte le lingue):
 `;
     }
     
-    // Add greeting instruction ONLY for first message – professional Lexora presentation, no negative phrasing
+    // REGOLA ASSOLUTA: primo messaggio = SEMPRE presentazione Lexora per prima; VIETATO dire "non ho trovato"
     const greetingInstruction = isFirstMessage 
-      ? `\n\nIMPORTANT: This is the user's FIRST message. Start your response with EXACTLY this professional presentation (Lexora business card): "${GREETINGS[lang] || GREETINGS.EN}" Then briefly offer help. Be friendly, professional, welcoming. NEVER start with negative phrases (e.g. "I didn't find", "I couldn't", "please provide"). If they uploaded a document, add one line that you have read it and are ready to help.`
+      ? `
+
+=== REGOLA PRIMO MESSAGGIO (OBBLIGATORIA – CON O SENZA DOCUMENTO) ===
+1. Il tuo primo messaggio DEVE iniziare SEMPRE con la presentazione Lexora: "${GREETINGS[lang] || GREETINGS.EN}"
+2. Prima ti presenti, POI (se c'è un documento) dici di averlo letto e di essere pronto ad aiutare, oppure chiedi come puoi aiutare.
+3. VIETATO ASSOLUTO – MAI scrivere in nessuna lingua: "non ho trovato", "I didn't find", "nessuna informazione", "couldn't find", "indicami l'indirizzo", "please provide the address", "puoi indicarmi". Se non hai un dato, usa il documento sopra o cerca sul web; non dire mai che non hai trovato informazioni.
+`
       : `\n\nNote: This is a follow-up message. Do NOT greet or introduce yourself again. Just respond directly to the user's question or continue the intake process.`;
 
     // =====================
@@ -680,6 +686,27 @@ DO NOT mention or correct typos in the user's confirmation. Just generate the do
     // Only return draftText when it is a real formal letter (not a summary/recap) – keeps buttons disabled until letter is ready
     if (draftText && !looksLikeFormalLetter(draftText.trim())) {
       draftText = null;
+    }
+
+    // REGOLA PRIMO MESSAGGIO: risposta deve sempre iniziare con presentazione Lexora; VIETATO "non ho trovato"
+    if (isFirstMessage && finalReply) {
+      const langForGreeting = (language || "EN").toUpperCase();
+      const greeting = GREETINGS[langForGreeting] || GREETINGS.EN;
+      const forbidden = [
+        /non ho trovato/i, /I didn't find/i, /I couldn't find/i, /nessuna informazione/i,
+        /indicami l'indirizzo/i, /please provide the address/i, /could you provide/i, /puoi indicarmi/i,
+        /nessuna informazione affidabile/i, /non dispongo di informazioni/i,
+      ];
+      const hasForbidden = forbidden.some((r) => r.test(finalReply));
+      const trimmed = finalReply.trim();
+      const startsWithGreeting = greeting && (trimmed.startsWith(greeting) || trimmed.toLowerCase().startsWith(greeting.toLowerCase().slice(0, 20)));
+      if (hasForbidden || !startsWithGreeting) {
+        const docLine = hasUploadedDocument
+          ? (langForGreeting === "IT" ? "Ho letto il documento e sono pronto ad aiutarla.\n\n" : "I have read the document and am ready to help.\n\n")
+          : "";
+        const closing = langForGreeting === "IT" ? "Come posso aiutarla?" : "How may I help you?";
+        finalReply = greeting + "\n\n" + docLine + closing;
+      }
     }
 
     // WEB ASSIST: Append sources section if web search was performed

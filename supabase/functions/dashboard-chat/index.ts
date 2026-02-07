@@ -1021,8 +1021,12 @@ DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiunger
     if (isFirstMessage) {
       const lang = (responseLanguage || 'EN').toUpperCase();
       const greeting = LEXORA_FIRST_GREETING[lang] || LEXORA_FIRST_GREETING.EN;
-      messages[0].content += `\n\n=== PRIMO MESSAGGIO (presentazione LEXORA) ===
-Start your response with this EXACT professional presentation (biglietto da visita): "${greeting}" Then offer help briefly. Be friendly, professional, welcoming. NEVER start with negative phrases ("I didn't find", "please provide", "non ho trovato"). If the user uploaded a document, add one line that you have read it and are ready to help.`;
+      messages[0].content += `
+
+=== REGOLA PRIMO MESSAGGIO (OBBLIGATORIA – CON O SENZA DOCUMENTO) ===
+1. Il tuo primo messaggio DEVE iniziare SEMPRE con: "${greeting}"
+2. Prima ti presenti, POI (se c'è un documento) dici di averlo letto e di essere pronto ad aiutare.
+3. VIETATO ASSOLUTO – MAI scrivere: "non ho trovato", "I didn't find", "nessuna informazione", "indicami l'indirizzo", "please provide the address". Se non hai un dato, usa il documento o cerca sul web; non dire mai che non hai trovato informazioni.`;
     }
     messages[0].content += gateInstruction;
 
@@ -1094,6 +1098,27 @@ Start your response with this EXACT professional presentation (biglietto da visi
       draftResponse = null;
       extractedTitle = null;
       assistantMessage = buildPlaceholderQuestion(responseLanguage, rawAssistant);
+    }
+
+    // REGOLA PRIMO MESSAGGIO: risposta deve sempre iniziare con presentazione Lexora; VIETATO "non ho trovato"
+    if (isFirstMessage && assistantMessage) {
+      const langForGreeting = (responseLanguage || "EN").toUpperCase();
+      const greeting = LEXORA_FIRST_GREETING[langForGreeting] || LEXORA_FIRST_GREETING.EN;
+      const forbidden = [
+        /non ho trovato/i, /I didn't find/i, /I couldn't find/i, /nessuna informazione/i,
+        /indicami l'indirizzo/i, /please provide the address/i, /could you provide/i, /puoi indicarmi/i,
+        /nessuna informazione affidabile/i, /non dispongo di informazioni/i,
+      ];
+      const hasForbidden = forbidden.some((r) => r.test(assistantMessage));
+      const trimmed = assistantMessage.trim();
+      const startsWithGreeting = greeting && (trimmed.startsWith(greeting) || trimmed.toLowerCase().startsWith(greeting.toLowerCase().slice(0, 20)));
+      if (hasForbidden || !startsWithGreeting) {
+        const docLine = hasDocumentInContext
+          ? (langForGreeting === "IT" ? "Ho letto il documento e sono pronto ad aiutarla.\n\n" : "I have read the document and am ready to help.\n\n")
+          : "";
+        const closing = langForGreeting === "IT" ? "Come posso aiutarla?" : "How may I help you?";
+        assistantMessage = greeting + "\n\n" + docLine + closing;
+      }
     }
 
     // Build suggested action only when we have a clean, formal draft.
