@@ -94,6 +94,42 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_payment_error_code tex
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_payment_error_message text;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS payment_failed_at timestamptz;
 
+-- ─── DOCUMENTS (tabella se mancante + colonne da tipi/codice/migrazioni) ─
+CREATE TABLE IF NOT EXISTS public.documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  pratica_id uuid NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS pratica_id uuid NULL;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS user_id uuid NULL;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS file_url text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS file_name text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS mime_type text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS direction text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS document_type text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS file_size int;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS raw_text text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS summary text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS detected_aktenzeichen text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS detected_authority text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS detected_date date;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS detected_deadline date;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS case_id uuid NULL;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS file_path text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS storage_bucket text DEFAULT 'documents';
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS storage_path text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS status text DEFAULT 'uploaded';
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS ocr_text text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS ocr_error text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS analysis_json jsonb;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS draft_text text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS source text;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS ultima_run_id uuid NULL;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS size_bytes int;
+
 -- ─── LEGAL (versioni documenti + accettazioni + eventi) ─────────────────────
 CREATE TABLE IF NOT EXISTS public.legal_versions (
   doc_type text PRIMARY KEY CHECK (doc_type IN ('terms','privacy','disclaimer')),
@@ -206,6 +242,7 @@ CREATE TABLE IF NOT EXISTS public.global_stats (
 
 -- ─── RLS (abilitazione + policy base) ───────────────────────────────────────
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.legal_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_legal_acceptances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.legal_acceptance_events ENABLE ROW LEVEL SECURITY;
@@ -231,6 +268,15 @@ DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can view their own documents" ON public.documents;
+CREATE POLICY "Users can view their own documents" ON public.documents FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can create their own documents" ON public.documents;
+CREATE POLICY "Users can create their own documents" ON public.documents FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update their own documents" ON public.documents;
+CREATE POLICY "Users can update their own documents" ON public.documents FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete their own documents" ON public.documents;
+CREATE POLICY "Users can delete their own documents" ON public.documents FOR DELETE USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "legal_versions_read_all" ON public.legal_versions;
 CREATE POLICY "legal_versions_read_all" ON public.legal_versions FOR SELECT USING (true);
@@ -270,7 +316,11 @@ CREATE POLICY "Anyone can view global stats" ON public.global_stats FOR SELECT U
 -- DIAGNOSTICA (SELECT di verifica)
 -- ═══════════════════════════════════════════════════════════════════════════
 
-SELECT 'legal_versions' AS tbl, count(*) AS n FROM public.legal_versions
+SELECT 'profiles' AS tbl, count(*) AS n FROM public.profiles
+UNION ALL
+SELECT 'documents', count(*) FROM public.documents
+UNION ALL
+SELECT 'legal_versions', count(*) FROM public.legal_versions
 UNION ALL
 SELECT 'user_legal_acceptances', count(*) FROM public.user_legal_acceptances
 UNION ALL
@@ -288,3 +338,4 @@ SELECT 'global_stats', count(*) FROM public.global_stats;
 
 SELECT * FROM public.legal_versions LIMIT 5;
 SELECT id, documents_processed, updated_at FROM public.global_stats LIMIT 1;
+SELECT id, user_id, pratica_id, created_at FROM public.documents LIMIT 1;
