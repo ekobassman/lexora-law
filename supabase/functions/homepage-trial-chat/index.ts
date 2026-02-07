@@ -260,19 +260,19 @@ ${UNIFIED_CHAT_BEHAVIOR}
 Это бесплатная демо.`,
 };
 
-// Greeting prefixes per language (ONLY for first message)
+// Opening: professional Lexora presentation – friendly, no negative phrasing (biglietto da visita)
 const GREETINGS: Record<string, string> = {
-  IT: "Ciao, sono Lexora, il tuo assistente legale AI. ",
-  DE: "Hallo, ich bin Lexora, dein KI-Rechtsassistent. ",
-  EN: "Hello, I'm Lexora, your AI legal assistant. ",
-  FR: "Bonjour, je suis Lexora, votre assistant juridique IA. ",
-  ES: "Hola, soy Lexora, tu asistente legal de IA. ",
-  PL: "Cześć, jestem Lexora, Twój asystent prawny AI. ",
-  RO: "Bună, sunt Lexora, asistentul tău juridic AI. ",
-  TR: "Merhaba, ben Lexora, yapay zeka hukuk asistanınız. ",
-  AR: "مرحباً، أنا Lexora، مساعدك القانوني بالذكاء الاصطناعي. ",
-  UK: "Привіт, я Lexora, ваш юридичний асистент на базі ШІ. ",
-  RU: "Привет, я Lexora, ваш юридический ассистент на базе ИИ. ",
+  IT: "Salve, sono LEXORA, il vostro assistente AI. Come posso aiutarla?",
+  DE: "Guten Tag, ich bin LEXORA, Ihr KI-Assistent. Wie kann ich Ihnen helfen?",
+  EN: "Hello, I am LEXORA, your AI assistant. How may I help you?",
+  FR: "Bonjour, je suis LEXORA, votre assistant IA. Comment puis-je vous aider?",
+  ES: "Hola, soy LEXORA, su asistente de IA. ¿Cómo puedo ayudarle?",
+  PL: "Dzień dobry, jestem LEXORA, Pana/Pani asystent AI. Jak mogę pomóc?",
+  RO: "Bună ziua, sunt LEXORA, asistentul dvs. AI. Cu ce vă pot ajuta?",
+  TR: "Merhaba, ben LEXORA, yapay zeka asistanınız. Size nasıl yardımcı olabilirim?",
+  AR: "مرحباً، أنا LEXORA، مساعدكم بالذكاء الاصطناعي. كيف يمكنني مساعدتكم؟",
+  UK: "Доброго дня, я LEXORA, ваш асистент з ШІ. Як я можу вам допомогти?",
+  RU: "Здравствуйте, я LEXORA, ваш ИИ-ассистент. Чем могу помочь?",
 };
 
 // Extract letter from AI response using [LETTER]...[/LETTER] markers (primary)
@@ -465,9 +465,9 @@ REGOLA OBBLIGATORIA (tutte le lingue):
 `;
     }
     
-    // Add greeting instruction ONLY for first message
+    // Add greeting instruction ONLY for first message – professional Lexora presentation, no negative phrasing
     const greetingInstruction = isFirstMessage 
-      ? `\n\nIMPORTANT: This is the user's FIRST message. Start your response with a brief greeting: "${GREETINGS[lang] || GREETINGS.EN}" Then proceed to ask what they need help with.`
+      ? `\n\nIMPORTANT: This is the user's FIRST message. Start your response with EXACTLY this professional presentation (Lexora business card): "${GREETINGS[lang] || GREETINGS.EN}" Then briefly offer help. Be friendly, professional, welcoming. NEVER start with negative phrases (e.g. "I didn't find", "I couldn't", "please provide"). If they uploaded a document, add one line that you have read it and are ready to help.`
       : `\n\nNote: This is a follow-up message. Do NOT greet or introduce yourself again. Just respond directly to the user's question or continue the intake process.`;
 
     // =====================
@@ -482,6 +482,8 @@ REGOLA OBBLIGATORIA (tutte le lingue):
     let webSearchContext = '';
     let webSearchResults: SearchResult[] = [];
     
+    // When user just uploaded a document, NEVER return "non ho trovato informazioni / indicami l'indirizzo" – AI has the doc and must answer from it
+    const hasUploadedDocument = letterOrDocText.length > 0 && (isUploadedDoc(trimmedMessage) || isUploadedDoc(message.trim()));
     if (userWantsSearch || needsExternalInfo) {
       console.log(`[homepage-trial-chat] Intelligent search triggered (userWantsSearch: ${userWantsSearch}, needsExternalInfo: ${needsExternalInfo})`);
       
@@ -492,7 +494,6 @@ REGOLA OBBLIGATORIA (tutte le lingue):
         // High confidence - propose result and ask for confirmation
         console.log(`[homepage-trial-chat] High confidence result found (${intelligentSearchResult.confidence.toFixed(2)})`);
         
-        // Return proposal instead of calling AI
         return json(200, {
           ok: true,
           reply: intelligentSearchResult.proposedAnswer + (intelligentSearchResult.sourcesSection || ''),
@@ -500,8 +501,8 @@ REGOLA OBBLIGATORIA (tutte le lingue):
           meta: { model: "intelligent-search", confidence: intelligentSearchResult.confidence },
           webSources: intelligentSearchResult.results.slice(0, 3),
         });
-      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found) {
-        // Low confidence - ask user for info, DON'T invent
+      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found && !hasUploadedDocument) {
+        // Low confidence - ask user for info ONLY when we do NOT have an uploaded document (otherwise AI must use the doc)
         console.log(`[homepage-trial-chat] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
         
         return json(200, {

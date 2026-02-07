@@ -84,6 +84,20 @@ const LANGUAGE_MAP: Record<string, string> = {
   RU: "Russian",
 };
 
+const LEXORA_FIRST_GREETING: Record<string, string> = {
+  IT: "Salve, sono LEXORA, il vostro assistente AI. Come posso aiutarla?",
+  DE: "Guten Tag, ich bin LEXORA, Ihr KI-Assistent. Wie kann ich Ihnen helfen?",
+  EN: "Hello, I am LEXORA, your AI assistant. How may I help you?",
+  FR: "Bonjour, je suis LEXORA, votre assistant IA. Comment puis-je vous aider?",
+  ES: "Hola, soy LEXORA, su asistente de IA. ¿Cómo puedo ayudarle?",
+  PL: "Dzień dobry, jestem LEXORA, Pana/Pani asystent AI. Jak mogę pomóc?",
+  RO: "Bună ziua, sunt LEXORA, asistentul dvs. AI. Cu ce vă pot ajuta?",
+  TR: "Merhaba, ben LEXORA, yapay zeka asistanınız. Size nasıl yardımcı olabilirim?",
+  AR: "مرحباً، أنا LEXORA، مساعدكم بالذكاء الاصطناعي. كيف يمكنني مساعدتكم؟",
+  UK: "Доброго дня, я LEXORA, ваш асистент з ШІ. Як я можу вам допомогти?",
+  RU: "Здравствуйте, я LEXORA, ваш ИИ-ассистент. Чем могу помочь?",
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LEXORA MASTER PROMPT - FULL LEGAL-TECH CAPABILITIES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -201,7 +215,13 @@ BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
 ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nUsa questi dati per citare articoli e sentenze.` : ""}`;
 
-    const systemPrompt = policyBlock + modeInstruction + "\n\n" + systemPromptBase + contextBlock;
+    let systemPrompt = policyBlock + modeInstruction + "\n\n" + systemPromptBase + contextBlock;
+    const isFirstMessage = mode !== "modify" && (!chatHistory || chatHistory.length === 0);
+    if (isFirstMessage) {
+      const greeting = LEXORA_FIRST_GREETING[langCode] || LEXORA_FIRST_GREETING.EN;
+      systemPrompt += `\n\n=== PRIMO MESSAGGIO (presentazione LEXORA) ===
+Start your response with this professional presentation: "${greeting}" Then offer help. Be friendly, professional. NEVER start with negative phrases ("I didn't find", "please provide").`;
+    }
 
     // Build messages array
     const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [

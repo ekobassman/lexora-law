@@ -83,6 +83,21 @@ const LANGUAGE_MAP: Record<string, string> = {
   RU: "Russian",
 };
 
+// Opening: professional Lexora presentation (biglietto da visita) – all 3 chats
+const LEXORA_FIRST_GREETING: Record<string, string> = {
+  IT: "Salve, sono LEXORA, il vostro assistente AI. Come posso aiutarla?",
+  DE: "Guten Tag, ich bin LEXORA, Ihr KI-Assistent. Wie kann ich Ihnen helfen?",
+  EN: "Hello, I am LEXORA, your AI assistant. How may I help you?",
+  FR: "Bonjour, je suis LEXORA, votre assistant IA. Comment puis-je vous aider?",
+  ES: "Hola, soy LEXORA, su asistente de IA. ¿Cómo puedo ayudarle?",
+  PL: "Dzień dobry, jestem LEXORA, Pana/Pani asystent AI. Jak mogę pomóc?",
+  RO: "Bună ziua, sunt LEXORA, asistentul dvs. AI. Cu ce vă pot ajuta?",
+  TR: "Merhaba, ben LEXORA, yapay zeka asistanınız. Size nasıl yardımcı olabilirim?",
+  AR: "مرحباً، أنا LEXORA، مساعدكم بالذكاء الاصطناعي. كيف يمكنني مساعدتكم؟",
+  UK: "Доброго дня, я LEXORA, ваш асистент з ШІ. Як я можу вам допомогти?",
+  RU: "Здравствуйте, я LEXORA, ваш ИИ-ассистент. Чем могу помочь?",
+};
+
 // Suggested action labels for "Create case from chat"
 const CREATE_CASE_LABELS: Record<string, string> = {
   IT: "Vuoi che crei un fascicolo con la bozza pronta?",
@@ -900,6 +915,8 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     // =====================
     // INTELLIGENT AUTO-SEARCH (REAL LOGIC - NOT JUST PROMPT)
     // =====================
+    // When user has uploaded a document or we have case letter, NEVER return "indicami l'indirizzo" – AI must use the doc
+    const hasDocumentInContext = (caseContext?.letterText?.trim().length ?? 0) > 0 || isUploadedDoc(message.trim());
     const userWantsSearch = detectSearchIntent(message);
     const needsExternalInfo = detectInfoRequest(message);
     
@@ -938,8 +955,8 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found) {
-        // Low confidence - ask user, DON'T invent
+      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found && !hasDocumentInContext) {
+        // Low confidence - ask user ONLY when we do NOT have document in context (otherwise AI must use the doc)
         console.log(`[DASHBOARD-CHAT] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
         
         await supabaseClient.from('dashboard_chat_history').insert([
@@ -996,6 +1013,13 @@ The user has NOT confirmed yet. Do NOT generate final letters yet. Do NOT ask fo
 User has confirmed. Generate IMMEDIATELY the final letter with [LETTER]...[/LETTER] tags.
 DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiungere altro?". Generate ONLY the letter. One brief phrase then [LETTER]...[/LETTER] only.`;
       console.log(`[DASHBOARD-CHAT] Document generation ALLOWED after confirmation`);
+    }
+    const isFirstMessage = !chatHistory || chatHistory.length === 0;
+    if (isFirstMessage) {
+      const lang = (responseLanguage || 'EN').toUpperCase();
+      const greeting = LEXORA_FIRST_GREETING[lang] || LEXORA_FIRST_GREETING.EN;
+      messages[0].content += `\n\n=== PRIMO MESSAGGIO (presentazione LEXORA) ===
+Start your response with this EXACT professional presentation (biglietto da visita): "${greeting}" Then offer help briefly. Be friendly, professional, welcoming. NEVER start with negative phrases ("I didn't find", "please provide", "non ho trovato"). If the user uploaded a document, add one line that you have read it and are ready to help.`;
     }
     messages[0].content += gateInstruction;
 
