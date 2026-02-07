@@ -9,13 +9,16 @@ const TEST_IMAGE = path.join(process.cwd(), 'src', 'assets', 'process-icons-1-2.
 
 async function waitForPipelineSuccess(page: import('@playwright/test').Page, demoSection: import('@playwright/test').Locator) {
   const successIndicator = page.getByText(
-    /document processed|documento elaborato|documents processed|analisi|analysis|rischio|summary|draft/i
+    /document processed|documento elaborato|documents processed|analisi|analysis|rischio|summary|draft|Salve|LEXORA|come posso aiutarla/i
   );
   await expect(successIndicator.first()).toBeVisible({ timeout: 90000 });
   const assistantContent = demoSection.locator('[class*="message"], [class*="assistant"], .demo-frame-wrapper').filter({
-    has: page.locator('text=/rischio|summary|analisi|draft|letter|document|elaborato|processed/i'),
+    has: page.locator('text=/rischio|summary|analisi|draft|letter|document|elaborato|processed|Salve|LEXORA|aiutarla/i'),
   });
   await expect(assistantContent.first()).toBeVisible({ timeout: 5000 });
+  // REGRESSION: AI must NOT say "non ho trovato informazioni" or "indicami l'indirizzo" after upload – doc is in context
+  const forbidden = page.getByText(/non ho trovato informazioni|indicami l'indirizzo|nessuna informazione affidabile/i);
+  await expect(forbidden).not.toBeVisible();
 }
 
 test.describe('Demo: Scan/Upload document to analysis', () => {

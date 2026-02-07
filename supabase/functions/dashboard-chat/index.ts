@@ -722,11 +722,14 @@ Usa questi dati automaticamente quando generi lettere.
         const snippet = docText.length > 8000 ? docText.slice(0, 8000) + "...[troncato]" : docText;
         systemPrompt += `
 
-=== LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
-L'utente ha caricato/scannerizzato questo documento. DEVI considerarlo GIÀ LETTO. Le informazioni sono QUI SOTTO; NON chiedere all'utente dove trovarle.
+=== DOCUMENTO GIÀ RICEVUTO E LETTO – USA QUESTO PER RISPONDERE ===
+L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è QUI SOTTO. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti). Rispondi SEMPRE basandoti su queste informazioni.
+TESTO DELLA LETTERA/DOCUMENTO:
+"""
 ${snippet}
+"""
 
-REGOLA OBBLIGATORIA (tutte le lingue): VIETATO dire "non ho ricevuto la lettera" o chiedere di "riportare i dati". Se il doc c'è usalo; se non c'è di' solo di caricare/incollare la lettera. NON chiedere MAI dati che compaiono nel documento sopra. NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; per la firma usa nome a stampa o "________________". Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA: Hai già il documento sopra. Non dire mai "non ho trovato" o "indicami l'indirizzo". NON chiedere MAI dati che compaiono nel documento. NON chiedere la firma. Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
       }
     }
@@ -915,7 +918,7 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     // =====================
     // INTELLIGENT AUTO-SEARCH (REAL LOGIC - NOT JUST PROMPT)
     // =====================
-    // When user has uploaded a document or we have case letter, NEVER return "indicami l'indirizzo" – AI must use the doc
+    // When user has uploaded a document or we have case letter: skip search ENTIRELY – doc text would trigger "indirizzo" and return "non ho trovato informazioni"
     const hasDocumentInContext = (caseContext?.letterText?.trim().length ?? 0) > 0 || isUploadedDoc(message.trim());
     const userWantsSearch = detectSearchIntent(message);
     const needsExternalInfo = detectInfoRequest(message);
@@ -924,7 +927,7 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     let webSearchResults: SearchResult[] = [];
     let webSearchContext = '';
     
-    if (userWantsSearch || needsExternalInfo) {
+    if (!hasDocumentInContext && (userWantsSearch || needsExternalInfo)) {
       console.log(`[DASHBOARD-CHAT] Intelligent search triggered (userWantsSearch: ${userWantsSearch}, needsExternalInfo: ${needsExternalInfo})`);
       
       intelligentSearchResult = await intelligentSearch(message.slice(0, 200), responseLanguage);
@@ -955,8 +958,8 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found && !hasDocumentInContext) {
-        // Low confidence - ask user ONLY when we do NOT have document in context (otherwise AI must use the doc)
+      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found) {
+        // Low confidence - ask user (hasDocumentInContext already excluded this block from running)
         console.log(`[DASHBOARD-CHAT] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
         
         await supabaseClient.from('dashboard_chat_history').insert([

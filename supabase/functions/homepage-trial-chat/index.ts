@@ -451,16 +451,18 @@ serve(async (req) => {
       const snippet = letterOrDocText.length > 8000 ? letterOrDocText.slice(0, 8000) + "...[troncato]" : letterOrDocText;
       systemPrompt += `
 
-=== LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
-L'utente ha caricato/scannerizzato questo documento. DEVI considerarlo GIÀ LETTO e usarlo come fonte primaria. NON aspettare che l'utente ti dica dove cercare: le informazioni sono QUI SOTTO.
+=== DOCUMENTO GIÀ RICEVUTO E LETTO – USA QUESTO PER RISPONDERE ===
+L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è QUI SOTTO. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti, oggetto, contenuto). Rispondi SEMPRE basandoti su queste informazioni.
+TESTO DELLA LETTERA/DOCUMENTO:
+"""
 ${snippet}
+"""
 
 REGOLA OBBLIGATORIA (tutte le lingue):
-- Il documento è già in tuo possesso. Usalo per rispondere senza chiedere all'utente dove trovare i dati.
-- VIETATO dire "non ho ricevuto il testo della lettera" o chiedere all'utente di "riportare i dati anagrafici/della lettera". Se il doc c'è, usalo; se non c'è, di' solo "Carica o incolla la lettera qui". Comportati come ChatGPT.
-- NON chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente.
+- Hai già il documento sopra: usalo come unica fonte per rispondere. Non dire mai "non ho trovato" o "non ho ricevuto" o "indicami l'indirizzo" – le informazioni sono nel testo sopra.
+- NON chiedere MAI all'utente dati che compaiono nel documento (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente.
 - NON chiedere MAI la firma (signature, firma, Unterschrift). Il cliente firma su carta dopo la stampa. Nella lettera usa solo nome a stampa o "________________".
-- Se questo messaggio È il caricamento del documento: rispondi brevemente confermando di aver letto il documento e di essere pronto a aiutare (es. 1-2 frasi), poi proponi il passo successivo.
+- Se questo è il primo messaggio con il documento: conferma brevemente di aver letto il documento e di essere pronto ad aiutare, poi proponi il passo successivo (es. riassunto o bozza di risposta).
 - Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
     }
@@ -482,9 +484,13 @@ REGOLA OBBLIGATORIA (tutte le lingue):
     let webSearchContext = '';
     let webSearchResults: SearchResult[] = [];
     
-    // When user just uploaded a document, NEVER return "non ho trovato informazioni / indicami l'indirizzo" – AI has the doc and must answer from it
-    const hasUploadedDocument = letterOrDocText.length > 0 && (isUploadedDoc(trimmedMessage) || isUploadedDoc(message.trim()));
-    if (userWantsSearch || needsExternalInfo) {
+    // When user just uploaded a document: skip intelligent search ENTIRELY – OCR text triggers "indirizzo" etc. and would return "non ho trovato informazioni"
+    const hasUploadedDocument = letterOrDocText.length > 0 && (
+      isUploadedDoc(trimmedMessage) ||
+      isUploadedDoc(message.trim()) ||
+      (typeof documentText === 'string' && documentText.trim().length > 0)
+    );
+    if (!hasUploadedDocument && (userWantsSearch || needsExternalInfo)) {
       console.log(`[homepage-trial-chat] Intelligent search triggered (userWantsSearch: ${userWantsSearch}, needsExternalInfo: ${needsExternalInfo})`);
       
       // Perform intelligent search with query expansion and confidence scoring
@@ -501,8 +507,8 @@ REGOLA OBBLIGATORIA (tutte le lingue):
           meta: { model: "intelligent-search", confidence: intelligentSearchResult.confidence },
           webSources: intelligentSearchResult.results.slice(0, 3),
         });
-      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found && !hasUploadedDocument) {
-        // Low confidence - ask user for info ONLY when we do NOT have an uploaded document (otherwise AI must use the doc)
+      } else if (intelligentSearchResult.needsUserInput && !intelligentSearchResult.found) {
+        // Low confidence - ask user for info (hasUploadedDocument already excluded this block from running)
         console.log(`[homepage-trial-chat] Low confidence (${intelligentSearchResult.confidence.toFixed(2)}) - asking user`);
         
         return json(200, {
