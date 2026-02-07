@@ -83,7 +83,14 @@ export function SocialProofCounter() {
   const totalCount = dbCount + BASE_COUNT;
   const text = translations[language] || translations.EN;
 
-  // Fetch initial count
+  // Coerce to number (PostgREST can return bigint as string)
+  const toCount = (v: unknown): number => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string') return parseInt(v, 10) || 0;
+    return 0;
+  };
+
+  // Fetch count from DB (initial, one retry, then periodic refetch so counter always updates)
   useEffect(() => {
     async function fetchCount() {
       const { data, error } = await supabase
@@ -92,14 +99,20 @@ export function SocialProofCounter() {
         .eq('id', 'main')
         .maybeSingle();
 
-      if (!error && data) {
-        setDbCount(data.documents_processed);
+      if (!error && data != null) {
+        setDbCount(toCount(data.documents_processed));
+        return true;
       }
+      return false;
     }
-    fetchCount();
+    fetchCount().then((ok) => {
+      if (!ok) setTimeout(fetchCount, 2000);
+    });
+    const interval = setInterval(fetchCount, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Real-time subscription
+  // Real-time subscription (optional: refetch covers if realtime is disabled)
   useEffect(() => {
     const channel = supabase
       .channel('global-stats-realtime')
@@ -112,8 +125,9 @@ export function SocialProofCounter() {
           filter: 'id=eq.main',
         },
         (payload) => {
-          if (payload.new && typeof payload.new.documents_processed === 'number') {
-            setDbCount(payload.new.documents_processed);
+          const raw = payload.new?.documents_processed;
+          if (raw !== undefined && raw !== null) {
+            setDbCount(toCount(raw));
           }
         }
       )
