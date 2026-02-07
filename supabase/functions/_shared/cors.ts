@@ -4,6 +4,13 @@
  * When Origin is in allowlist we reflect it (required for credentialed requests); else use "*".
  */
 
+/** Simple CORS headers (Origin: *) - use for credits-get-status, sync-subscription, auth-health, etc. */
+export const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
+};
+
 const ALLOWED_ORIGINS = new Set([
   "https://www.lexora-law.com",
   "https://lexora-law.com",
