@@ -101,8 +101,8 @@ const handler = async (req: Request): Promise<Response> => {
     const safePageSource = sanitize(pageSource);
     const timestamp = new Date().toISOString();
 
-    // Send email using Resend API directly
-    // Using Resend's default test domain - emails go TO your email, user's email is in reply_to
+    // Send from Lexora: set LEXORA_FROM_EMAIL (e.g. "Lexora <noreply@lexora.app>") and verify domain in Resend
+    const fromAddress = Deno.env.get("LEXORA_FROM_EMAIL") || "Lexora <onboarding@resend.dev>";
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Lexora Support <onboarding@resend.dev>",
+        from: fromAddress,
         to: [SUPPORT_EMAIL],
         reply_to: email,
         subject: `[Lexora Support] ${safeRequestType} - from ${safeName}`,

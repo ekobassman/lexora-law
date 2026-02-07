@@ -950,12 +950,18 @@ export function DemoChatSection() {
     const currentTrimmed = messageContent.trim();
     const lastUserMsg = conversationHistory.filter((m) => m.role === 'user').pop();
     const lastUserContent = lastUserMsg?.content?.trim() ?? '';
+    // Rule: when user uploads/scans a document, AI must receive it immediately (don't wait for user to say where to find it)
+    const isUploadedDoc = (t: string) => t.startsWith('[Document uploaded]') || t.startsWith('[PDF uploaded]') || /^\[\d+\s+documents uploaded\]/.test(t);
     const documentTextToSend =
-      currentTrimmed.length >= 350 && looksLikeLetter(currentTrimmed)
+      isUploadedDoc(currentTrimmed)
         ? currentTrimmed.slice(0, 12000)
-        : lastUserContent.length >= 350 && looksLikeLetter(lastUserContent)
-          ? lastUserContent.slice(0, 12000)
-          : undefined;
+        : currentTrimmed.length >= 350 && looksLikeLetter(currentTrimmed)
+          ? currentTrimmed.slice(0, 12000)
+          : isUploadedDoc(lastUserContent)
+            ? lastUserContent.slice(0, 12000)
+            : lastUserContent.length >= 350 && looksLikeLetter(lastUserContent)
+              ? lastUserContent.slice(0, 12000)
+              : undefined;
 
     const looksLikeConfirmation = /^(ok|okay|sì|si|yes|ja|oui|va bene|questo è tutto|questo e tutto|confermo|genera|procedi|niente|no,? niente|that'?s all|nothing else|reicht|passt|das ist alles|c\'est tout|eso es todo|bene così|è tutto|e tutto)[\s.,!?]*$/i.test(currentTrimmed);
     const statusToSend = startingNewFascicolo ? 'collecting' : (conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus);

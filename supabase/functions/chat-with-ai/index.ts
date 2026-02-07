@@ -191,7 +191,8 @@ Autorità: ${praticaData?.authority || "N/A"}
 Riferimento: ${praticaData?.aktenzeichen || "N/A"}
 Scadenza: ${praticaData?.deadline || "N/A"}
 
-DOCUMENTO ORIGINALE (OCR) – FONTE UNICA DI VERITÀ – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE:
+DOCUMENTO ORIGINALE (OCR) – FONTE UNICA DI VERITÀ – GIÀ IN TUO POSSESSO:
+Le informazioni stanno in questo documento; usalo come fonte primaria. Non chiedere all'utente dove trovarle.
 ${letterSnippet || "Nessun documento."}
 
 REGOLA CRITICA (tutte le lingue): Non chiedere MAI all'utente dati che compaiono nel DOCUMENTO sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Non chiedere MAI la firma (signature/firma/Unterschrift): il cliente firma su carta dopo la stampa; nella bozza usa nome a stampa o "________________". Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.

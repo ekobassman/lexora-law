@@ -682,7 +682,7 @@ Usa questi dati automaticamente quando generi lettere.
       }
     }
 
-    // When no case or no letter in case: derive document from current/last user message (OCR pasted in chat)
+    // When no case or no letter in case: derive document from current/last user message (OCR / upload in chat)
     const looksLikeLetter = (text: string): boolean => {
       if (!text || text.length < 350) return false;
       const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
@@ -690,23 +690,25 @@ Usa questi dati automaticamente quando generi lettere.
       const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
       return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
     };
+    const isUploadedDoc = (t: string): boolean =>
+      t.startsWith("[Document uploaded]") || t.startsWith("[PDF uploaded]") || /^\[\d+\s+documents uploaded\]/.test(t);
     if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
       const msg = message.trim();
       const history = Array.isArray(chatHistory) ? chatHistory : [];
       let docText = "";
-      if (msg.length >= 350 && looksLikeLetter(msg)) {
+      if (isUploadedDoc(msg) || (msg.length >= 350 && looksLikeLetter(msg))) {
         docText = msg.slice(0, 12000);
       } else {
         const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
         const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
-        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) docText = lastContent.slice(0, 12000);
+        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent))) docText = lastContent.slice(0, 12000);
       }
       if (docText.length > 0) {
         const snippet = docText.length > 8000 ? docText.slice(0, 8000) + "...[troncato]" : docText;
         systemPrompt += `
 
 === LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
-Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
+L'utente ha caricato/scannerizzato questo documento. DEVI considerarlo GIÀ LETTO. Le informazioni sono QUI SOTTO; NON chiedere all'utente dove trovarle.
 ${snippet}
 
 REGOLA OBBLIGATORIA (tutte le lingue): NON chiedere MAI dati che compaiono nel documento sopra. NON chiedere MAI la firma (signature/firma/Unterschrift). Usali direttamente; per la firma usa nome a stampa o "________________". Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
@@ -724,13 +726,14 @@ ${caseContext.aktenzeichen ? `Numero riferimento: ${caseContext.aktenzeichen}` :
 ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
 `;
 
-      // Add main letter text (OCR) when present – CRITICAL so AI does not ask for data already in the letter
+      // Add main letter text (OCR) when present – CRITICAL: AI must use it as primary source, no asking user where to find info
       if (caseContext.letterText && caseContext.letterText.trim().length > 0) {
         const letterSnippet = caseContext.letterText.trim().length > 6000
           ? caseContext.letterText.trim().slice(0, 6000) + '...[troncato]'
           : caseContext.letterText.trim();
         systemPrompt += `
-=== LETTERA PRINCIPALE (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE ===
+=== LETTERA PRINCIPALE (OCR) – GIÀ IN TUO POSSESSO, USA COME FONTE PRIMARIA ===
+Le informazioni stanno in questo documento. Non chiedere all'utente dove trovarle.
 ${letterSnippet}
 
 NON chiedere MAI la firma (signature/firma/Unterschrift). Il cliente firma su carta dopo la stampa.
@@ -745,7 +748,7 @@ NON chiedere MAI la firma (signature/firma/Unterschrift). Il cliente firma su ca
           .slice(0, 3); // Limit to 3 most relevant docs
         
         if (docsWithText.length > 0) {
-          systemPrompt += `\n=== DOCUMENTI DEL FASCICOLO (dati già noti – non chiedere) ===\n`;
+          systemPrompt += `\n=== DOCUMENTI DEL FASCICOLO – GIÀ IN TUO POSSESSO (usa come fonte, non chiedere dove trovare) ===\n`;
           for (const doc of docsWithText) {
             const direction = doc.direction === 'incoming' ? '📥 Ricevuto' : '📤 Inviato';
             const name = doc.fileName || 'Documento';
@@ -801,11 +804,11 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     } else if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
       const msg = message.trim();
       const history = Array.isArray(chatHistory) ? chatHistory : [];
-      if (msg.length >= 350 && looksLikeLetter(msg)) letterTextForMessages = msg.slice(0, 8000);
+      if (isUploadedDoc(msg) || (msg.length >= 350 && looksLikeLetter(msg))) letterTextForMessages = msg.slice(0, 8000);
       else {
         const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
         const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
-        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) letterTextForMessages = lastContent.slice(0, 8000);
+        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent))) letterTextForMessages = lastContent.slice(0, 8000);
       }
     }
 

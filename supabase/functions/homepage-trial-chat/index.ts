@@ -422,17 +422,21 @@ serve(async (req) => {
       return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
     };
 
-    // Document: explicit (letterText/documentText) OR derived from current/last user message in chat (OCR in bubble)
+    // Helper: detect upload prefix so we always treat as document (AI must read immediately, no waiting for user)
+    const isUploadedDoc = (t: string): boolean =>
+      t.startsWith("[Document uploaded]") || t.startsWith("[PDF uploaded]") || /^\[\d+\s+documents uploaded\]/.test(t);
+
+    // Document: explicit (letterText/documentText) OR derived from current/last user message (OCR / upload in chat)
     let letterOrDocText = (letterText || documentText || "").trim();
     if (letterOrDocText.length === 0) {
       const fullMessage = message.trim();
       const history = Array.isArray(conversationHistory) ? conversationHistory : [];
-      if (fullMessage.length >= 350 && looksLikeLetter(fullMessage)) {
+      if (isUploadedDoc(fullMessage) || (fullMessage.length >= 350 && looksLikeLetter(fullMessage))) {
         letterOrDocText = fullMessage.slice(0, 12000);
       } else {
         const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
         const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
-        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) {
+        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent))) {
           letterOrDocText = lastContent.slice(0, 12000);
         }
       }
@@ -442,12 +446,14 @@ serve(async (req) => {
       systemPrompt += `
 
 === LETTERA/DOCUMENTO IN CHAT (OCR / SCANSIONE) – FONTE UNICA DI VERITÀ ===
-Il contenuto sotto è la lettera che l'utente ha scannerizzato/incollato in chat. TUTTE le informazioni che vi compaiono sono GIÀ NOTE.
+L'utente ha caricato/scannerizzato questo documento. DEVI considerarlo GIÀ LETTO e usarlo come fonte primaria. NON aspettare che l'utente ti dica dove cercare: le informazioni sono QUI SOTTO.
 ${snippet}
 
 REGOLA OBBLIGATORIA (tutte le lingue):
+- Il documento è già in tuo possesso. Usalo per rispondere senza chiedere all'utente dove trovare i dati.
 - NON chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente.
 - NON chiedere MAI la firma (signature, firma, Unterschrift). Il cliente firma su carta dopo la stampa. Nella lettera usa solo nome a stampa o "________________".
+- Se questo messaggio È il caricamento del documento: rispondi brevemente confermando di aver letto il documento e di essere pronto a aiutare (es. 1-2 frasi), poi proponi il passo successivo.
 - Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
     }
