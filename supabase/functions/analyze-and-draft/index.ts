@@ -92,30 +92,27 @@ serve(async (req) => {
     return json({ ok: false, error: "NO_OCR", message: "Document has no OCR text. Run ocr-document first." }, 400, cors);
   }
 
-  const langName = LANGUAGE_MAP[userLanguage] || "German";
+  // MOBILE DETECTION
+  const userAgent = req.headers.get("user-agent") ?? "";
+  const isMobile = /android|iphone|ipad|mobile/i.test(userAgent);
+  const model = isMobile ? "gpt-4o-mini" : "gpt-4o";
 
-  const systemPrompt = `You are Lexora, a legal-tech assistant. Analyze the following official letter (OCR text) and produce TWO outputs in the user's language (${langName}).
-
-OUTPUT 1 - JSON (single valid JSON object, no markdown):
-{
-  "deadlines": ["list of any deadlines or Fristen mentioned"],
-  "risks": ["main risks if the user does not act"],
-  "summary": "brief summary of what the letter is about",
-  "suggested_action": "what the user should do next"
-}
-
-OUTPUT 2 - DRAFT LETTER:
-After the JSON, write "---DRAFT---" on a new line, then the full reply letter in DIN 5008 style (formal letter in ${langName}): sender block, date, recipient, subject, body, closing. No placeholder brackets like [Name]. Use clear formal language.`;
-
-  const userPrompt = `Letter text to analyze and reply to:\n\n${ocrText.slice(0, 12000)}`;
+  const letterSnippet = ocrText.slice(0, 12000);
 
   const result = await callOpenAI({
+    model,
+    temperature: 0.1,
+    max_tokens: 2000,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      {
+        role: "system",
+        content: "Analizza lettere amministrative. Rispondi SEMPRE.",
+      },
+      {
+        role: "user",
+        content: `Lettera: "${letterSnippet}". Spiega semplice: cosa è, scadenze, cosa fare. Bozza risposta.`,
+      },
     ],
-    temperature: 0.4,
-    max_tokens: 3500,
   });
 
   if (!result.ok) {
