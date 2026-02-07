@@ -1030,15 +1030,7 @@ export function DemoChatSection() {
         };
         setMessages((prev) => [...prev, confirmation]);
         toast.success(confirmation.content);
-        
-        // Increment global document counter (fire and forget)
-        (async () => {
-          try {
-            await supabase.rpc('increment_documents_processed');
-          } catch {
-            // Silently ignore errors - counter is not critical
-          }
-        })();
+        // Counter is incremented by homepage-trial-chat when it returns draftText
       }
 
       const nextCount = incrementSessionCount();

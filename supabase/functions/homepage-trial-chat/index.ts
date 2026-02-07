@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callOpenAI } from "../_shared/openai.ts";
 import { normLang } from "../_shared/lang.ts";
 import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
@@ -634,6 +635,20 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
     if (webSearchResults.length > 0 && !placeholderBlocked) {
       const sourcesSection = formatSourcesSection(webSearchResults, lang);
       finalReply = finalReply + sourcesSection;
+    }
+
+    // Increment global documents counter when we return a letter (so social proof counter always updates)
+    if (draftText && draftText.trim().length >= 50) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (supabaseUrl && serviceKey) {
+        try {
+          const supabaseAdmin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+          await supabaseAdmin.rpc("increment_documents_processed");
+        } catch (e) {
+          console.warn("[homepage-trial-chat] increment_documents_processed failed (non-critical):", (e as Error)?.message);
+        }
+      }
     }
 
     return json(200, {

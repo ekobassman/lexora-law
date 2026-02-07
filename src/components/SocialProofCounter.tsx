@@ -90,9 +90,9 @@ export function SocialProofCounter() {
     return 0;
   };
 
-  // Fetch count from DB (initial, one retry, then periodic refetch so counter always updates)
+  // Fetch count from DB (retries, then periodic refetch; also refetch when tab becomes visible)
   useEffect(() => {
-    async function fetchCount() {
+    async function fetchCount(): Promise<boolean> {
       const { data, error } = await supabase
         .from('global_stats')
         .select('documents_processed')
@@ -103,13 +103,37 @@ export function SocialProofCounter() {
         setDbCount(toCount(data.documents_processed));
         return true;
       }
+      if (error) {
+        console.warn('[SocialProofCounter] fetch count failed:', error.message);
+      }
       return false;
     }
-    fetchCount().then((ok) => {
-      if (!ok) setTimeout(fetchCount, 2000);
-    });
+
+    let retries = 0;
+    const maxRetries = 3;
+    const tryFetch = () => {
+      fetchCount().then((ok) => {
+        if (!ok && retries < maxRetries) {
+          retries += 1;
+          setTimeout(tryFetch, 1500 * retries);
+        }
+      });
+    };
+    tryFetch();
+
     const interval = setInterval(fetchCount, 60_000);
-    return () => clearInterval(interval);
+
+    const onVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchCount();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Real-time subscription (optional: refetch covers if realtime is disabled)
