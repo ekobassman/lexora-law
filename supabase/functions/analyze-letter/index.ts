@@ -8,6 +8,15 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+/** Build response headers for OPTIONS so gateway does not override with Access-Control-Allow-Origin: * */
+function corsOptionsHeaders(): Headers {
+  const h = new Headers();
+  h.set("Access-Control-Allow-Origin", "https://lexora-law.com");
+  h.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+  h.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  return h;
+}
+
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
 
 // Check if request is from a blocked jurisdiction (FAIL-OPEN for dev/preview)
@@ -299,11 +308,10 @@ function runAllValidators(
 }
 
 serve(async (req) => {
-  // Preflight CORS: must return 200 with CORS headers so browser allows POST
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
-      headers: corsHeaders,
+      headers: corsOptionsHeaders(),
     });
   }
 
