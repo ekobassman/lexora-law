@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callOpenAI } from "../_shared/openai.ts";
-import { getIntakeModeRules, DOCUMENT_TYPE_DETECTION } from "../_shared/intakePromptRules.ts";
 import { normLang } from "../_shared/lang.ts";
 import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
@@ -134,146 +133,76 @@ serve(async (req) => {
     // CRITICAL: Only use chatHistory from this specific pratica
     // Do NOT let information from other pratiche leak into this conversation
     
-    const intakeModeRules = getIntakeModeRules(langCode);
+    const letterSnippet = (letterText || "").trim().slice(0, 8000);
+    const hasLetterContext = letterSnippet.length > 0;
 
-    const lexoraMasterRules = `LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT (CONTEXT-ISOLATED)
+    // WEB SEARCH (Perplexity): se c'è contesto lettera, cerca normativa/sentenze 2026 prima della risposta
+    let webData = "";
+    const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
+    if (hasLetterContext && perplexityKey) {
+      try {
+        const searchResponse = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${perplexityKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-sonar-small-128k-online",
+            messages: [
+              { role: "user", content: `LEGGE ITALIANA 2026: normativa e sentenze aggiornate su: "${letterSnippet.slice(0, 3000)}". Cita articoli CdS, Cassazione, Gazzetta Ufficiale, gov.it.` },
+            ],
+            max_tokens: 2000,
+          }),
+        });
+        if (searchResponse.ok) {
+          const searchJson = await searchResponse.json();
+          const searchContent = searchJson?.choices?.[0]?.message?.content;
+          if (searchContent) {
+            webData = searchContent;
+            console.log("[CHAT-AI] Perplexity web search OK, injected into context");
+          }
+        }
+      } catch (e) {
+        console.warn("[CHAT-AI] Perplexity search failed:", e);
+      }
+    }
 
-=== IDENTITÀ ===
-Sei Lexora, assistente AI intelligente che funziona come ChatGPT ma specializzata in documenti legali/amministrativi.
+    const systemPromptBase = `You are the world's best lawyer. For EVERY legal question:
 
-=== LINGUA ===
-Rispondi nella lingua corrente dell'interfaccia utente: ${outputLanguage}. Nessuna eccezione.
+ANALYZZA: leggi OCR, identifica norme, articoli, scadenze, obblighi
 
-=== UNIFIED INTELLIGENT BEHAVIOR ===
-CORE: Sei un'AI conversazionale e utile. Rispondi alle domande naturalmente, fornisci spiegazioni, brainstorming - E quando serve un documento formale, crealo con precisione.
+RICERCA: se NON sai qualcosa, cerca SU INTERNET dati aggiornati (normativa, sentenze 2026)
 
-1) RILEVAMENTO INTENTO AUTOMATICO:
-- CONVERSAZIONE: Domande, spiegazioni, idee → rispondi conversazionalmente come ChatGPT
-- RICHIESTA INFO: Servono dati esterni → cerca online autonomamente PRIMA
-- CREAZIONE DOCUMENTO: Serve lettera formale → segui regole documento rigide
+VERIFICA: cita fonti ufficiali (Gazzetta Ufficiale, Cassazione, siti gov.it)
 
-2) RICERCA ONLINE INTELLIGENTE (AUTONOMA):
-Quando servono informazioni esterne (indirizzi, procedure, contatti):
-- Cerca autonomamente con query expansion
-- Se trovato: proponi e chiedi conferma
-- Se NON trovato: fai UNA domanda chiara, NON inventare
-- Se utente dice "trovalo tu": DEVI cercare online
+RISPONDI: spiegazione semplice + strategia legale + bozza risposta
 
-3) REGOLE GENERAZIONE DOCUMENTI (RIGIDE):
-NON generare MAI un documento finale automaticamente.
-FLUSSO OBBLIGATORIO:
-1. Raccogli informazioni
-2. Riassumi cosa verrà inserito
-3. Chiedi conferma ESPLICITA
-4. SOLO dopo conferma → genera documento
+MAI INDOVINARE: 'Non ho dati aggiornati, cerco online' → ricerca reale
 
-⚠️ CONTESTO ISOLATO - REGOLA CRITICA ⚠️
-- Questa conversazione riguarda SOLO la pratica corrente.
-- NON fare riferimento a nomi, scuole, datori di lavoro o dettagli di altre pratiche.
-- Ogni pratica/fascicolo è completamente indipendente.
+Esempio risposta:
+'ART. 123 CDF: multa 150€ entro 30gg. SENTENZA Cass. 456/2026 conferma.
+RISPONDI: Contestazione + ricorso. Bozza: [testo completo]'
 
-=== AMBITO AMMESSO (SEMPRE ACCETTARE) ===
-✔️ Lettere a scuole, asili, università
-✔️ Comunicazioni con datori di lavoro, proprietari, aziende
-✔️ Lettere a uffici pubblici, banche, assicurazioni
-✔️ Qualsiasi comunicazione formale o semi-formale scritta
-- MAI rifiutare questi tipi di richieste
+CERCA SEMPRE prima di rispondere. Usa dati 2026 aggiornati.
 
-${intakeModeRules}
+Lingua risposta: ${outputLanguage}.`;
 
-${DOCUMENT_TYPE_DETECTION}
+    const contextBlock = `
+PRATICA ID: ${praticaId || "N/A"}
+Titolo: ${praticaData?.title || "N/A"}
+Autorità: ${praticaData?.authority || "N/A"}
+Riferimento: ${praticaData?.aktenzeichen || "N/A"}
+Scadenza: ${praticaData?.deadline || "N/A"}
 
-LIMITI:
-- Non rappresenti l'utente in tribunale.
-- Puoi rifiutare SOLO: intrattenimento, ricette, argomenti estranei a documenti.
-
-ANTI-RIFIUTO (CRITICO):
-- È VIETATO rifiutare lettere a scuole, datori di lavoro, proprietari.
-
-⛔ PLACEHOLDER VIETATI - REGOLA ASSOLUTA ⛔
-NON usare MAI placeholder tra parentesi quadre.
-Se mancano informazioni: CHIEDI all'utente, NON generare con placeholder.
-
-FORMATO OUTPUT (SOLO DOPO CONFERMA):
-Output SOLO testo lettera. NO spiegazioni, NO meta-commenti.
-Struttura: Mittente → Destinatario → Luogo+Data → Oggetto → Corpo → Chiusura → Firma.`;
-
-    let systemPrompt: string;
-    
-    if (mode === "modify") {
-      // CRITICAL: In modify mode, only use data from THIS pratica
-      systemPrompt = `${lexoraMasterRules}
-
-═══════════════════════════════════════════════════════════════════════════
-MODE: DRAFT MODIFICATION (CONTEXT-ISOLATED)
-═══════════════════════════════════════════════════════════════════════════
-
-⚠️ IMPORTANTE: Questa è la pratica con ID: ${praticaId || 'unknown'}
-Usa SOLO le informazioni fornite qui sotto. Non inventare dettagli.
+DOCUMENTO ORIGINALE (OCR):
+${letterSnippet || "Nessun documento."}
 
 BOZZA ATTUALE:
-${draftResponse || "Nessuna bozza disponibile."}
+${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
+${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nUsa questi dati per citare articoli e sentenze.` : ""}`;
 
-DOCUMENTO ORIGINALE (se presente):
-${letterText || "Nessun documento originale disponibile."}
-
-DATI PRATICA CORRENTE:
-- Titolo: ${praticaData?.title || "N/A"}
-- Autorità/Destinatario: ${praticaData?.authority || "N/A"}
-- Riferimento: ${praticaData?.aktenzeichen || "N/A"}
-- Scadenza: ${praticaData?.deadline || "N/A"}
-
-DEVI:
-✔️ Modificare la bozza come richiesto dall'utente
-✔️ Migliorare forma linguistica, tono, chiarezza
-✔️ Aggiungere contenuti, espandere sezioni, rafforzare argomenti
-✔️ Correggere grammatica, ortografia, struttura
-✔️ Se mancano dati specifici (nome, data, indirizzo), CHIEDI all'utente
-
-⛔ NON DEVI:
-- Usare placeholder come [Nome], [Data], [CAP]
-- Inventare nomi, date o indirizzi non forniti
-- Fare riferimento a pratiche o casi precedenti
-
-OUTPUT CRITICO:
-- Restituisci SOLO la lettera modificata, pronta per stampa.
-- NIENTE spiegazioni, commenti, "---LETTERA---", "fine lettera".
-- La lettera deve iniziare direttamente con l'intestazione formale.
-- Mantieni formato DIN 5008 / lettera formale standard.`;
-    } else {
-      systemPrompt = `${lexoraMasterRules}
-
-═══════════════════════════════════════════════════════════════════════════
-MODE: DOCUMENT ASSISTANCE & LEGAL HELP (CONTEXT-ISOLATED)
-═══════════════════════════════════════════════════════════════════════════
-
-⚠️ IMPORTANTE: Questa è la pratica con ID: ${praticaId || 'unknown'}
-Usa SOLO le informazioni fornite qui sotto.
-
-ORIGINAL DOCUMENT:
-${letterText || "No document available."}
-
-CURRENT DRAFT (if any):
-${draftResponse || "No draft generated yet."}
-
-CASE DATA:
-- Title: ${praticaData?.title || "N/A"}
-- Authority: ${praticaData?.authority || "N/A"}
-- Reference: ${praticaData?.aktenzeichen || "N/A"}
-- Deadline: ${praticaData?.deadline || "N/A"}
-
-YOU MUST:
-✔️ Help the user understand the document fully
-✔️ Answer all questions about its meaning and implications
-✔️ Explain legal terms in accessible language
-✔️ Clarify rights, obligations, deadlines, consequences
-✔️ Provide substantive guidance on how to proceed
-✔️ If asked, help draft or modify response letters
-✔️ If missing specific data (names, dates), ASK the user - do NOT use placeholders
-
-You may add a brief note like: "For complex litigation, consider consulting a lawyer."
-But NEVER refuse to answer or replace your response with this note.`;
-    }
+    const systemPrompt = systemPromptBase + "\n\n=== CONTESTO PRATICA ===\n" + contextBlock;
 
     // Build messages array
     const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -339,11 +268,11 @@ But NEVER refuse to answer or replace your response with this note.`;
       }
     }
 
-    // Use OpenAI API directly
+    // Use OpenAI API directly (precise legal answers)
     const aiResult = await callOpenAI({
       messages: openaiMessages,
-      model: "gpt-4.1-mini",
-      temperature: 0.3,
+      model: "gpt-4o",
+      temperature: 0.05,
     });
 
     if (!aiResult.ok) {
