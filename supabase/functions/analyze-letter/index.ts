@@ -4,8 +4,8 @@ import { callOpenAI } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://lexora-law.com",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
@@ -299,7 +299,7 @@ function runAllValidators(
 }
 
 serve(async (req) => {
-  // Preflight: must return 200 with CORS headers so browser allows POST
+  // Preflight CORS: must return 200 with CORS headers so browser allows POST
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
