@@ -1,2 +1,8 @@
 [functions.auth-health]
 verify_jwt = false
+
+[functions.sync-subscription]
+verify_jwt = false
+
+[functions.credits-get-status]
+verify_jwt = false

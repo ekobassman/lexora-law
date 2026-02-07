@@ -29,3 +29,11 @@
 5. **Monitoraggio**
    - Monitora errori applicativi (500/API) dopo il deploy.
    - Se emergono problemi di permessi, controlla prima le policy RLS prima di toccare lo schema.
+
+## Troubleshooting
+
+- **400 su `profiles` o 404 su `legal_versions` / `dashboard_chat_messages` / `dashboard_chat_history`**  
+  Lo schema in produzione non è aggiornato. Esegui `supabase/lexora_schema_rebuild.sql` nel SQL Editor del progetto (vedi checklist sopra).
+
+- **CORS su Edge Functions (`sync-subscription`, `credits-get-status`)**  
+  La preflight OPTIONS non invia `Authorization`; se le funzioni richiedono JWT a livello progetto, la preflight riceve 401 prima di arrivare al handler. Le due funzioni hanno `verify_jwt = false` in `config.toml` e in `supabase.function.config.json`: ridistribuisci le funzioni dopo aver applicato la config così la preflight arriva al codice e restituisce 204 con gli header CORS.
