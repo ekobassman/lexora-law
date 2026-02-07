@@ -408,10 +408,13 @@ export function DemoChatSection() {
   const [draftText, setDraftText] = useState<string>(() => getSavedDraft());
   const draftTextRef = useRef(draftText);
   
-  // BUG FIX: Track whether a document was generated in the CURRENT session
-  // This prevents action buttons from being enabled when draftText is restored from localStorage
-  // but no document was actually generated in this conversation
   const [generatedInSession, setGeneratedInSession] = useState<boolean>(false);
+  // Conversation state: collecting | confirmed | document_generated (buttons only when document_generated)
+  const [conversationStatus, setConversationStatus] = useState<'collecting' | 'confirmed' | 'document_generated'>(() => {
+    const buf = readDemoChatBuffer();
+    if (buf?.draftText && typeof buf.draftText === 'string' && buf.draftText.trim().length > 0) return 'document_generated';
+    return 'collecting';
+  });
 
   // Keep full UI history, but do NOT allow old sessions/drafts to pollute AI context.
   // Default behavior: start AI context at the end of any restored history.
@@ -435,9 +438,12 @@ export function DemoChatSection() {
     }));
 
     if (restoredMessages.length > 0) setMessages(restoredMessages);
-    if (typeof buf.draftText === 'string' && buf.draftText) setDraftText(buf.draftText);
+    if (typeof buf.draftText === 'string' && buf.draftText) {
+      setDraftText(buf.draftText);
+      setConversationStatus('document_generated');
+    }
     if (typeof buf.input === 'string' && buf.input) setInput(buf.input);
-  }, []); // run once
+  }, []);
 
   // Ensure AI context starts "fresh" when arriving with restored UI state.
   // This keeps the transcript visible, but prevents the AI from reusing old drafts/topics.
@@ -745,8 +751,8 @@ export function DemoChatSection() {
   }, []);
 
   const exportText = draftText.trim();
-  // Buttons ONLY when the AI has generated the letter (backend sent draftText after user confirmed). No character/layout logic.
-  const hasLetterDraft = exportText.length > 0;
+  const isDocumentGenerated = conversationStatus === 'document_generated' && exportText.length > 0;
+  const hasLetterDraft = isDocumentGenerated;
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
   // When letter becomes ready: green frame + play sound once
@@ -942,6 +948,10 @@ export function DemoChatSection() {
           ? lastUserContent.slice(0, 12000)
           : undefined;
 
+    const looksLikeConfirmation = /^(ok|okay|sì|si|yes|ja|oui|va bene|questo è tutto|questo e tutto|confermo|genera|procedi|niente|no,? niente|that'?s all|nothing else|reicht|passt|das ist alles|c\'est tout|eso es todo|bene così|è tutto|e tutto)[\s.,!?]*$/i.test(currentTrimmed);
+    const statusToSend = conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus;
+    setConversationStatus(statusToSend);
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
@@ -956,6 +966,7 @@ export function DemoChatSection() {
             language,
             isFirstMessage,
             conversationHistory,
+            conversationStatus: statusToSend,
             ...(documentTextToSend ? { documentText: documentTextToSend } : {}),
           }),
         }
@@ -989,8 +1000,8 @@ export function DemoChatSection() {
       if (newDraft) {
         setDraftText(newDraft);
         draftTextRef.current = newDraft;
-        // BUG FIX: Mark that a document was generated in this session
         setGeneratedInSession(true);
+        setConversationStatus('document_generated');
         // IMPORTANT: Do NOT reset AI context after document generation.
         // Keep full context so user can ask follow-up questions like "translate to German".
         // The AI needs to remember the conversation and the generated draft.

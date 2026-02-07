@@ -206,10 +206,13 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
     const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt },
     ];
-
-    // CRITICAL: Only include chatHistory from THIS pratica, limit to recent messages
-    // Filter out any potentially stale or cross-contaminated data
-    const recentHistory = (chatHistory || []).slice(-8); // Reduce from 10 to 8 for tighter context
+    if (letterSnippet.length > 0) {
+      openaiMessages.push({
+        role: "user",
+        content: `TESTO LETTERA (OCR):\n"""\n${letterSnippet}\n"""`,
+      });
+    }
+    const recentHistory = (chatHistory || []).slice(-8);
     for (const msg of recentHistory) {
       if (msg.role === 'user' || msg.role === 'assistant') {
         // Clean any system markers from history

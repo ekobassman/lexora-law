@@ -5,20 +5,25 @@
 
 import { SupportedLang, normLang } from "./lang.ts";
 
-// Confirmation keywords that user must use to approve document generation
-// CASE-INSENSITIVE check - all keywords stored in lowercase
+// Confirmation keywords: user approves generation OR says nothing more to add
+// CASE-INSENSITIVE - all keywords stored in lowercase
 const CONFIRMATION_KEYWORDS = [
   // Italian
   'confermo', 'conferma', 'sì procedi', 'si procedi', 'vai avanti', 'genera', 'crea il documento', 'procedi',
+  'questo è tutto', 'questo e tutto', 'non voglio aggiungere altro', 'va bene così', 'va bene cosi', 'bene così', 'è tutto', 'e tutto',
   // German
   'bestätigen', 'bestätige', 'ja weiter', 'erstellen', 'dokument erstellen', 'weiter', 'mach weiter',
+  'das ist alles', 'nichts mehr', 'reicht so', 'passt so',
   // English
   'confirm', 'confirmed', 'yes proceed', 'go ahead', 'generate', 'create the document', 'proceed', 'yes please', 'please proceed',
+  'that\'s all', 'thats all', 'don\'t add anything', 'nothing else', 'this is all', 'good as is',
   // French
   'confirmer', 'confirme', 'oui continuer', 'créer le document', 'continuer',
+  'c\'est tout', 'rien à ajouter', 'ça va comme ça',
   // Spanish
   'confirmo', 'confirmar', 'sí continuar', 'crear el documento', 'continuar',
-  // Other languages - basic patterns
+  'eso es todo', 'nada más', 'está bien así',
+  // Other
   'ok', 'okay', 'yes', 'ja', 'oui', 'sí', 'si', 'да', 'tak', 'evet', 'da', 'sim',
 ];
 

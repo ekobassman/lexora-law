@@ -473,6 +473,7 @@ serve(async (req) => {
       caseId,
       userProfile,
       caseContext,
+      conversationStatus,
     } = await req.json() as {
       message: string;
       userLanguage?: string;
@@ -482,6 +483,7 @@ serve(async (req) => {
       caseId?: string;
       userProfile?: UserProfileContext;
       caseContext?: CaseContext;
+      conversationStatus?: 'collecting' | 'confirmed' | 'document_generated';
     };
 
     if (!message || message.trim().length === 0) {
@@ -790,23 +792,63 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
 `;
     }
 
-    // CTA is now only added when document is ready - not on every response
-    // Using direct OpenAI API (no Lovable credits dependency)
-    // Build messages array
+    // Collect OCR/letter text for explicit user message (so AI always has it in messages)
+    let letterTextForMessages = '';
+    if (caseContext?.letterText?.trim()) {
+      letterTextForMessages = caseContext.letterText.trim().length > 8000
+        ? caseContext.letterText.trim().slice(0, 8000) + '\n...[troncato]'
+        : caseContext.letterText.trim();
+    } else if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
+      const msg = message.trim();
+      const history = Array.isArray(chatHistory) ? chatHistory : [];
+      if (msg.length >= 350 && looksLikeLetter(msg)) letterTextForMessages = msg.slice(0, 8000);
+      else {
+        const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
+        const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
+        if (lastContent.length >= 350 && looksLikeLetter(lastContent)) letterTextForMessages = lastContent.slice(0, 8000);
+      }
+    }
+
     const messages: Array<{ role: string; content: string }> = [
       { role: "system", content: systemPrompt },
     ];
-
-    // Add recent chat history (limit to last 8)
+    if (letterTextForMessages.length > 0) {
+      messages.push({
+        role: "user",
+        content: `TESTO LETTERA (OCR):\n"""\n${letterTextForMessages}\n"""`,
+      });
+    }
     const recentHistory = (chatHistory || []).slice(-8);
     for (const msg of recentHistory) {
       if (msg.role === 'user' || msg.role === 'assistant') {
         messages.push({ role: msg.role, content: msg.content });
       }
     }
-
-    // Add current message
     messages.push({ role: "user", content: message });
+
+    if (conversationStatus === 'document_generated') {
+      const closureMsg = "Il documento è già stato generato. Puoi usare Anteprima, Stampa, Email o Copia.";
+      await supabaseClient.from('dashboard_chat_history').insert([
+        { user_id: user.id, role: 'user', content: message },
+        { user_id: user.id, role: 'assistant', content: closureMsg },
+      ]);
+      if (usageData) {
+        await supabaseClient.from('dashboard_chat_messages').update({ messages_count: currentCount + 1 }).eq('user_id', user.id).eq('message_date', today);
+      } else {
+        await supabaseClient.from('dashboard_chat_messages').insert({ user_id: user.id, message_date: today, messages_count: 1 });
+      }
+      return new Response(
+        JSON.stringify({
+          response: closureMsg,
+          messagesUsed: currentCount + 1,
+          messagesLimit: messageLimit,
+          plan: userPlan,
+          draftReady: false,
+          draftResponse: null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log(`[DASHBOARD-CHAT] User: ${user.id}, Plan: ${userPlan}, Messages: ${currentCount}/${messageLimit}`);
 
@@ -931,12 +973,10 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
       }
     }
     
-    // =====================
-    // DOCUMENT CONFIRMATION GATE (REAL LOGIC)
-    // =====================
     const previousWasSummary = wasPreviousMessageSummary(chatHistory || []);
     const userConfirmedDoc = hasUserConfirmed(message);
-    const allowDocumentGeneration = previousWasSummary && userConfirmedDoc;
+    const statusConfirmed = conversationStatus === 'confirmed' || conversationStatus === 'document_generated';
+    const allowDocumentGeneration = statusConfirmed || (previousWasSummary && userConfirmedDoc);
     
     // Add gate instruction to system prompt
     let gateInstruction = '';

@@ -372,13 +372,14 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], letterText, documentText } = await req.json() as {
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], letterText, documentText, conversationStatus } = await req.json() as {
       message: string;
       language?: string;
       isFirstMessage?: boolean;
       conversationHistory?: Array<{ role: string; content: string }>;
       letterText?: string;
       documentText?: string;
+      conversationStatus?: 'collecting' | 'confirmed' | 'document_generated';
     };
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
@@ -509,14 +510,12 @@ REGOLA OBBLIGATORIA (tutte le lingue):
     }
     
     // =====================
-    // DOCUMENT CONFIRMATION GATE (REAL LOGIC)
+    // DOCUMENT CONFIRMATION GATE (conversation status)
     // =====================
-    // Check if previous message was a summary block awaiting confirmation
     const previousWasSummary = wasPreviousMessageSummary(conversationHistory);
     const userConfirmed = hasUserConfirmed(trimmedMessage);
-    
-    // If user confirmed after summary, allow document generation
-    const allowDocumentGeneration = previousWasSummary && userConfirmed;
+    const statusConfirmed = conversationStatus === 'confirmed' || conversationStatus === 'document_generated';
+    const allowDocumentGeneration = statusConfirmed || (previousWasSummary && userConfirmed);
     
     // Add gate instruction to system prompt
     let gateInstruction = '';
@@ -536,16 +535,22 @@ DO NOT mention or correct typos in the user's confirmation. Just generate the do
       console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
     }
 
-    // Build messages array with conversation history for context
+    // Build messages array: system, then EXPLICIT OCR user message when present, then history
     const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
        { role: "system", content: systemPrompt + greetingInstruction + gateInstruction + webSearchContext },
     ];
-    
-    // Add conversation history (limited to last 10 exchanges for token efficiency)
+
+    if (letterOrDocText.length > 0) {
+      const ocrForMessages = letterOrDocText.length > 8000 ? letterOrDocText.slice(0, 8000) + "\n...[troncato]" : letterOrDocText;
+      aiMessages.push({
+        role: "user",
+        content: `TESTO LETTERA (OCR):\n"""\n${ocrForMessages}\n"""`,
+      });
+    }
+
     const historyToUse = Array.isArray(conversationHistory) 
-      ? conversationHistory.slice(-20) // Last 20 messages (10 exchanges)
+      ? conversationHistory.slice(-20) 
       : [];
-    
     for (const msg of historyToUse) {
       if (msg.role === 'user' || msg.role === 'assistant') {
         aiMessages.push({
@@ -553,6 +558,15 @@ DO NOT mention or correct typos in the user's confirmation. Just generate the do
           content: String(msg.content || '').slice(0, 4000),
         });
       }
+    }
+
+    if (conversationStatus === 'document_generated') {
+      return json(200, {
+        ok: true,
+        reply: "Il documento è già stato generato. Puoi usare i pulsanti Anteprima, Stampa, Email o Copia per utilizzarlo.",
+        draftText: null,
+        meta: { model: "closure" },
+      });
     }
 
     // Use OpenAI API directly (no Lovable credits)

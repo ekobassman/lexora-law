@@ -371,11 +371,11 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   // File processing state (camera/file handled via /scan page)
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   
-  // Draft states
   const [lastDraftText, setLastDraftText] = useState<string | null>(null);
   const [chatTopic, setChatTopic] = useState<string | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftCopied, setDraftCopied] = useState(false);
+  const [conversationStatus, setConversationStatus] = useState<'collecting' | 'confirmed' | 'document_generated'>('collecting');
   
   // Case naming dialog states
   const [showCaseNameDialog, setShowCaseNameDialog] = useState(false);
@@ -414,9 +414,9 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     return { hasDraft: true, draftText: sanitizeDraftForCase(extracted) };
   }, [messages]);
 
-  // Buttons ONLY when the AI has generated the letter (backend sent draftReady + draftResponse). No character/layout logic.
   const exportText = (lastDraftText && lastDraftText.trim().length > 0 && !containsPlaceholders(lastDraftText)) ? lastDraftText : '';
-  const hasLetterDraft = exportText.length > 0;
+  const isDocumentGenerated = conversationStatus === 'document_generated' && exportText.length > 0;
+  const hasLetterDraft = isDocumentGenerated;
   const isDocumentReady = draftReady && hasLetterDraft;
   const letterReadyPlayedRef = useRef(false);
   useEffect(() => {
@@ -952,15 +952,19 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('No session token (user not authenticated)');
       
+      const looksLikeConfirmation = /^(ok|okay|sì|si|yes|ja|oui|va bene|questo è tutto|confermo|genera|procedi|niente|that'?s all|nothing else|reicht|passt|das ist alles|c\'est tout|eso es todo)[\s.,!?]*$/i.test(userMessage.content.trim());
+      const statusToSend = conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus;
+      setConversationStatus(statusToSend);
+
       const payload = {
         message: userMessage.content,
         userLanguage: language?.toUpperCase() || 'DE',
         isFirstMessage: nextHistory.length === 1,
         chatHistory: nextHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
         caseId: selectedCaseId,
-        // AUTO-CONTEXT: Pass user profile and case context
         userProfile: effectiveUserProfile || undefined,
         caseContext: caseContext || undefined,
+        conversationStatus: statusToSend,
       };
 
       const response = await fetch(
@@ -1046,7 +1050,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
 
       setLastDraftText(backendDraftReady ? backendDraft : null);
       setDraftReady(backendDraftReady);
-      
+      if (backendDraftReady) setConversationStatus('document_generated');
+
       if (backendDraftReady && backendDraft && !hasPromptedForName) {
         setHasPromptedForName(true);
         setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
@@ -1217,6 +1222,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       setLastDraftText(null);
       setChatTopic(null);
       setDraftReady(false);
+      setConversationStatus('collecting');
     } catch (error) {
       console.error('Error clearing chat:', error);
     }
@@ -1336,6 +1342,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       setLastDraftText(null);
       setChatTopic(null);
       setDraftReady(false);
+      setConversationStatus('collecting');
       toast.success(t('dashboardChat.chatCleared'));
     } catch (error) {
       console.error('Error clearing chat:', error);
