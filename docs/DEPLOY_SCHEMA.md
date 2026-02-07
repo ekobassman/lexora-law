@@ -79,4 +79,10 @@
   La preflight OPTIONS non invia `Authorization`; se la piattaforma applica la verifica JWT, la preflight riceve 401 prima di arrivare al handler. Le funzioni hanno `verify_jwt = false` in `config.toml` e in `supabase.function.config.json`. **Ridistribuisci** le funzioni in produzione e in Dashboard → Edge Functions verifica che “Enforce JWT” sia disattivato. Tutte le risposte (inclusi errori) devono includere `corsHeaders`.
 
 - **“Accept & continue” non sblocca / legal_versions incomplete**  
-  Esegui `supabase/seed_legal_versions.sql` nel SQL Editor di produzione (inserisce terms, privacy, disclaimer con version `2026-01-28`). Poi hard refresh, rifai login, clicca di nuovo Accept & continue.
+  La versione in DB deve coincidere con `src/lib/legalVersions.ts` (es. `2026-01-28`). In SQL Editor esegui `SELECT * FROM public.legal_versions;`: devono esserci tre righe con `doc_type` = `terms`, `privacy`, `disclaimer` e `version` = `2026-01-28`. Se mancano o la version è diversa, esegui di nuovo `supabase/seed_legal_versions.sql` (o l’INSERT con ON CONFLICT DO UPDATE). Poi hard refresh e nuovo login; se il log “legal_versions incomplete” resta, la stringa di versione attesa dal codice è diversa (cercala in `legalVersions.ts` e usala nel seed).
+
+- **400 su `profiles` (se ancora presenti)**  
+  Se le colonne esistono (verifica con le SELECT in “Verifica post-script”) ma vedi ancora 400, può essere cache: controlla il **dettaglio JSON** della risposta 400 nel tab Network del browser per capire il messaggio esatto di PostgREST.
+
+- **CORS su `credits-get-status` / `sync-subscription`**  
+  Se le due funzioni **non sono deployate** in produzione, il frontend riceve 404/401 in preflight e mostra errori CORS; il codice usa comunque il **fallback** (plan free, planReady: true) e la UI non deve bloccarsi. Puoi ignorare questi errori finché non si deployano le funzioni o si rimuovono le chiamate dal frontend. Le definizioni esistono in repo (`supabase/functions/...`); per farle “esistere” in produzione serve un redeploy da CLI o da Dashboard.

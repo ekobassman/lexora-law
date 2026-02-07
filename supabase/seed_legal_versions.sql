@@ -1,6 +1,7 @@
 -- Inserisce/aggiorna le tre versioni legali che il frontend si aspetta.
 -- Eseguire una volta in produzione (SQL Editor) dopo lexora_schema_rebuild.sql.
--- Versioni allineate a src/lib/legalVersions.ts (TERMS_VERSION, PRIVACY_VERSION, DISCLAIMER_VERSION).
+-- La stringa version DEVE coincidere con src/lib/legalVersions.ts (TERMS_VERSION, PRIVACY_VERSION, DISCLAIMER_VERSION).
+-- Verifica: SELECT * FROM public.legal_versions; devono esserci terms, privacy, disclaimer con version = '2026-01-28'.
 
 INSERT INTO public.legal_versions (doc_type, version, published_at, summary)
 VALUES
