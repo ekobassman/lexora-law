@@ -1322,7 +1322,12 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
 
       toast.success(t('dashboardChat.createCaseSuccess', 'Case created successfully!'));
       await clearChatAfterCaseCreation();
-      
+      // Increment global documents counter (homepage) so it stays in sync when creating case from dashboard
+      try {
+        await supabase.rpc('increment_documents_processed');
+      } catch {
+        // Non-critical; backend create-case also increments
+      }
       // Reset dialog state
       setShowCaseNameDialog(false);
       setCaseName('');
