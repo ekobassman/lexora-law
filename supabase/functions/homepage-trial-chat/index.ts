@@ -351,7 +351,14 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [] } = await req.json();
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], letterText, documentText } = await req.json() as {
+      message: string;
+      language?: string;
+      isFirstMessage?: boolean;
+      conversationHistory?: Array<{ role: string; content: string }>;
+      letterText?: string;
+      documentText?: string;
+    };
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return json(400, {
@@ -382,7 +389,20 @@ serve(async (req) => {
       }
     }
     
-    const systemPrompt = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.EN;
+    let systemPrompt = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.EN;
+
+    // When user has uploaded/scanned a letter: inject it so AI uses it and never asks for data already in it
+    const letterOrDocText = (letterText || documentText || "").trim();
+    if (letterOrDocText.length > 0) {
+      const snippet = letterOrDocText.length > 5000 ? letterOrDocText.slice(0, 5000) + "...[troncato]" : letterOrDocText;
+      systemPrompt += `
+
+=== LETTERA/DOCUMENTO CARICATO (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE ===
+${snippet}
+
+REGOLA CRITICA: Non chiedere MAI all'utente dati che compaiono nel documento sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+`;
+    }
     
     // Add greeting instruction ONLY for first message
     const greetingInstruction = isFirstMessage 

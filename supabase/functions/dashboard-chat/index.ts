@@ -660,6 +660,18 @@ ${caseContext.aktenzeichen ? `Numero riferimento: ${caseContext.aktenzeichen}` :
 ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
 `;
 
+      // Add main letter text (OCR) when present – CRITICAL so AI does not ask for data already in the letter
+      if (caseContext.letterText && caseContext.letterText.trim().length > 0) {
+        const letterSnippet = caseContext.letterText.trim().length > 6000
+          ? caseContext.letterText.trim().slice(0, 6000) + '...[troncato]'
+          : caseContext.letterText.trim();
+        systemPrompt += `
+=== LETTERA PRINCIPALE (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE ===
+${letterSnippet}
+
+`;
+      }
+
       // Add document OCR context
       if (caseContext.documents && caseContext.documents.length > 0) {
         const docsWithText = caseContext.documents
@@ -667,7 +679,7 @@ ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
           .slice(0, 3); // Limit to 3 most relevant docs
         
         if (docsWithText.length > 0) {
-          systemPrompt += `\n=== DOCUMENTI DEL FASCICOLO ===\n`;
+          systemPrompt += `\n=== DOCUMENTI DEL FASCICOLO (dati già noti – non chiedere) ===\n`;
           for (const doc of docsWithText) {
             const direction = doc.direction === 'incoming' ? '📥 Ricevuto' : '📤 Inviato';
             const name = doc.fileName || 'Documento';
@@ -689,11 +701,11 @@ ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
       }
 
       systemPrompt += `
-REGOLE CONTESTO FASCICOLO:
-- NON chiedere "chi ti scrive" se authority è già nota.
-- NON chiedere dettagli già presenti nei documenti OCR.
-- Usa i riferimenti (aktenzeichen) automaticamente nelle risposte.
-- Mantieni coerenza con la corrispondenza precedente.
+REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
+- Tutte le informazioni nella LETTERA PRINCIPALE e nei DOCUMENTI sopra sono GIÀ NOTE. NON chiedere MAI dati che vi compaiono (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente.
+- Chiedi SOLO informazioni AGGIUNTIVE non presenti nei documenti, oppure cerca sul web.
+- NON chiedere "chi ti scrive" se authority/dati sono già nei documenti.
+- Usa i riferimenti (aktenzeichen) automaticamente. Mantieni coerenza con la corrispondenza precedente.
 
 === REGOLE ANTI-CONTAMINAZIONE CROSS-FASCICOLO (CRITICHE) ===
 - Ogni fascicolo è una SANDBOX ISOLATA. Non riutilizzare MAI:

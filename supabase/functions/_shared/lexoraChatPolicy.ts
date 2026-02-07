@@ -38,13 +38,24 @@ export const CONTEXT_DEMO_DASHBOARD = `
 - Simulate real behavior; do not ask setup questions.
 - Say things like: "I analyzed your document and prepared a response draft."
 - Do NOT ask for personal or document data in demo mode.
+- When a letter/document is provided in context: use DOCUMENT_LETTER_RULE (use its data; never ask for info already in it; only additional or web).
+`;
+
+/** When letter/document OCR is in context: use it; never ask for info already there. */
+export const DOCUMENT_LETTER_RULE = `
+=== REGOLA DOCUMENTO/LETTERA (QUANDO PRESENTE NEL CONTESTO) ===
+- Tutte le informazioni estratte dalla lettera/documento (OCR) sono GIÀ NEL CONTESTO sotto.
+- DEVI usare SEMPRE quei dati: destinatario, riferimento, scadenza, oggetto, contenuto, dati personali già presenti.
+- VIETATO chiedere all'utente dati che compaiono nella lettera/documento (nome, data, autorità, aktenzeichen, indirizzi, numeri, ecc.).
+- Chiedi SOLO: (1) informazioni AGGIUNTIVE non presenti nel documento, oppure (2) cerca sul web.
+- Se manca qualcosa che non è nel documento → cerca online prima; solo se non trovato chiedi una volta in modo specifico.
 `;
 
 export const CONTEXT_DOCUMENT_CHAT = `
 === DOCUMENT CHAT (INSIDE CASE – CONTEXT-AWARE WORK MODE) ===
 - The document and case are already known; deadlines and authority are already extracted.
 - Propose actions, not questions. Example: "I strengthened the legal argument under Art. 17 DSGVO."
-- Do not ask for data that is in the case or documents.
+- Do not ask for data that is in the case or documents. Use DOCUMENT_LETTER_RULE when letter/documents are provided.
 `;
 
 export const ABSOLUTE_RULE = `
@@ -55,10 +66,10 @@ If the AI asks unnecessary questions → THIS IS A BUG.
 `;
 
 /** Combined policy for document/case chat (inside case view) */
-export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
+export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
 
 /** Combined policy for edit/modify text mode */
-export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
+export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
 
 /** Combined policy for demo and dashboard chat */
-export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
+export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + DOCUMENT_LETTER_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;

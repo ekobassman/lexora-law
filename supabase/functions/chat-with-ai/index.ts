@@ -186,8 +186,10 @@ Autorità: ${praticaData?.authority || "N/A"}
 Riferimento: ${praticaData?.aktenzeichen || "N/A"}
 Scadenza: ${praticaData?.deadline || "N/A"}
 
-DOCUMENTO ORIGINALE (OCR):
+DOCUMENTO ORIGINALE (OCR) – TUTTE LE INFORMAZIONI QUI SOTTO SONO GIÀ NOTE:
 ${letterSnippet || "Nessun documento."}
+
+REGOLA CRITICA: Non chiedere MAI all'utente dati che compaiono nel DOCUMENTO ORIGINALE sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 
 BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
