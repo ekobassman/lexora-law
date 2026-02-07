@@ -129,6 +129,7 @@ ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS draft_text text;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS source text;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS ultima_run_id uuid NULL;
 ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS size_bytes int;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 -- ─── LEGAL (versioni documenti + accettazioni + eventi) ─────────────────────
 CREATE TABLE IF NOT EXISTS public.legal_versions (
