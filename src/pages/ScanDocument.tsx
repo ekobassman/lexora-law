@@ -12,7 +12,7 @@ import { LegalLoader } from '@/components/LegalLoader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { invokeExtractText } from '@/lib/invokeExtractText';
 import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';

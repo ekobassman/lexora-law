@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { invokeExtractText } from '@/lib/invokeExtractText';
 import { Camera, Loader2, Upload, FileText, Image as ImageIcon, X, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1,3 +1,15 @@
-// Single import point for the app-wide Supabase client.
-// IMPORTANT: This re-exports the auto-generated client.
-export { supabase } from '@/integrations/supabase/client';
+// Single Supabase client for the app. Reads from .env (Vite: VITE_*).
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+export const supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
+  auth: {
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});

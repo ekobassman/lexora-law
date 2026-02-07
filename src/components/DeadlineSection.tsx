@@ -5,7 +5,7 @@ import { Calendar, CalendarPlus, CheckCircle2, AlertCircle, Loader2 } from 'luci
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { it, de, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { downloadICSFile, createPraticaDeadlineEvent, Reminder, DEFAULT_REMINDERS } from '@/lib/icsGenerator';
 

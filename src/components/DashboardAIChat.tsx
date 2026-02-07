@@ -8,7 +8,7 @@ import {
   Camera, Paperclip, Eye, Printer, Mail, Save, Trash2, FolderOpen
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlanState } from '@/hooks/usePlanState';
 import { useEntitlements } from '@/hooks/useEntitlements';

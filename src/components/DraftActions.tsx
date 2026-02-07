@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { ExternalLink, FileDown, Mail, Printer, Copy, Loader2, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';

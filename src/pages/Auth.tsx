@@ -12,7 +12,7 @@ import { LanguageSelector } from '@/components/LanguageSelector';
 import { LegalFooter } from '@/components/LegalFooter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { Loader2, Shield, Scale } from 'lucide-react';
 import { TERMS_VERSION, PRIVACY_VERSION, AGE_POLICY_VERSION, DISCLAIMER_VERSION } from '@/lib/legalVersions';

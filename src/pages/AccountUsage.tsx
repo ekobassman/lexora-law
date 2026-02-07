@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 import { AppHeader } from "@/components/AppHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

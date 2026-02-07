@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeadsetIcon, Upload, CheckCircle2, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useLocation } from 'react-router-dom';
 
 type RequestType = 'technical' | 'document' | 'billing' | 'other';

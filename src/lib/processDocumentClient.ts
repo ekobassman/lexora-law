@@ -3,7 +3,7 @@
  * Un solo endpoint: multipart (file) o JSON (base64 + mimeType + caseId?).
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 
 const BASE =
   import.meta.env.VITE_SUPABASE_URL ||

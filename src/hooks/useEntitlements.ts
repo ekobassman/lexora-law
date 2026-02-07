@@ -2,7 +2,7 @@ import { useCallback, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEntitlements, type EntitlementsDTO } from "@/lib/getEntitlements";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 
 const DEFAULT_ENTITLEMENTS: EntitlementsDTO = {
   role: "user",

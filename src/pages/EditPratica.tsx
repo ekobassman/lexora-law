@@ -15,7 +15,7 @@ import { DraftActions } from '@/components/DraftActions';
 import { ScrollableContentBox } from '@/components/ScrollableContentBox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { invokeExtractText } from '@/lib/invokeExtractText';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, CalendarPlus, FileText, Building2, Hash, Sparkles, FileCheck, Trash2, AlertTriangle, Check } from 'lucide-react';

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage, Language } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { Send, Mic, MicOff, Loader2, Bot, FileText, Copy, Check, ChevronDown, Square, Sparkles, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';

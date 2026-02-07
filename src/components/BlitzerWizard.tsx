@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle, FileText, MapPin, Calendar, Hash, Gauge, Camera as CameraIcon, Mail, ArrowRight, ArrowLeft, CheckCircle2, Download, Printer, Send } from 'lucide-react';
 import jsPDF from 'jspdf';

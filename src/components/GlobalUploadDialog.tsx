@@ -21,7 +21,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { Camera, CheckCircle, HelpCircle, Loader2, Plus, Upload } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
 import { toast } from 'sonner';

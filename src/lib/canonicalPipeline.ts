@@ -5,7 +5,7 @@
  * Dev check: In browser Network tab, request to /functions/v1/upload-document should have
  * Authorization: Bearer <token> for logged-in users; x-demo-mode: true for demo. No http://ip-api.com in repo.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 
 const BASE =
   import.meta.env.VITE_SUPABASE_URL ||

@@ -8,7 +8,7 @@ import {
   Language as LanguageCode,
   Country as CountryCode,
 } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { AppHeader } from '@/components/AppHeader';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { PaywallDialog } from '@/components/PaywallDialog';

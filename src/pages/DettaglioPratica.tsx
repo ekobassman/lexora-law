@@ -15,7 +15,7 @@ import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { AIDisclaimer } from '@/components/AIDisclaimer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import {
   ArrowLeft,
   Building2,

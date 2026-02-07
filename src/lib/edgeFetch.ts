@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 
 export async function callEdgeFunction(functionName: string, token: string, body: any) {
   // Get URL and anon key from environment or supabase client internals

@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 import { callEdgeFunction } from "@/lib/edgeFetch";
 import { hardResetAuth } from "@/lib/authHardReset";
 

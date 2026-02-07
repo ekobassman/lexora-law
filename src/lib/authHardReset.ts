@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from "sonner";
 
 export async function hardResetAuth(navigate: (path: string) => void) {

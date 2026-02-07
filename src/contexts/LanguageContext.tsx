@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import i18n from '../i18n';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 export type Language = 'IT' | 'DE' | 'EN' | 'FR' | 'ES' | 'PL' | 'RO' | 'TR' | 'AR' | 'UK' | 'RU';

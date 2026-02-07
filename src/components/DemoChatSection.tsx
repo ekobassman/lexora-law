@@ -39,7 +39,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlanState } from '@/hooks/usePlanState';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
 

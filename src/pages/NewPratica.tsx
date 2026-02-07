@@ -16,7 +16,7 @@ import { AutoveloxWizard } from '@/components/AutoveloxWizard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { invokeExtractText } from '@/lib/invokeExtractText';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';

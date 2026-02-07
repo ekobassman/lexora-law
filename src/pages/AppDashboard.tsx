@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlanState } from '@/hooks/usePlanState';
 import { useSyncSubscription } from '@/hooks/useSyncSubscription';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import {
   FileText,
   Loader2,
