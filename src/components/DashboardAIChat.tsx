@@ -19,6 +19,7 @@ import { PlanLimitPopup } from '@/components/PlanLimitPopup';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
+import { playLetterReadySound } from '@/utils/letterReadySound';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
   AlertDialog,
@@ -446,7 +447,13 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   }, [lastDraftText, clientDraftCheck.draftText]);
 
   const hasLetterDraft = exportText.length >= 50;
-  
+  const letterReadyPlayedRef = useRef(false);
+  useEffect(() => {
+    if (!hasLetterDraft || letterReadyPlayedRef.current) return;
+    letterReadyPlayedRef.current = true;
+    playLetterReadySound();
+  }, [hasLetterDraft]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastUserMessageRef = useRef<HTMLDivElement>(null);
@@ -1347,7 +1354,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
 
   const handleClearChat = async () => {
     if (!user) return;
-    
+    letterReadyPlayedRef.current = false;
     try {
       await supabase.from('dashboard_chat_history').delete().eq('user_id', user.id);
       setMessages([]);
@@ -1394,7 +1401,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       />
 
       {/* MAIN CONTAINER with frame styling - SAME DIMENSIONS AS DEMO */}
-      <div className="dashboard-frame-wrapper">
+      <div className={`dashboard-frame-wrapper${hasLetterDraft ? ' letter-ready' : ''}`}>
         {/* Golden Header Bar */}
         <div className="dashboard-gold-header">
           <span className="dashboard-fleur">❧</span>
@@ -1765,6 +1772,15 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           box-shadow: 
             0 0 0 2px #0B1C2D,
             0 0 0 5px #A8863D,
+            0 20px 60px rgba(0,0,0,0.5);
+          transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .dashboard-frame-wrapper.letter-ready {
+          border-color: #22c55e;
+          box-shadow: 
+            0 0 0 2px #0B1C2D,
+            0 0 0 5px #16a34a,
+            0 0 20px rgba(34, 197, 94, 0.35),
             0 20px 60px rgba(0,0,0,0.5);
         }
 

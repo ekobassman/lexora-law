@@ -42,6 +42,7 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/lib/supabaseClient';
 import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
+import { playLetterReadySound } from '@/utils/letterReadySound';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -488,6 +489,7 @@ export function DemoChatSection() {
   const isRecordingRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const letterReadyPlayedRef = useRef(false);
   
   const openLetterOnlyPreviewWithText = (text: string) => {
     const trimmed = (text || '').trim();
@@ -743,12 +745,31 @@ export function DemoChatSection() {
   }, []);
 
   const exportText = draftText.trim();
-  // BUG FIX: Enable export buttons ONLY when a draft was generated in the CURRENT session
-  // This prevents buttons from being enabled when draftText is restored from localStorage
-  // but the current conversation hasn't generated a document yet
-  const hasLetterDraft = useMemo(() => exportText.length >= 50 && generatedInSession, [exportText, generatedInSession]);
+  // Chat contains a formal letter if any assistant message looks like one (so buttons stay on after navigate back / preview)
+  const looksLikeFormalLetter = useCallback((content: string) => {
+    if (!content || content.length < 200) return false;
+    const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(content);
+    const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(content);
+    const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(content);
+    return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+  }, []);
+  const chatContainsLetter = useMemo(() =>
+    messages.some(m => m.role === 'assistant' && looksLikeFormalLetter(m.content)),
+    [messages, looksLikeFormalLetter]
+  );
+  // Buttons on when we have draft text AND (generated this session OR chat still shows the letter)
+  const hasLetterDraft = useMemo(() =>
+    exportText.length >= 50 && (generatedInSession || chatContainsLetter),
+    [exportText, generatedInSession, chatContainsLetter]
+  );
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
+  // When letter becomes ready: green frame + play sound once
+  useEffect(() => {
+    if (!hasLetterDraft || letterReadyPlayedRef.current) return;
+    letterReadyPlayedRef.current = true;
+    playLetterReadySound();
+  }, [hasLetterDraft]);
   // Limit is reached ONLY if: limit exceeded AND a document was already generated
   // This ensures users can always complete at least one document before being blocked
   const isLimitReached = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft;
@@ -1215,6 +1236,7 @@ export function DemoChatSection() {
 
   // Handle clear conversation for privacy
   const handleClearConversation = useCallback(() => {
+    letterReadyPlayedRef.current = false;
     // Don't clear while recording
     if (isRecordingRef.current || isListening) {
       toast.error('Stop recording first');
@@ -1358,8 +1380,8 @@ export function DemoChatSection() {
         onChange={handleFileChange}
       />
 
-      {/* MAIN CONTAINER with frame styling */}
-      <div className="demo-frame-wrapper">
+      {/* MAIN CONTAINER with frame styling - green border when letter ready */}
+      <div className={`demo-frame-wrapper${hasLetterDraft ? ' letter-ready' : ''}`}>
         {/* Golden Header Bar */}
         <div className="demo-gold-header">
           <span className="demo-fleur">❧</span>
@@ -1822,6 +1844,15 @@ export function DemoChatSection() {
           box-shadow: 
             0 0 0 2px #0B1C2D,
             0 0 0 5px #A8863D,
+            0 20px 60px rgba(0,0,0,0.5);
+          transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .demo-frame-wrapper.letter-ready {
+          border-color: #22c55e;
+          box-shadow: 
+            0 0 0 2px #0B1C2D,
+            0 0 0 5px #16a34a,
+            0 0 20px rgba(34, 197, 94, 0.35),
             0 20px 60px rgba(0,0,0,0.5);
         }
 

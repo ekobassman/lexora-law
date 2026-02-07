@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { extractFormalLetterOnly } from '@/lib/extractFormalLetter';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { playLetterReadySound } from '@/utils/letterReadySound';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 import { useCaseChatMessages } from '@/hooks/useCaseChatMessages';
 // ═══════════════════════════════════════════════════════════════════════════
@@ -720,9 +721,15 @@ export function ChatWithAI({
   };
 
   const hasLetterInHistory = chatHistory.some(msg => msg.role === 'assistant' && containsLetter(msg.content));
+  const letterReadyPlayedRef = useRef(false);
+  useEffect(() => {
+    if (!hasLetterInHistory || letterReadyPlayedRef.current) return;
+    letterReadyPlayedRef.current = true;
+    playLetterReadySound();
+  }, [hasLetterInHistory]);
 
   return (
-    <div className="edit-chat-premium print:hidden">
+    <div className={`edit-chat-premium print:hidden${hasLetterInHistory ? ' letter-ready' : ''}`}>
       {/* Gold Header with icon */}
       <div className="edit-gold-header">
         <span className="edit-fleur">⚜</span>
@@ -881,6 +888,15 @@ export function ChatWithAI({
           box-shadow: 
             0 0 0 2px #0B1C2D,
             0 0 0 5px #A8863D,
+            0 12px 40px rgba(0,0,0,0.4);
+          transition: border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        .edit-chat-premium.letter-ready {
+          border-color: #22c55e;
+          box-shadow: 
+            0 0 0 2px #0B1C2D,
+            0 0 0 5px #16a34a,
+            0 0 20px rgba(34, 197, 94, 0.35),
             0 12px 40px rgba(0,0,0,0.4);
         }
 
