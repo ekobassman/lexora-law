@@ -1121,6 +1121,16 @@
     "copyLetter": "Copiar",
     "listening": "Escuchando..."
   },
+  "registrationGate": {
+    "continueTitle": "Límite diario alcanzado",
+    "continueDesc": "Has alcanzado el límite máximo diario del chat demo. Crea una cuenta para continuar.",
+    "benefit1": "Guarda y accede a tus casos en cualquier momento",
+    "benefit2": "Exportar documentos en PDF",
+    "benefit3": "Plazos y recordatorios",
+    "createAccount": "Crear cuenta gratuita",
+    "login": "Ya tengo una cuenta",
+    "later": "Quizás más tarde"
+  },
   "landingSections": {
     "howItWorks": {
       "badge": "Cómo Funciona",

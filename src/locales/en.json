@@ -1283,6 +1283,16 @@
     "copyLetter": "Copy letter",
     "listening": "Listening..."
   },
+  "registrationGate": {
+    "continueTitle": "Daily limit reached",
+    "continueDesc": "You have reached the maximum daily limit for the demo chat. Create an account to continue.",
+    "benefit1": "Save and access your cases anytime",
+    "benefit2": "Export documents as PDF",
+    "benefit3": "Track deadlines and get reminders",
+    "createAccount": "Create free account",
+    "login": "I already have an account",
+    "later": "Maybe later"
+  },
   "intake": {
     "phase": {
       "collecting": "Data collection",

@@ -1176,6 +1176,16 @@
     "copyLetter": "Brief kopieren",
     "listening": "Höre zu..."
   },
+  "registrationGate": {
+    "continueTitle": "Tageslimit erreicht",
+    "continueDesc": "Sie haben das maximale Tageslimit für die Demo-Chat erreicht. Erstellen Sie ein Konto, um fortzufahren.",
+    "benefit1": "Fälle jederzeit speichern und abrufen",
+    "benefit2": "Dokumente als PDF exportieren",
+    "benefit3": "Fristen und Erinnerungen",
+    "createAccount": "Kostenloses Konto erstellen",
+    "login": "Ich habe bereits ein Konto",
+    "later": "Vielleicht später"
+  },
   "intake": {
     "phase": {
       "collecting": "Datenerfassung",

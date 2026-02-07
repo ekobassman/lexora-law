@@ -1107,6 +1107,16 @@
     "preview": "Podgląd",
     "copyLetter": "Kopiuj list"
   },
+  "registrationGate": {
+    "continueTitle": "Osiągnięto limit dzienny",
+    "continueDesc": "Osiągnąłeś maksymalny dzienny limit czatu demo. Utwórz konto, aby kontynuować.",
+    "benefit1": "Zapisuj i uzyskuj dostęp do spraw w dowolnym momencie",
+    "benefit2": "Eksportuj dokumenty do PDF",
+    "benefit3": "Terminy i przypomnienia",
+    "createAccount": "Utwórz darmowe konto",
+    "login": "Mam już konto",
+    "later": "Może później"
+  },
   "landingSections": {
     "howItWorks": {
       "badge": "Jak to działa",

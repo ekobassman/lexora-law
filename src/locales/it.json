@@ -1172,6 +1172,16 @@
     "copyLetter": "Copia lettera",
     "listening": "Sto ascoltando..."
   },
+  "registrationGate": {
+    "continueTitle": "Limite giornaliero raggiunto",
+    "continueDesc": "Hai raggiunto il limite massimo giornaliero per la demo chat. Crea un account per continuare.",
+    "benefit1": "Salva e accedi alle tue pratiche in qualsiasi momento",
+    "benefit2": "Esporta i documenti in PDF",
+    "benefit3": "Scadenze e promemoria",
+    "createAccount": "Crea account gratuito",
+    "login": "Ho già un account",
+    "later": "Forse più tardi"
+  },
   "intake": {
     "phase": {
       "collecting": "Raccolta dati",

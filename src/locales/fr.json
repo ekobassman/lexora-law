@@ -1096,6 +1096,16 @@
     "copyLetter": "Copier",
     "listening": "J'écoute..."
   },
+  "registrationGate": {
+    "continueTitle": "Limite quotidien atteint",
+    "continueDesc": "Vous avez atteint la limite quotidienne maximale pour le chat démo. Créez un compte pour continuer.",
+    "benefit1": "Enregistrez et accédez à vos dossiers à tout moment",
+    "benefit2": "Exporter les documents en PDF",
+    "benefit3": "Échéances et rappels",
+    "createAccount": "Créer un compte gratuit",
+    "login": "J'ai déjà un compte",
+    "later": "Peut-être plus tard"
+  },
   "landingSections": {
     "howItWorks": {
       "badge": "Comment ça marche",

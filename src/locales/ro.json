@@ -1107,6 +1107,16 @@
     "preview": "Previzualizare",
     "copyLetter": "Copiază scrisoarea"
   },
+  "registrationGate": {
+    "continueTitle": "Limită zilnică atinsă",
+    "continueDesc": "Ați atins limita zilnică maximă pentru chat-ul demo. Creați un cont pentru a continua.",
+    "benefit1": "Salvați și accesați dosarele oricând",
+    "benefit2": "Exportați documentele în PDF",
+    "benefit3": "Termene și memento-uri",
+    "createAccount": "Creați cont gratuit",
+    "login": "Am deja un cont",
+    "later": "Poate mai târziu"
+  },
   "landingSections": {
     "howItWorks": {
       "badge": "Cum Funcționează",

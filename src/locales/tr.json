@@ -1092,6 +1092,16 @@
     "preview": "Önizleme",
     "copyLetter": "Mektubu kopyala"
   },
+  "registrationGate": {
+    "continueTitle": "Günlük limit aşıldı",
+    "continueDesc": "Demo sohbet için günlük maksimum limite ulaştınız. Devam etmek için bir hesap oluşturun.",
+    "benefit1": "Dosyalarınızı kaydedin ve istediğiniz zaman erişin",
+    "benefit2": "Belgeleri PDF olarak dışa aktarın",
+    "benefit3": "Son tarihler ve hatırlatıcılar",
+    "createAccount": "Ücretsiz hesap oluştur",
+    "login": "Zaten bir hesabım var",
+    "later": "Belki sonra"
+  },
   "landingSections": {
     "howItWorks": { "badge": "Nasıl Çalışır", "title": "4 kolay adımda yanıtınız", "subtitle": "Resmi mektuptan profesyonel yanıta - hızlı, basit ve yasal olarak güvenli.", "timeIndicator": "⏱️ Ortalama süre: 5-10 dakika", "steps": { "1": { "title": "Yükle", "description": "Resmi mektubunuzu tarayın veya yükleyin. PDF, fotoğraf veya doğrudan kamerayla." }, "2": { "title": "YZ Analizi", "description": "YZ'miz belgeyi analiz eder, göndereni belirler, son tarihleri çıkarır ve içeriği anlar." }, "3": { "title": "İncele ve Ayarla", "description": "Oluşturulan yanıtı inceleyin ve ihtiyaçlarınıza göre özelleştirin." }, "4": { "title": "Gönder", "description": "PDF olarak dışa aktarın, yazdırın veya doğrudan postayla gönderin." } } },
     "pricing": { "badge": "Fiyatlandırma", "title": "Şeffaf fiyatlar, gizli maliyet yok", "subtitle": "İhtiyaçlarınıza uygun planı seçin. Ücretsiz başlayın ve istediğiniz zaman yükseltin.", "monthly": "Aylık", "yearly": "Yıllık", "save": "2 ay ücretsiz", "perMonth": "/ay", "perYear": "/yıl", "free": "Ücretsiz", "popular": "Popüler", "trustNote": "Ücretsiz plan için kredi kartı gerekmez. İstediğiniz zaman iptal edin.", "plans": { "free": { "name": "Ücretsiz", "description": "Denemek için ideal", "cta": "Ücretsiz Başla", "features": ["1 dosya dahil", "YZ belge analizi", "Otomatik yanıt oluşturma", "30 gün depolama"] }, "starter": { "name": "Starter", "description": "Ara sıra kullanım için", "cta": "Starter Seç", "features": ["Ayda 3 dosya", "Dosya başına 15 YZ mesajı", "PDF dışa aktarma", "E-posta gönderme", "Son tarih takibi"] }, "pro": { "name": "Pro", "description": "Düzenli kullanıcılar için", "cta": "Pro Seç", "features": ["Ayda 10 dosya", "Dosya başına 30 YZ mesajı", "Starter'daki her şey", "Aile desteği", "Öncelikli destek"] }, "unlimited": { "name": "Unlimited", "description": "Profesyoneller için", "cta": "Unlimited Seç", "features": ["Sınırsız dosya", "Sınırsız YZ mesajı", "Sınırsız belge", "Pro'daki her şey", "Profesyonel destek"] } } },

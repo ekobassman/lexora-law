@@ -51,8 +51,8 @@ interface ChatMessage {
   attachmentType?: 'image' | 'pdf' | null;
 }
 
-// Demo chat limit (user messages). Generous limit to encourage document completion.
-const MESSAGE_LIMIT = 20;
+// Demo chat: 15 messages per 24h, renew at 1:00 each day (anonymous users)
+const MESSAGE_LIMIT = 15;
 const DISCLAIMER_TRIGGER = 1;
 
 const DEMO_SESSION_KEY = 'lexora_demo_chat_session_v2';
@@ -74,8 +74,9 @@ interface SessionData {
 }
 
 function getLocalDateKey(): string {
-  // Local day key, resets at local midnight (not rolling 24h)
+  // Period resets at 1:00 local time each day (so 00:00–00:59 belongs to previous day)
   const d = new Date();
+  if (d.getHours() < 1) d.setDate(d.getDate() - 1);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -761,9 +762,8 @@ export function DemoChatSection() {
     letterReadyPlayedRef.current = true;
     playLetterReadySound();
   }, [hasLetterDraft]);
-  // Limit is reached ONLY if: limit exceeded AND a document was already generated
-  // This ensures users can always complete at least one document before being blocked
   const isLimitReached = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft;
+  const hasReachedDailyLimit = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT;
   const showDisclaimer = sessionCount >= DISCLAIMER_TRIGGER;
   const trimmedInput = input.trim();
   
