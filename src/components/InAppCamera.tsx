@@ -9,9 +9,6 @@ interface InAppCameraProps {
   existingPhotos?: File[];
 }
 
-const blobToFile = (blob: Blob, fileName: string) =>
-  new File([blob], fileName, { type: blob.type || "image/jpeg" });
-
 // Compress image to reduce file size
 async function compressImage(blob: Blob, maxSizeMB: number = 2, maxDimension: number = 2000): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -80,18 +77,15 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  console.log('DEBUG: InAppCamera render', { existingPhotosCount: existingPhotos.length });
-
+  
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
+  const [capturedPhotos, setCapturedPhotos] = useState<{ blob: Blob; url: string }[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [showPreview, setShowPreview] = useState(false);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
-    console.log('DEBUG: Apertura camera...', { facing });
     setIsInitializing(true);
     setError(null);
 
@@ -110,12 +104,7 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
         audio: false,
       };
 
-      console.log('DEBUG: getUserMedia chiamato', { constraints });
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia non disponibile (HTTPS o browser non supportato)');
-      }
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('DEBUG: Stream ottenuto', { tracks: stream.getTracks().length });
       streamRef.current = stream;
 
       if (videoRef.current) {
@@ -123,8 +112,7 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
         await videoRef.current.play();
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('DEBUG: Errore camera:', msg, err);
+      console.error('Camera error:', err);
       setError(t('inAppCamera.errorAccess') || 'Cannot access camera. Please check permissions.');
     } finally {
       setIsInitializing(false);
@@ -132,11 +120,9 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   }, [t]);
 
   useEffect(() => {
-    console.log('DEBUG: InAppCamera useEffect mount - avvio startCamera');
     startCamera(facingMode);
 
     return () => {
-      console.log('DEBUG: InAppCamera cleanup - stop stream');
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -170,28 +156,20 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
       // Draw current frame
       ctx.drawImage(video, 0, 0);
 
-      // Always produce JPEG File for upload
-      await new Promise<void>((resolve, reject) => {
+      // Get blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
-          (blob) => {
-            if (!blob || blob.size === 0) {
-              reject(new Error('Camera snapshot blob is empty'));
-              return;
-            }
-            const file = blobToFile(blob, 'scan.jpg');
-            console.log('[camera] captured file:', {
-              name: file.name,
-              type: file.type,
-              size: file.size,
-            });
-            const url = URL.createObjectURL(file);
-            setCapturedPhotos((prev) => [...prev, { file, url }]);
-            resolve();
-          },
+          (b) => (b ? resolve(b) : reject(new Error('Failed to capture'))),
           'image/jpeg',
-          0.9
+          0.92
         );
       });
+
+      // Compress
+      const compressed = await compressImage(blob);
+      const url = URL.createObjectURL(compressed);
+
+      setCapturedPhotos(prev => [...prev, { blob: compressed, url }]);
 
       // Brief flash effect
       if (videoRef.current) {
@@ -216,36 +194,20 @@ export function InAppCamera({ onPhotosCaptured, onClose, existingPhotos = [] }: 
   }, []);
 
   const handleConfirm = useCallback(() => {
-    const files = capturedPhotos.map((p) => p.file);
+    // Convert blobs to Files
+    const files = capturedPhotos.map((photo, i) => {
+      return new File([photo.blob], `photo-${Date.now()}-${i}.jpg`, { type: 'image/jpeg' });
+    });
+
+    // Combine with existing photos
     onPhotosCaptured([...existingPhotos, ...files]);
     onClose();
   }, [capturedPhotos, existingPhotos, onPhotosCaptured, onClose]);
 
   const totalPhotos = existingPhotos.length + capturedPhotos.length;
 
-  const handleTestFileInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files ?? []);
-      e.target.value = "";
-      if (files.length > 0) {
-        onPhotosCaptured([...existingPhotos, ...files]);
-        onClose();
-      }
-    },
-    [existingPhotos, onPhotosCaptured, onClose]
-  );
-
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* E2E: hidden file input to simulate photo (Playwright setInputFiles) */}
-      <input
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        aria-hidden
-        data-testid="camera-test-file-input"
-        onChange={handleTestFileInput}
-      />
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/60 to-transparent">
         <Button

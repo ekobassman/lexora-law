@@ -135,7 +135,7 @@ export function PricingSection({ id }: PricingSectionProps) {
             return (
               <Card
                 key={plan.name}
-                className={`relative flex flex-col overflow-hidden min-h-0 ${
+                className={`relative flex flex-col ${
                   plan.popular
                     ? 'border-2 border-gold shadow-lg shadow-gold/10 scale-105'
                     : 'border-navy/10'
@@ -150,16 +150,16 @@ export function PricingSection({ id }: PricingSectionProps) {
                 )}
                 
                 <CardHeader className="text-center pb-4">
-                  <div className={`h-12 w-12 rounded-full mx-auto mb-3 flex items-center justify-center shrink-0 ${
+                  <div className={`h-12 w-12 rounded-full mx-auto mb-3 flex items-center justify-center ${
                     plan.popular ? 'bg-gold/20' : 'bg-navy/5'
                   }`}>
-                    <Icon className={`h-6 w-6 shrink-0 ${plan.popular ? 'text-gold' : 'text-navy/70'}`} />
+                    <Icon className={`h-6 w-6 ${plan.popular ? 'text-gold' : 'text-navy/70'}`} />
                   </div>
-                  <CardTitle className="text-xl text-navy line-clamp-2 break-words">{plan.name}</CardTitle>
-                  <CardDescription className="line-clamp-2 break-words text-sm md:text-base">{plan.description}</CardDescription>
+                  <CardTitle className="text-xl text-navy">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
                 
-                <CardContent className="flex-1 min-h-0">
+                <CardContent className="flex-1">
                   <div className="text-center mb-6">
                     <span className="text-4xl font-bold text-navy">
                       {price === 0 ? t('landingSections.pricing.free') : `€${price.toFixed(2).replace('.', ',')}`}
@@ -171,9 +171,9 @@ export function PricingSection({ id }: PricingSectionProps) {
                   
                   <ul className="space-y-3">
                     {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-navy/80 break-words">
+                      <li key={i} className="flex items-start gap-2 text-sm text-navy/80">
                         <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                        <span className="min-w-0">{feature}</span>
+                        {feature}
                       </li>
                     ))}
                   </ul>

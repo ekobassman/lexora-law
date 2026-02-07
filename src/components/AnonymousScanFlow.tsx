@@ -27,7 +27,6 @@ import {
   addChatMessage as addAnonChatMessage,
   type AnonymousCase 
 } from '@/lib/anonymousSession';
-import { extractTextWithTesseract } from '@/lib/tesseractOcr';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RegistrationGate } from '@/components/RegistrationGate';
 
@@ -46,7 +45,6 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<FlowStep>('camera');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStage, setProcessingStage] = useState<'ocr' | 'analyze'>('ocr');
-  const [ocrProgress, setOcrProgress] = useState(0);
   const [currentCase, setCurrentCase] = useState<AnonymousCase | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [analysis, setAnalysis] = useState('');
@@ -84,9 +82,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
     setStep('processing');
     setIsProcessing(true);
     setProcessingStage('ocr');
-    setOcrProgress(0);
 
     try {
+      // Convert first file to base64
       const file = files[0];
       const base64 = await fileToBase64(file);
       const mimeType = file.type || 'image/jpeg';
@@ -98,29 +96,26 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       });
       setCurrentCase(newCase);
 
-      // OCR: prefer anonymous-ocr (GPT-4o Vision), fallback to Tesseract
-      let text = '';
-      try {
-        const ocrRes = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-            body: JSON.stringify({ base64, mimeType }),
-          }
-        );
-        const ocrData = await ocrRes.json();
-        if (ocrRes.ok && ocrData?.ok && ocrData?.text?.trim()) {
-          text = ocrData.text.trim();
-          setOcrProgress(100);
-        } else throw new Error(ocrData?.error ?? 'anonymous-ocr failed');
-      } catch (apiErr) {
-        console.warn('[AnonymousScanFlow] anonymous-ocr failed, using Tesseract fallback:', apiErr);
-        toast.warning(t('anonymousFlow.ocrFallback', 'Using basic OCR (for best results ensure good lighting).'));
-        const ocrResult = await extractTextWithTesseract(file, (p) => setOcrProgress(p));
-        if (!ocrResult?.text?.trim()) throw new Error('OCR failed or no text found');
-        text = ocrResult.text.trim();
+      // Call OCR endpoint
+      const ocrResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ base64, mimeType, language }),
+        }
+      );
+
+      const ocrData = await ocrResponse.json();
+
+      if (!ocrResponse.ok || !ocrData.ok) {
+        throw new Error(ocrData.error || 'OCR failed');
       }
+
+      const text = ocrData.text || '';
       setExtractedText(text);
       updateAnonymousCase(newCase.id, { letterText: text, ocrResult: text });
 
@@ -290,7 +285,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
             </h3>
             <p className="text-muted-foreground text-sm">
               {processingStage === 'ocr'
-                ? `${t('anonymousFlow.extractingHint', 'Extracting text from your document')} ${ocrProgress}%`
+                ? t('anonymousFlow.extractingHint', 'Extracting text from your document')
                 : t('anonymousFlow.analyzingHint', 'Understanding content, risks, and next steps')
               }
             </p>
@@ -303,8 +298,8 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
   // RESULT STEP
   if (step === 'result') {
     return (
-      <div className="fixed inset-0 z-50 bg-background overflow-y-auto overflow-x-hidden">
-        <div className="container max-w-2xl py-6 px-4 pb-8">
+      <div className="fixed inset-0 z-50 bg-background overflow-auto">
+        <div className="container max-w-2xl py-6 px-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <Button variant="ghost" size="sm" onClick={onClose}>
@@ -345,21 +340,6 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Extracted document text - scrollable */}
-          <Card className="mb-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                {t('anonymousFlow.documentText', 'Testo del documento')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded border bg-muted/30 p-4 text-sm whitespace-pre-wrap break-words">
-                {extractedText || '—'}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Analysis */}
           <Card className="mb-6">
             <CardHeader className="pb-3">
@@ -369,9 +349,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[280px] overflow-y-auto overflow-x-hidden prose prose-sm max-w-none dark:prose-invert">
+              <div className="prose prose-sm max-w-none dark:prose-invert">
                 {analysis.split('\n').map((line, i) => (
-                  <p key={i} className="mb-2 last:mb-0 break-words">{line}</p>
+                  <p key={i} className="mb-2 last:mb-0">{line}</p>
                 ))}
               </div>
             </CardContent>
@@ -405,9 +385,9 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
 
   // CHAT STEP
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col min-h-0">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 border-b px-4 py-3 flex items-center justify-between">
+      <div className="border-b px-4 py-3 flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => setStep('result')}>
           {t('common.back', 'Back')}
         </Button>
@@ -419,7 +399,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea ref={chatScrollRef} className="flex-1 min-h-0">
+      <ScrollArea ref={chatScrollRef} className="flex-1">
         <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {chatMessages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -428,12 +408,12 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
               )}
-              <div className={`max-w-[85%] min-w-0 rounded-xl px-4 py-3 break-words ${
+              <div className={`max-w-[85%] rounded-xl px-4 py-3 ${
                 msg.role === 'user'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-card border shadow-sm'
               }`}>
-                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               </div>
               {msg.role === 'user' && (
                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -457,7 +437,7 @@ export function AnonymousScanFlow({ onClose }: { onClose: () => void }) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="flex-shrink-0 border-t p-4">
+      <div className="border-t p-4">
         <div className="max-w-2xl mx-auto flex gap-2">
           <Textarea
             value={chatInput}

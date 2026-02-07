@@ -502,8 +502,6 @@
     "modifyButton": "Modifică ciorna",
     "send": "Trimite",
     "thinking": "Gândesc...",
-    "outOfScopeRefusal": "Îmi pare rău, vă pot ajuta doar în materie juridică și administrativă. Vă pot asista la contracte, scrisori formale, consultanță juridică sau proceduri birocratice. Aveți nevoie de ajutor pentru unul dintre aceste subiecte?",
-    "searchingLegalSources": "🔍 Căutare surse juridice actualizate...",
     "error": "Eroare la trimiterea mesajului",
     "welcome": "Bună! Cum te pot ajuta cu această scrisoare?",
     "regenerate": "Regenerează răspunsul",
@@ -581,27 +579,13 @@
     "deleteCase": "Șterge dosarul"
   },
   "footer": {
-    "product": "Produs",
-    "howItWorks": "Cum funcționează",
-    "pricing": "Prețuri",
-    "supportedDocuments": "Documente acceptate",
-    "faq": "FAQ",
-    "company": "Companie",
-    "aboutUs": "Despre noi",
-    "contact": "Contact",
-    "legal": "Legal",
     "privacy": "Politica de confidențialitate",
     "terms": "Termeni și condiții",
     "disclaimer": "Declinare responsabilitate",
-    "support": "Suport",
-    "helpCenter": "Centru de asistență",
+    "legal": "Notă legală",
     "impressum": "Impressum",
-    "disclaimerText": "Lexora este un asistent bazat pe IA și nu oferă consultanță juridică. Conținutul generat este doar informativ. Pentru decizii juridice, consultați un avocat calificat.",
+    "disclaimerText": "Acest serviciu nu constituie consiliere juridică. Pentru cazuri complexe, consultă un avocat.",
     "copyright": "© {year} LEXORA. Toate drepturile rezervate."
-  },
-  "pullToRefresh": {
-    "pull": "Trage pentru a actualiza",
-    "release": "Eliberează pentru a actualiza"
   },
   "pricing": {
     "localCurrencyNote": "Prețurile sunt afișate în moneda dvs. locală.",
@@ -1029,10 +1013,7 @@
     "logout": "Deconectare",
     "login": "Conectare",
     "signup": "Înregistrare",
-    "support": "Suport",
-    "howItWorks": "Cum funcționează",
-    "pricing": "Prețuri",
-    "faq": "FAQ"
+    "support": "Suport"
   },
   "tryChat": {
     "title": "Încearcă Lexora acum",
@@ -1213,9 +1194,9 @@
       "title": "Datele tale sunt în siguranță la noi",
       "subtitle": "Securitatea și confidențialitatea sunt prioritățile noastre principale. Folosim tehnologii de ultimă generație pentru a proteja documentele tale sensibile.",
       "countriesTitle": "Țări Acceptate",
-      "countriesSubtitle": "Adaptat special la cerințele legale din 11 țări din întreaga lume:",
+      "countriesSubtitle": "Adaptat special la cerințele legale din:",
       "certifications": { "gdpr": "GDPR" },
-      "countries": { "us": "SUA", "de": "Germania", "at": "Austria", "ch": "Elveția", "it": "Italia", "fr": "Franța", "es": "Spania", "uk": "Regatul Unit", "ua": "Ucraina", "tr": "Turcia", "latam": "America Latină" },
+      "countries": { "de": "Germania", "at": "Austria", "ch": "Elveția" },
       "features": [
         { "title": "Conform GDPR", "description": "Complet conform cu reglementările europene privind protecția datelor." },
         { "title": "Criptare SSL", "description": "Criptare SSL pe 256 biți pentru toate transferurile de date." },
@@ -1223,31 +1204,5 @@
         { "title": "Fără Partajare Date", "description": "Documentele tale nu sunt niciodată partajate sau vândute terților." }
       ]
     }
-  },
-  "pwa": {
-    "installPrompt": "Adaugă Lexora pe ecranul principal pentru acces instant",
-    "installButton": "Instalează aplicația",
-    "installLater": "Mai târziu",
-    "installing": "Se instalează...",
-    "installed": "Aplicația a fost instalată!",
-    "alreadyInstalled": "Aplicația este deja instalată",
-    "updateApp": "Actualizează aplicația",
-    "offlineTitle": "Ești offline",
-    "offlineMessage": "Unele funcționalități sunt limitate. Documentele salvate sunt disponibile.",
-    "online": "Online",
-    "offline": "Offline",
-    "iOSGuide": {
-      "title": "Instalează Lexora pe iPhone",
-      "installTitle": "Instalează Lexora",
-      "subtitle": "Adaugă la ecranul principal pentru acces instant",
-      "shareHint": "Atinge butonul Partajare",
-      "addToHomeButton": "Adaugă la ecranul principal",
-      "hint": "Partajare → Adaugă la ecranul principal",
-      "step1": "Atinge butonul Partajare jos",
-      "step2": "Selectează \"Adaugă pe ecranul de start\"",
-      "step3": "Confirmă cu \"Adaugă\"",
-      "gotIt": "Am înțeles, nu mai afișa"
-    },
-    "updateAvailable": "Versiune nouă disponibilă. Reîncarcă pentru a actualiza."
   }
 }

@@ -51,12 +51,25 @@ serve(async (req) => {
 
     // Admin lookup accepts ONLY target_user_id (no email lookup)
     if (target_user_id) {
-      if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail.toLowerCase())) {
-        return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      // Check if caller is admin
+      const isCallerAdmin = ADMIN_EMAILS.includes(callerEmail.toLowerCase());
+      if (!isCallerAdmin) {
+        // Check user_roles
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", callerId)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        if (!roleRow) {
+          return new Response(JSON.stringify({ error: "Admin only", code: "FORBIDDEN" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
+
       isAdminLookup = true;
       targetUserId = target_user_id;
     }

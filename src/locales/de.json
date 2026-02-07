@@ -558,8 +558,6 @@
     "modifyButton": "Entwurf anpassen",
     "send": "Senden",
     "thinking": "Denke nach...",
-    "outOfScopeRefusal": "Es tut mir leid, ich kann nur bei rechtlichen und administrativen Angelegenheiten helfen. Ich kann Sie bei Verträgen, formellen Schreiben, Rechtsberatung oder bürokratischen Verfahren unterstützen. Benötigen Sie Hilfe zu einem dieser Themen?",
-    "searchingLegalSources": "🔍 Aktuelle Rechtsquellen werden abgefragt...",
     "error": "Fehler beim Senden der Nachricht",
     "welcome": "Hallo! Wie kann ich Ihnen bei diesem Brief helfen?",
     "regenerate": "Antwort neu generieren",
@@ -659,27 +657,13 @@
     "deleteCase": "Vorgang löschen"
   },
   "footer": {
-    "product": "Produkt",
-    "howItWorks": "So funktioniert's",
-    "pricing": "Preise",
-    "supportedDocuments": "Unterstützte Dokumente",
-    "faq": "FAQ",
-    "company": "Unternehmen",
-    "aboutUs": "Über uns",
-    "contact": "Kontakt",
-    "legal": "Rechtliches",
-    "privacy": "Datenschutz",
+    "privacy": "Datenschutzerklärung",
     "terms": "Nutzungsbedingungen",
     "disclaimer": "Haftungsausschluss",
-    "support": "Support",
-    "helpCenter": "Hilfe-Center",
+    "legal": "Rechtliche Hinweise",
     "impressum": "Impressum",
-    "disclaimerText": "Lexora ist ein KI-basierter Assistent und bietet keine Rechtsberatung. Die generierten Inhalte dienen ausschließlich zu Informationszwecken. Für rechtlich bindende Entscheidungen konsultieren Sie bitte einen qualifizierten Anwalt.",
+    "disclaimerText": "Dieser Service stellt keine Rechtsberatung dar. Bei komplexen Fällen wenden Sie sich an einen Anwalt.",
     "copyright": "© {year} LEXORA. Alle Rechte vorbehalten."
-  },
-  "pullToRefresh": {
-    "pull": "Ziehen zum Aktualisieren",
-    "release": "Loslassen zum Aktualisieren"
   },
   "pricing": {
     "localCurrencyNote": "Preise werden in Ihrer lokalen Währung angezeigt.",
@@ -962,17 +946,12 @@
     "saveError": "Fehler beim Speichern"
   },
   "countries": {
-    "US": "USA",
     "DE": "Deutschland",
     "AT": "Österreich",
     "CH": "Schweiz",
     "IT": "Italien",
     "FR": "Frankreich",
     "ES": "Spanien",
-    "UK": "Vereinigtes Königreich",
-    "UA": "Ukraine",
-    "TR": "Türkei",
-    "LATAM": "Lateinamerika",
     "PL": "Polen",
     "RO": "Rumänien",
     "NL": "Niederlande",
@@ -1102,10 +1081,7 @@
     "logout": "Abmelden",
     "login": "Anmelden",
     "signup": "Registrieren",
-    "support": "Support",
-    "howItWorks": "So funktioniert's",
-    "pricing": "Preise",
-    "faq": "FAQ"
+    "support": "Support"
   },
   "tryChat": {
     "title": "Lexora jetzt testen",
@@ -1374,9 +1350,9 @@
       "title": "Ihre Daten sind bei uns sicher",
       "subtitle": "Sicherheit und Datenschutz haben bei uns höchste Priorität. Wir setzen auf modernste Technologien, um Ihre sensiblen Dokumente zu schützen.",
       "countriesTitle": "Unterstützte Länder",
-      "countriesSubtitle": "Speziell angepasst an die rechtlichen Anforderungen in 11 Ländern weltweit:",
+      "countriesSubtitle": "Speziell angepasst an die rechtlichen Anforderungen in:",
       "certifications": { "gdpr": "DSGVO" },
-      "countries": { "us": "USA", "de": "Deutschland", "at": "Österreich", "ch": "Schweiz", "it": "Italien", "fr": "Frankreich", "es": "Spanien", "uk": "UK", "ua": "Ukraine", "tr": "Türkei", "latam": "Lateinamerika" },
+      "countries": { "de": "Deutschland", "at": "Österreich", "ch": "Schweiz" },
       "features": [
         { "title": "DSGVO-konform", "description": "Vollständig konform mit der europäischen Datenschutz-Grundverordnung." },
         { "title": "SSL-Verschlüsselung", "description": "256-bit SSL-Verschlüsselung für alle Datenübertragungen." },
@@ -1384,41 +1360,5 @@
         { "title": "Keine Datenweitergabe", "description": "Ihre Dokumente werden niemals an Dritte weitergegeben oder verkauft." }
       ]
     }
-  },
-  "pwa": {
-    "installPrompt": "Lexora zur Startseite hinzufügen für schnellen Zugriff",
-    "installButton": "App installieren",
-    "installLater": "Später",
-    "installing": "Wird installiert...",
-    "installed": "App installiert!",
-    "alreadyInstalled": "App bereits installiert",
-    "updateApp": "App aktualisieren",
-    "offlineTitle": "Sie sind offline",
-    "offlineMessage": "Einige Funktionen sind eingeschränkt. Gespeicherte Dokumente sind verfügbar.",
-    "retry": "Erneut versuchen",
-    "online": "Online",
-    "offline": "Offline",
-    "iOSGuide": {
-      "title": "Lexora auf Ihrem iPhone installieren",
-      "installTitle": "Lexora installieren",
-      "subtitle": "App zum Home-Bildschirm hinzufügen für Offline-Nutzung",
-      "addToHomeButton": "Zum Home-Bildschirm",
-      "hint": "Tippen Sie auf Teilen → Zum Home-Bildschirm",
-      "shareHint": "Tippen Sie auf die Teilen-Schaltfläche in Safari",
-      "step1": "Tippen Sie unten auf die Teilen-Schaltfläche",
-      "step2": "Wählen Sie \"Zum Startbildschirm hinzufügen\"",
-      "step3": "Bestätigen Sie mit \"Hinzufügen\"",
-      "gotIt": "Verstanden, nicht mehr anzeigen"
-    },
-    "updateAvailable": "Neue Version verfügbar. Laden Sie die Seite neu, um zu aktualisieren."
-  },
-  "mobileInstall": {
-    "bannerText": "Installa Lexora per salvare i tuoi documenti",
-    "installBtn": "Installa",
-    "dismiss": "Chiudi",
-    "saveDocumentTitle": "Documento generato!",
-    "saveDocumentDesc": "Installa l'app per salvarlo e accedervi offline.",
-    "installApp": "Installa App",
-    "continueWeb": "Continua sul web"
   }
 }

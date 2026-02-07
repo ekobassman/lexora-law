@@ -502,8 +502,6 @@
     "modifyButton": "Modyfikuj szkic",
     "send": "Wyślij",
     "thinking": "Myślę...",
-    "outOfScopeRefusal": "Przepraszam, mogę pomagać tylko w sprawach prawnych i administracyjnych. Mogę pomóc w zakresie umów, pism formalnych, porad prawnych lub procedur urzędowych. Czy potrzebujesz pomocy w którymś z tych obszarów?",
-    "searchingLegalSources": "🔍 Szukam zaktualizowanych źródeł prawnych...",
     "error": "Błąd wysyłania wiadomości",
     "welcome": "Cześć! Jak mogę Ci pomóc z tym pismem?",
     "regenerate": "Wygeneruj ponownie odpowiedź",
@@ -581,27 +579,13 @@
     "deleteCase": "Usuń sprawę"
   },
   "footer": {
-    "product": "Produkt",
-    "howItWorks": "Jak to działa",
-    "pricing": "Cennik",
-    "supportedDocuments": "Obsługiwane dokumenty",
-    "faq": "FAQ",
-    "company": "Firma",
-    "aboutUs": "O nas",
-    "contact": "Kontakt",
-    "legal": "Prawne",
     "privacy": "Polityka prywatności",
     "terms": "Warunki korzystania",
     "disclaimer": "Zastrzeżenie",
-    "support": "Wsparcie",
-    "helpCenter": "Centrum pomocy",
+    "legal": "Informacje prawne",
     "impressum": "Impressum",
-    "disclaimerText": "Lexora to asystent oparty na AI i nie świadczy porad prawnych. Generowana treść ma charakter wyłącznie informacyjny. W sprawach prawnych skonsultuj się z prawnikiem.",
+    "disclaimerText": "Ta usługa nie stanowi porady prawnej. W skomplikowanych przypadkach skonsultuj się z prawnikiem.",
     "copyright": "© {year} LEXORA. Wszelkie prawa zastrzeżone."
-  },
-  "pullToRefresh": {
-    "pull": "Pociągnij, aby odświeżyć",
-    "release": "Puść, aby odświeżyć"
   },
   "pricing": {
     "localCurrencyNote": "Ceny wyświetlane w Twojej lokalnej walucie.",
@@ -1029,10 +1013,7 @@
     "logout": "Wyloguj",
     "login": "Zaloguj",
     "signup": "Zarejestruj",
-    "support": "Wsparcie",
-    "howItWorks": "Jak to działa",
-    "pricing": "Cennik",
-    "faq": "FAQ"
+    "support": "Wsparcie"
   },
   "tryChat": {
     "title": "Wypróbuj Lexora teraz",
@@ -1213,9 +1194,9 @@
       "title": "Twoje dane są u nas bezpieczne",
       "subtitle": "Bezpieczeństwo i prywatność to nasze najwyższe priorytety. Używamy najnowocześniejszych technologii do ochrony Twoich wrażliwych dokumentów.",
       "countriesTitle": "Obsługiwane Kraje",
-      "countriesSubtitle": "Specjalnie dostosowane do wymogów prawnych w 11 krajach na całym świecie:",
+      "countriesSubtitle": "Specjalnie dostosowane do wymogów prawnych w:",
       "certifications": { "gdpr": "RODO" },
-      "countries": { "us": "USA", "de": "Niemcy", "at": "Austria", "ch": "Szwajcaria", "it": "Włochy", "fr": "Francja", "es": "Hiszpania", "uk": "Wielka Brytania", "ua": "Ukraina", "tr": "Turcja", "latam": "Ameryka Łacińska" },
+      "countries": { "de": "Niemcy", "at": "Austria", "ch": "Szwajcaria" },
       "features": [
         { "title": "Zgodność z RODO", "description": "W pełni zgodne z europejskimi przepisami o ochronie danych." },
         { "title": "Szyfrowanie SSL", "description": "256-bitowe szyfrowanie SSL dla wszystkich transferów danych." },
@@ -1223,31 +1204,5 @@
         { "title": "Brak Udostępniania Danych", "description": "Twoje dokumenty nigdy nie są udostępniane ani sprzedawane stronom trzecim." }
       ]
     }
-  },
-  "pwa": {
-    "installPrompt": "Dodaj Lexora do ekranu głównego dla szybkiego dostępu",
-    "installButton": "Zainstaluj aplikację",
-    "installLater": "Później",
-    "installing": "Instalowanie...",
-    "installed": "Aplikacja zainstalowana!",
-    "alreadyInstalled": "Aplikacja już zainstalowana",
-    "updateApp": "Zaktualizuj aplikację",
-    "offlineTitle": "Jesteś offline",
-    "offlineMessage": "Niektóre funkcje są ograniczone. Zapisane dokumenty są dostępne.",
-    "online": "Online",
-    "offline": "Offline",
-    "iOSGuide": {
-      "title": "Zainstaluj Lexora na swoim iPhonie",
-      "installTitle": "Zainstaluj Lexora",
-      "subtitle": "Dodaj do ekranu głównego dla natychmiastowego dostępu",
-      "shareHint": "Dotknij przycisku Udostępnij",
-      "addToHomeButton": "Dodaj do ekranu początkowego",
-      "hint": "Udostępnij → Dodaj do ekranu początkowego",
-      "step1": "Dotknij przycisku Udostępnij na dole",
-      "step2": "Wybierz \"Dodaj do ekranu początkowego\"",
-      "step3": "Potwierdź przez \"Dodaj\"",
-      "gotIt": "Rozumiem, nie pokazuj więcej"
-    },
-    "updateAvailable": "Dostępna nowa wersja. Odśwież, aby zaktualizować."
   }
 }

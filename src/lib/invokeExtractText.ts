@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/edgeFetch";
 import { hardResetAuth } from "@/lib/authHardReset";
-import { ocrWithBase64 } from "@/lib/ocrClient";
 
 interface InvokeParams {
   base64: string;
@@ -13,12 +12,11 @@ interface InvokeParams {
 interface InvokeResult {
   text?: string;
   error?: string;
-  details?: string;
   success?: boolean;
 }
 
 export async function invokeExtractText(params: InvokeParams): Promise<InvokeResult | null> {
-  const { base64, mimeType, navigate } = params;
+  const { base64, mimeType, userLanguage, navigate } = params;
 
   const refreshed = await supabase.auth.refreshSession();
   const token = refreshed.data.session?.access_token;
@@ -30,6 +28,7 @@ export async function invokeExtractText(params: InvokeParams): Promise<InvokeRes
     return null;
   }
 
+  // AUTH HEALTH via fetch (bypass invoke)
   const health = await callEdgeFunction("auth-health", token, { ping: true });
   console.info("[auth-health] fetch", {
     status: health.status,
@@ -42,13 +41,27 @@ export async function invokeExtractText(params: InvokeParams): Promise<InvokeRes
     return null;
   }
 
-  // OCR via Vercel /api/ocr (Google Cloud Vision)
-  const result = await ocrWithBase64(base64, mimeType);
-  console.info("[ocr] fetch", { hasText: !!result.text, error: result.error, details: result.details });
+  // EXTRACT TEXT via fetch (bypass invoke)
+  const ocr = await callEdgeFunction("extract-text", token, {
+    imageBase64: base64,
+    mimeType,
+    userLanguage,
+  });
 
-  if (!result.text) {
-    return { error: "OCR_FAILED", details: result.details || result.error };
+  console.info("[extract-text] fetch", {
+    status: ocr.status,
+    ok: ocr.ok,
+    hasText: !!ocr.data?.text,
+  });
+
+  if (ocr.status === 401) {
+    await hardResetAuth(navigate);
+    return null;
   }
 
-  return { text: result.text, success: true };
+  if (!ocr.ok) {
+    return { error: "OCR_FAILED" };
+  }
+
+  return ocr.data;
 }

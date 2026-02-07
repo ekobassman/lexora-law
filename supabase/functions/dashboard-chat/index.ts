@@ -7,8 +7,11 @@ import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
-import { UNIFIED_LEXORA_IDENTITY } from "../_shared/lexoraSystemPrompt.ts";
-import { getCorsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 // User profile context (passed from frontend)
 interface UserProfileContext {
@@ -412,7 +415,6 @@ function isWithinScope(message: string, language: string): boolean {
 }
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -441,7 +443,6 @@ serve(async (req) => {
       caseId,
       userProfile,
       caseContext,
-      legalSearchContext = [],
     } = await req.json() as {
       message: string;
       userLanguage?: string;
@@ -451,50 +452,12 @@ serve(async (req) => {
       caseId?: string;
       userProfile?: UserProfileContext;
       caseContext?: CaseContext;
-      legalSearchContext?: Array<{ title?: string; snippet?: string; link?: string; url?: string; date?: string }>;
     };
 
     if (!message || message.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: "No message provided" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // =====================
-    // GENERAL MODE (no case): auth only, no DB, short helpful reply
-    // =====================
-    if (!caseId) {
-      const responseLanguage = userLanguage?.toUpperCase() || "EN";
-      const fullLanguageName = LANGUAGE_MAP[responseLanguage] || "English";
-      const generalSystemPrompt = `${UNIFIED_LEXORA_IDENTITY}
-
-Sei in modalità "chat generale" (nessun fascicolo selezionato). Rispondi nella lingua: ${fullLanguageName}.
-
-Dai una risposta breve e utile: come usare Lexora, come rispondere a lettere ufficiali, cosa fare (es. "Seleziona una pratica per salvare la conversazione e generare documenti", "Puoi caricare una lettera e ricevere un'analisi", "Crea un fascicolo per iniziare"). Non scrivere lettere formali in questa modalità; invita l'utente a selezionare o creare una pratica per documenti. Mantieni il tono professionale e conciso.`;
-
-      const openaiResult = await callOpenAI({
-        messages: [
-          { role: "system", content: generalSystemPrompt },
-          { role: "user", content: message.trim() },
-        ],
-        temperature: 0.4,
-        max_tokens: 600,
-      });
-
-      if (!openaiResult.ok) {
-        const userMsg = openaiResult.error === "AI service not configured"
-          ? "AI is temporarily unavailable. (Service not configured.)"
-          : openaiResult.error || "AI temporarily unavailable";
-        return new Response(
-          JSON.stringify({ ok: false, error: "AI_PROVIDER_ERROR", message: userMsg }),
-          { status: openaiResult.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ ok: true, reply: openaiResult.content || "", response: openaiResult.content || "" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -561,22 +524,62 @@ Dai una risposta breve e utile: come usare Lexora, come rispondere a lettere uff
     
     const fullLanguageName = LANGUAGE_MAP[responseLanguage] || "English";
 
-    // Unified Lexora identity + dashboard-specific rules
+    // LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
     const intakeModeRules = getIntakeModeRules(responseLanguage);
     
-    let systemPrompt = `${UNIFIED_LEXORA_IDENTITY}
+    let systemPrompt = `LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
+
+=== IDENTITÀ ===
+Sei Lexora, assistente AI intelligente che funziona come ChatGPT ma specializzata in documenti legali/amministrativi.
 
 === LINGUA ===
 Rispondi nella lingua corrente dell'interfaccia utente: ${fullLanguageName}. Nessuna eccezione.
 
-=== DOCUMENTI E RICERCA ===
-- RICHIESTA INFO: Servono dati esterni (indirizzi, procedure) → cerca online autonomamente, poi proponi e chiedi conferma.
-- CREAZIONE DOCUMENTO: Serve lettera formale → raccogli dati, riassumi, chiedi conferma ESPLICITA, SOLO dopo conferma genera.
-- Se utente dice "trovalo tu" / "find it yourself": esegui la ricerca online.
+=== UNIFIED INTELLIGENT BEHAVIOR ===
+CORE: Sei un'AI conversazionale e utile. Rispondi alle domande naturalmente, fornisci spiegazioni, brainstorming - E quando serve un documento formale, crealo con precisione.
+
+1) RILEVAMENTO INTENTO AUTOMATICO (NO toggle, NO UI changes):
+- CONVERSAZIONE: Domande, spiegazioni, idee → rispondi conversazionalmente come ChatGPT
+- RICHIESTA INFO: Servono dati esterni → cerca online autonomamente PRIMA
+- CREAZIONE DOCUMENTO: Serve lettera formale → segui regole documento rigide
+
+2) RICERCA ONLINE INTELLIGENTE (AUTONOMA):
+Quando servono informazioni esterne (indirizzi, procedure, contatti):
+
+STEP 1: Cerca autonomamente con query expansion:
+- Query diretta nella lingua utente
+- Sinonimi in DE/IT/EN
+- "zuständig für" / "competente per" / "responsible for"
+- Fallback territoriale: città → provincia → autorità competente
+
+STEP 2: Se trovato con buona affidabilità:
+- PROPONI il risultato all'utente
+- Chiedi conferma semplice prima di usarlo nei documenti
+
+STEP 3: Se NON trovato in modo affidabile:
+- NON inventare nulla
+- Fai UNA domanda chiara
+
+STEP 4: Se utente dice "trovalo tu" / "such es selbst" / "find it yourself":
+- DEVI eseguire la ricerca online, non chiedere di nuovo all'utente
+
+VIETATO: Usare indirizzi approssimativi, enti non ufficiali come fallback, "indovinare" informazioni mancanti
+
+3) REGOLE GENERAZIONE DOCUMENTI (RIGIDE):
+NON generare MAI un documento finale automaticamente senza conferma.
+
+FLUSSO OBBLIGATORIO:
+1. Raccogli tutte le informazioni necessarie (dal profilo utente, fascicolo, conversazione, o ricerca)
+2. Riassumi cosa verrà inserito nel documento
+3. Chiedi conferma ESPLICITA: "Posso creare la lettera con queste informazioni?"
+4. SOLO dopo conferma → genera il documento formale
 
 === AMBITO AMMESSO (SEMPRE ACCETTARE) ===
-✔️ Lettere a scuole, asili, università, datori di lavoro, proprietari, aziende, uffici pubblici, banche, assicurazioni.
-✔️ Qualsiasi comunicazione formale o semi-formale scritta. MAI rifiutare questi tipi di richieste.
+✔️ Lettere a scuole, asili, università
+✔️ Comunicazioni con datori di lavoro, proprietari, aziende
+✔️ Lettere a uffici pubblici, banche, assicurazioni
+✔️ Qualsiasi comunicazione formale o semi-formale scritta
+- MAI rifiutare questi tipi di richieste
 
 ${intakeModeRules}
 
@@ -849,20 +852,6 @@ REGOLE CONTESTO FASCICOLO:
     }
     
     // =====================
-    // CLIENT-PROVIDED LEGAL SEARCH CONTEXT (from webSearch.ts)
-    // =====================
-    const legalSources: SearchResult[] = Array.isArray(legalSearchContext) ? legalSearchContext.map((r: { title?: string; snippet?: string; link?: string; url?: string; date?: string }) => ({
-      title: r.title ?? '',
-      snippet: r.snippet ?? '',
-      url: r.link ?? r.url ?? '',
-    })).filter((r: SearchResult) => r.url) : [];
-    if (legalSources.length > 0) {
-      const sourcesBlock = legalSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.url}`).join('\n\n');
-      messages[0].content += `\n\nFONTI UFFICIALI CONSULTATE (use to inform your answer, cite when relevant):\n${sourcesBlock}\n\n`;
-      webSearchResults = [...webSearchResults, ...legalSources];
-    }
-    
-    // =====================
     // DOCUMENT CONFIRMATION GATE (REAL LOGIC)
     // =====================
     const previousWasSummary = wasPreviousMessageSummary(chatHistory || []);
@@ -902,11 +891,8 @@ User has confirmed document generation. You may now generate the final letter wi
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const userMessage = aiResult.error === "AI service not configured"
-        ? "AI service not configured. Please set OPENAI_API_KEY in Supabase Edge Function secrets."
-        : aiResult.error || "AI temporarily unavailable";
       return new Response(
-        JSON.stringify({ error: "AI_PROVIDER_ERROR", message: userMessage }),
+        JSON.stringify({ error: "AI_PROVIDER_ERROR", message: "AI temporarily unavailable" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

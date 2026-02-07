@@ -16,7 +16,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeExtractText } from '@/lib/invokeExtractText';
-import { extractTextWithTesseract, isImageType } from '@/lib/tesseractOcr';
 import { Camera, Loader2, Upload, FileText, Image as ImageIcon, X, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
@@ -110,18 +109,8 @@ export function DocumentUpload({ praticaId, open, onOpenChange, onSuccess, onLet
     setFiles(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
   };
 
-  const extractTextFromFile = async (
-    fileToExtract: File,
-    onProgress?: (percent: number) => void
-  ): Promise<string | null> => {
+  const extractTextFromFile = async (fileToExtract: File): Promise<string | null> => {
     try {
-      // Use Tesseract for images (client-side, no CORS)
-      if (isImageType(fileToExtract.type)) {
-        const result = await extractTextWithTesseract(fileToExtract, onProgress);
-        return result?.text ?? null;
-      }
-
-      // PDF: fallback to API (requires network)
       const dataUrl: string = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -266,13 +255,11 @@ export function DocumentUpload({ praticaId, open, onOpenChange, onSuccess, onLet
 
       updateFileStatus(item.id, { progress: 40 });
 
-      // Extract text (Tesseract for images, API for PDF)
+      // Extract text
       let extractedText: string | null = null;
       if (item.file.type.startsWith('image/') || item.file.type === 'application/pdf') {
         updateFileStatus(item.id, { status: 'extracting', progress: 50 });
-        extractedText = await extractTextFromFile(item.file, (p) =>
-          updateFileStatus(item.id, { status: 'extracting', progress: 50 + Math.round((p / 100) * 40) })
-        );
+        extractedText = await extractTextFromFile(item.file);
       }
 
       // Analyze

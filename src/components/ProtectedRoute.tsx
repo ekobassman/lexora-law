@@ -4,7 +4,6 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useTermsCheck } from '@/hooks/useTermsCheck';
 import { TermsReacceptDialog } from '@/components/TermsReacceptDialog';
-import { isAdminEmail } from '@/lib/adminConfig';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,8 +18,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('loading');
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('loading');
   const [userId, setUserId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [isAnonymousUser, setIsAnonymousUser] = useState(false);
 
   // Terms check hook
   const { loading: termsLoading, termsOutdated, privacyOutdated, ageNotConfirmed, needsReaccept, refresh: refreshTerms } = useTermsCheck(userId);
@@ -38,71 +35,27 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         if (!session?.access_token) {
           setSessionStatus('unauthenticated');
           setUserId(null);
-          setIsAnonymousUser(false);
-          return;
-        }
-
-        const isAnonymous =
-          session.user?.is_anonymous === true || session.user?.app_metadata?.is_anonymous === true;
-        if (isAnonymous) {
-          setSessionStatus('unauthenticated');
-          setUserId(null);
-          setIsAnonymousUser(true);
           return;
         }
 
         setSessionStatus('authenticated');
         setUserId(session.user.id);
-        setUserEmail(session.user.email ?? '');
-        setIsAnonymousUser(false);
 
-        // Debug: log user / metadata (admin check)
-        const u = session.user;
-        console.log('[ProtectedRoute] user for admin check:', {
-          id: u?.id,
-          email: u?.email,
-          user_metadata: u?.user_metadata,
-          app_metadata: u?.app_metadata,
-        });
-
-        // If admin is required, check admin status (RPC reads user_roles / profiles)
+        // If admin is required, check admin status
         if (requireAdmin) {
           try {
             const { data: adminData, error } = await supabase.rpc('is_admin');
             if (cancelled) return;
-
-            console.log('[ProtectedRoute] is_admin RPC result:', { adminData, error: error?.message });
-
+            
             if (error) {
               console.error('[ProtectedRoute] is_admin RPC error:', error);
-              // Fallback: if DB role missing (e.g. after migration), allow known admin email
-              if (isAdminEmail(u?.email)) {
-                console.log('[ProtectedRoute] fallback: admin by email');
-                setAdminStatus('admin');
-              } else {
-                setAdminStatus('error');
-              }
-            } else if (adminData === true) {
-              setAdminStatus('admin');
+              setAdminStatus('error');
             } else {
-              // RPC returned false: no row in user_roles. Fallback to email for known admin.
-              if (isAdminEmail(u?.email)) {
-                console.log('[ProtectedRoute] fallback: admin by email (RPC false)');
-                setAdminStatus('admin');
-              } else {
-                setAdminStatus('not_admin');
-              }
+              setAdminStatus(adminData === true ? 'admin' : 'not_admin');
             }
           } catch (e) {
             console.error('[ProtectedRoute] is_admin threw:', e);
-            if (!cancelled) {
-              if (isAdminEmail(u?.email)) {
-                console.log('[ProtectedRoute] fallback: admin by email (after throw)');
-                setAdminStatus('admin');
-              } else {
-                setAdminStatus('error');
-              }
-            }
+            if (!cancelled) setAdminStatus('error');
           }
         }
       } catch (e) {
@@ -110,7 +63,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         if (!cancelled) {
           setSessionStatus('unauthenticated');
           setUserId(null);
-          setIsAnonymousUser(false);
         }
       }
     };
@@ -124,40 +76,26 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
       if (!session?.access_token) {
         setSessionStatus('unauthenticated');
         setUserId(null);
-        setIsAnonymousUser(false);
         setAdminStatus('loading'); // Reset admin status
-        return;
-      }
-
-      const isAnonymous =
-        session.user?.is_anonymous === true || session.user?.app_metadata?.is_anonymous === true;
-      if (isAnonymous) {
-        setSessionStatus('unauthenticated');
-        setUserId(null);
-        setIsAnonymousUser(true);
         return;
       }
 
       setSessionStatus('authenticated');
       setUserId(session.user.id);
-      setIsAnonymousUser(false);
 
       // Re-check admin status on auth change if required
       if (requireAdmin) {
-        setAdminStatus('loading');
+        setAdminStatus('loading'); // Show loader while checking
         setTimeout(async () => {
           try {
             const { data: adminData, error } = await supabase.rpc('is_admin');
-            const email = session?.user?.email;
             if (error) {
-              setAdminStatus(isAdminEmail(email) ? 'admin' : 'error');
-            } else if (adminData === true) {
-              setAdminStatus('admin');
+              setAdminStatus('error');
             } else {
-              setAdminStatus(isAdminEmail(email) ? 'admin' : 'not_admin');
+              setAdminStatus(adminData === true ? 'admin' : 'not_admin');
             }
           } catch {
-            setAdminStatus(isAdminEmail(session?.user?.email) ? 'admin' : 'error');
+            setAdminStatus('error');
           }
         }, 0);
       }
@@ -178,11 +116,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  // NOT AUTHENTICATED: anonymous users go to homepage (/), others to /auth
+  // NOT AUTHENTICATED: redirect to /auth
   if (sessionStatus === 'unauthenticated') {
-    if (isAnonymousUser) {
-      return <Navigate to="/" replace />;
-    }
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
@@ -211,8 +146,9 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  // ADMIN REQUIRED: do NOT redirect on error or not_admin — always render AdminPanel so page loads (no white page / redirect loop)
+  // ADMIN REQUIRED: wait for admin status
   if (requireAdmin) {
+    // Still checking admin status - show loader (NO REDIRECT YET)
     if (adminStatus === 'loading') {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background">
@@ -220,7 +156,18 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         </div>
       );
     }
-    // error / not_admin: still render children; AdminPanel will show "Not authorized" or message
+
+    // Error checking admin (e.g., 401) - redirect to auth
+    if (adminStatus === 'error') {
+      return <Navigate to="/auth" state={{ from: location }} replace />;
+    }
+
+    // Not admin - redirect to dashboard
+    if (adminStatus === 'not_admin') {
+      return <Navigate to="/dashboard" replace />;
+    }
+
+    // adminStatus === 'admin' - allow through
   }
 
   return <>{children}</>;

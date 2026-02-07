@@ -67,9 +67,16 @@ serve(async (req) => {
       });
     }
 
-    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === (caller.user.email ?? "").toLowerCase())) {
-      return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
+    // Check admin role in user_roles table
+    const { data: adminRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!adminRole) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

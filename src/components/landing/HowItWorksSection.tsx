@@ -65,14 +65,14 @@ export function HowItWorksSection({ id }: HowItWorksSectionProps) {
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <div key={index} className="relative flex flex-col items-center text-center overflow-hidden min-w-0">
+                <div key={index} className="relative flex flex-col items-center text-center">
                   {/* Step number badge */}
                   <div className="absolute -top-2 -right-2 md:relative md:top-0 md:right-0 z-10">
                     <span className="text-xs font-bold text-gold/60 md:hidden">{step.number}</span>
                   </div>
                   
                   {/* Icon container */}
-                  <div className={`relative h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-6 shadow-lg shadow-gold/10 z-10`}>
+                  <div className={`relative h-20 w-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-6 shadow-lg shadow-gold/10 z-10`}>
                     <Icon className="h-10 w-10 text-white" />
                     {/* Step number */}
                     <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-navy border-2 border-gold flex items-center justify-center">
@@ -88,8 +88,8 @@ export function HowItWorksSection({ id }: HowItWorksSectionProps) {
                   )}
                   
                   {/* Content */}
-                  <h3 className="text-lg font-semibold text-ivory mb-2 line-clamp-2 break-words">{step.title}</h3>
-                  <p className="text-sm text-ivory/60 leading-relaxed line-clamp-3 break-words">{step.description}</p>
+                  <h3 className="text-lg font-semibold text-ivory mb-2">{step.title}</h3>
+                  <p className="text-sm text-ivory/60 leading-relaxed">{step.description}</p>
                 </div>
               );
             })}

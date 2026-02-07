@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, RefreshCw, AlertTriangle, CreditCard, FileText, MessageSquare, Calendar, ArrowLeft, Search, Shield, PlayCircle, CheckCircle, XCircle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { isAdminEmail } from "@/lib/adminConfig";
 
 interface UsageStatus {
   plan: string;
@@ -83,7 +82,7 @@ export default function AdminUsage() {
   const [selfTestLoading, setSelfTestLoading] = useState(false);
   const [selfTestResult, setSelfTestResult] = useState<SelfTestResult | null>(null);
 
-  // Check admin status (RPC + fallback by email when DB not populated)
+  // Check admin status
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!user) {
@@ -91,15 +90,17 @@ export default function AdminUsage() {
         return;
       }
 
+      if (user.email === "imbimbo.bassman@gmail.com") {
+        setIsAdmin(true);
+        setCheckingAdmin(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase.rpc("is_admin");
-        if (error) {
-          setIsAdmin(isAdminEmail(user?.email));
-        } else {
-          setIsAdmin(data === true || isAdminEmail(user?.email));
-        }
+        setIsAdmin(error ? false : data === true);
       } catch {
-        setIsAdmin(isAdminEmail(user?.email));
+        setIsAdmin(false);
       } finally {
         setCheckingAdmin(false);
       }

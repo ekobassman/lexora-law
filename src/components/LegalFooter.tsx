@@ -69,26 +69,26 @@ export const LegalFooter = forwardRef<HTMLElement, LegalFooterProps>(function Le
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
             {/* Product */}
             <div>
-              <h4 className="font-semibold text-ivory mb-4">{t('footer.product')}</h4>
+              <h4 className="font-semibold text-ivory mb-4">Produkt</h4>
               <ul className="space-y-3">
                 <li>
                   <a href="#how-it-works" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.howItWorks')}
+                    So funktioniert's
                   </a>
                 </li>
                 <li>
                   <a href="#pricing" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.pricing')}
+                    Preise
                   </a>
                 </li>
                 <li>
                   <a href="#documents" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.supportedDocuments')}
+                    Unterstützte Dokumente
                   </a>
                 </li>
                 <li>
                   <a href="#faq" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.faq')}
+                    FAQ
                   </a>
                 </li>
               </ul>
@@ -96,22 +96,22 @@ export const LegalFooter = forwardRef<HTMLElement, LegalFooterProps>(function Le
 
             {/* Company */}
             <div>
-              <h4 className="font-semibold text-ivory mb-4">{t('footer.company')}</h4>
+              <h4 className="font-semibold text-ivory mb-4">Unternehmen</h4>
               <ul className="space-y-3">
                 <li>
                   <Link to="/support" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.aboutUs')}
+                    Über uns
                   </Link>
                 </li>
                 <li>
                   <Link to="/support" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.contact')}
+                    Kontakt
                   </Link>
                 </li>
                 {showImpressum && (
                   <li>
                     <Link to="/impressum" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                      {t('footer.impressum')}
+                      Impressum
                     </Link>
                   </li>
                 )}
@@ -120,21 +120,21 @@ export const LegalFooter = forwardRef<HTMLElement, LegalFooterProps>(function Le
 
             {/* Legal */}
             <div>
-              <h4 className="font-semibold text-ivory mb-4">{t('footer.legal')}</h4>
+              <h4 className="font-semibold text-ivory mb-4">Rechtliches</h4>
               <ul className="space-y-3">
                 <li>
                   <Link to="/privacy" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.privacy')}
+                    Datenschutz
                   </Link>
                 </li>
                 <li>
                   <Link to="/terms" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.terms')}
+                    Nutzungsbedingungen
                   </Link>
                 </li>
                 <li>
                   <Link to="/disclaimer" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.disclaimer')}
+                    Haftungsausschluss
                   </Link>
                 </li>
               </ul>
@@ -142,11 +142,11 @@ export const LegalFooter = forwardRef<HTMLElement, LegalFooterProps>(function Le
 
             {/* Support */}
             <div>
-              <h4 className="font-semibold text-ivory mb-4">{t('footer.support')}</h4>
+              <h4 className="font-semibold text-ivory mb-4">Support</h4>
               <ul className="space-y-3">
                 <li>
                   <Link to="/support" className="text-ivory/60 hover:text-gold text-sm transition-colors">
-                    {t('footer.helpCenter')}
+                    Hilfe-Center
                   </Link>
                 </li>
                 <li>
@@ -198,7 +198,7 @@ export const LegalFooter = forwardRef<HTMLElement, LegalFooterProps>(function Le
             <div className="flex items-start gap-3 rounded-lg bg-ivory/5 p-4 max-w-3xl mx-auto">
               <Shield className="h-5 w-5 flex-shrink-0 text-gold/60 mt-0.5" />
               <p className="text-xs text-ivory/50 leading-relaxed">
-                {t('footer.disclaimerText')}
+                Lexora ist ein KI-basierter Assistent und bietet keine Rechtsberatung. Die generierten Inhalte dienen ausschließlich zu Informationszwecken. Für rechtlich bindende Entscheidungen konsultieren Sie bitte einen qualifizierten Anwalt.
               </p>
             </div>
           </div>

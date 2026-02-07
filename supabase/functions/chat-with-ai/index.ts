@@ -7,8 +7,11 @@ import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
-import { UNIFIED_LEXORA_IDENTITY } from "../_shared/lexoraSystemPrompt.ts";
-import { getCorsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -81,7 +84,6 @@ const LANGUAGE_MAP: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -111,7 +113,7 @@ serve(async (req) => {
       );
     }
 
-    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId, legalSearchContext = [] } = await req.json();
+    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId } = await req.json();
 
     if (!userMessage || userMessage.trim().length === 0) {
       return new Response(
@@ -134,10 +136,36 @@ serve(async (req) => {
     
     const intakeModeRules = getIntakeModeRules(langCode);
 
-    const lexoraMasterRules = `${UNIFIED_LEXORA_IDENTITY}
+    const lexoraMasterRules = `LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT (CONTEXT-ISOLATED)
+
+=== IDENTITÀ ===
+Sei Lexora, assistente AI intelligente che funziona come ChatGPT ma specializzata in documenti legali/amministrativi.
 
 === LINGUA ===
 Rispondi nella lingua corrente dell'interfaccia utente: ${outputLanguage}. Nessuna eccezione.
+
+=== UNIFIED INTELLIGENT BEHAVIOR ===
+CORE: Sei un'AI conversazionale e utile. Rispondi alle domande naturalmente, fornisci spiegazioni, brainstorming - E quando serve un documento formale, crealo con precisione.
+
+1) RILEVAMENTO INTENTO AUTOMATICO:
+- CONVERSAZIONE: Domande, spiegazioni, idee → rispondi conversazionalmente come ChatGPT
+- RICHIESTA INFO: Servono dati esterni → cerca online autonomamente PRIMA
+- CREAZIONE DOCUMENTO: Serve lettera formale → segui regole documento rigide
+
+2) RICERCA ONLINE INTELLIGENTE (AUTONOMA):
+Quando servono informazioni esterne (indirizzi, procedure, contatti):
+- Cerca autonomamente con query expansion
+- Se trovato: proponi e chiedi conferma
+- Se NON trovato: fai UNA domanda chiara, NON inventare
+- Se utente dice "trovalo tu": DEVI cercare online
+
+3) REGOLE GENERAZIONE DOCUMENTI (RIGIDE):
+NON generare MAI un documento finale automaticamente.
+FLUSSO OBBLIGATORIO:
+1. Raccogli informazioni
+2. Riassumi cosa verrà inserito
+3. Chiedi conferma ESPLICITA
+4. SOLO dopo conferma → genera documento
 
 ⚠️ CONTESTO ISOLATO - REGOLA CRITICA ⚠️
 - Questa conversazione riguarda SOLO la pratica corrente.
@@ -145,18 +173,29 @@ Rispondi nella lingua corrente dell'interfaccia utente: ${outputLanguage}. Nessu
 - Ogni pratica/fascicolo è completamente indipendente.
 
 === AMBITO AMMESSO (SEMPRE ACCETTARE) ===
-✔️ Lettere a scuole, asili, università, datori di lavoro, proprietari, aziende, uffici pubblici, banche, assicurazioni.
-✔️ Qualsiasi comunicazione formale o semi-formale scritta. MAI rifiutare questi tipi di richieste.
+✔️ Lettere a scuole, asili, università
+✔️ Comunicazioni con datori di lavoro, proprietari, aziende
+✔️ Lettere a uffici pubblici, banche, assicurazioni
+✔️ Qualsiasi comunicazione formale o semi-formale scritta
+- MAI rifiutare questi tipi di richieste
 
 ${intakeModeRules}
 
 ${DOCUMENT_TYPE_DETECTION}
 
-LIMITI: Non rappresenti l'utente in tribunale. Puoi rifiutare SOLO: intrattenimento, ricette, argomenti estranei a documenti.
+LIMITI:
+- Non rappresenti l'utente in tribunale.
+- Puoi rifiutare SOLO: intrattenimento, ricette, argomenti estranei a documenti.
 
-⛔ PLACEHOLDER VIETATI: NON usare MAI placeholder tra parentesi quadre. Se mancano informazioni: CHIEDI all'utente.
+ANTI-RIFIUTO (CRITICO):
+- È VIETATO rifiutare lettere a scuole, datori di lavoro, proprietari.
 
-FORMATO OUTPUT (SOLO DOPO CONFERMA): Output SOLO testo lettera. NO spiegazioni, NO meta-commenti.
+⛔ PLACEHOLDER VIETATI - REGOLA ASSOLUTA ⛔
+NON usare MAI placeholder tra parentesi quadre.
+Se mancano informazioni: CHIEDI all'utente, NON generare con placeholder.
+
+FORMATO OUTPUT (SOLO DOPO CONFERMA):
+Output SOLO testo lettera. NO spiegazioni, NO meta-commenti.
 Struttura: Mittente → Destinatario → Luogo+Data → Oggetto → Corpo → Chiusura → Firma.`;
 
     let systemPrompt: string;
@@ -190,7 +229,6 @@ DEVI:
 ✔️ Aggiungere contenuti, espandere sezioni, rafforzare argomenti
 ✔️ Correggere grammatica, ortografia, struttura
 ✔️ Se mancano dati specifici (nome, data, indirizzo), CHIEDI all'utente
-✔️ Spiegare le implicazioni legali delle modifiche quando rilevante (es. "Attenzione: rimuovendo questa clausola perdi la protezione X")
 
 ⛔ NON DEVI:
 - Usare placeholder come [Nome], [Data], [CAP]
@@ -301,18 +339,6 @@ But NEVER refuse to answer or replace your response with this note.`;
       }
     }
 
-    // CLIENT-PROVIDED LEGAL SEARCH CONTEXT (from webSearch.ts)
-    const legalSources: SearchResult[] = Array.isArray(legalSearchContext) ? legalSearchContext.map((r: { title?: string; snippet?: string; link?: string; url?: string; date?: string }) => ({
-      title: r.title ?? '',
-      snippet: r.snippet ?? '',
-      url: r.link ?? r.url ?? '',
-    })).filter((r: SearchResult) => r.url) : [];
-    if (legalSources.length > 0) {
-      const sourcesBlock = legalSources.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nFonte: ${r.url}`).join('\n\n');
-      openaiMessages[0].content += `\n\nFONTI UFFICIALI CONSULTATE (use to inform your answer, cite when relevant):\n${sourcesBlock}\n\n`;
-      webSearchResults = [...webSearchResults, ...legalSources];
-    }
-
     // Use OpenAI API directly
     const aiResult = await callOpenAI({
       messages: openaiMessages,
@@ -340,7 +366,7 @@ But NEVER refuse to answer or replace your response with this note.`;
       throw new Error("No response from AI");
     }
 
-    // WEB ASSIST: Append sources section if web search or legal search was performed
+    // WEB ASSIST: Append sources section if web search was performed
     if (webSearchResults.length > 0) {
       content += formatSourcesSection(webSearchResults, langCode);
     }

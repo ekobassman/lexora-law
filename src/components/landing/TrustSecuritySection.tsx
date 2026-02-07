@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Server, Eye, ShieldCheck, Globe } from 'lucide-react';
+import { Shield, Lock, Server, Eye, CheckCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TrustSecuritySectionProps {
@@ -33,17 +33,9 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
   ];
 
   const countries = [
-    { code: 'US', name: t('landingSections.trust.countries.us'), flag: '🇺🇸' },
     { code: 'DE', name: t('landingSections.trust.countries.de'), flag: '🇩🇪' },
     { code: 'AT', name: t('landingSections.trust.countries.at'), flag: '🇦🇹' },
     { code: 'CH', name: t('landingSections.trust.countries.ch'), flag: '🇨🇭' },
-    { code: 'IT', name: t('landingSections.trust.countries.it'), flag: '🇮🇹' },
-    { code: 'FR', name: t('landingSections.trust.countries.fr'), flag: '🇫🇷' },
-    { code: 'ES', name: t('landingSections.trust.countries.es'), flag: '🇪🇸' },
-    { code: 'UK', name: t('landingSections.trust.countries.uk'), flag: '🇬🇧' },
-    { code: 'UA', name: t('landingSections.trust.countries.ua'), flag: '🇺🇦' },
-    { code: 'TR', name: t('landingSections.trust.countries.tr'), flag: '🇹🇷' },
-    { code: 'LATAM', name: t('landingSections.trust.countries.latam'), flag: '🌎' },
   ];
 
   return (
@@ -62,42 +54,42 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
           </p>
         </div>
 
-        {/* Security Features Grid - explicit icon color for dark bg */}
+        {/* Security Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto mb-16">
           {securityFeatures.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div
                 key={index}
-                className="text-center p-6 rounded-xl border border-amber-500/30 bg-slate-900/60 hover:border-amber-500/50 transition-all overflow-hidden min-h-0"
+                className="text-center p-6 rounded-xl border border-gold/20 bg-navy/50 hover:border-gold/40 transition-all"
               >
-                <div className="h-14 w-14 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-4 [&_svg]:text-amber-400">
-                  <Icon className="h-7 w-7 text-amber-400 shrink-0" strokeWidth={2} />
+                <div className="h-14 w-14 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-4">
+                  <Icon className="h-7 w-7 text-gold" />
                 </div>
-                <h3 className="font-semibold text-ivory mb-2 line-clamp-2 break-words">{feature.title}</h3>
-                <p className="text-sm text-ivory/60 line-clamp-3 break-words">{feature.description}</p>
+                <h3 className="font-semibold text-ivory mb-2">{feature.title}</h3>
+                <p className="text-sm text-ivory/60">{feature.description}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Certifications - high-contrast icons/text on dark bg (white/amber) */}
-        <div className="flex flex-wrap justify-center items-center gap-4 mb-12">
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
-            <ShieldCheck className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
-            <span className="text-sm font-medium text-amber-200">ISO 27001</span>
+        {/* Certifications */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30">
+            <CheckCircle className="h-5 w-5 text-green-400" />
+            <span className="text-sm text-green-300 font-medium">ISO 27001</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
-            <Shield className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
-            <span className="text-sm font-medium text-amber-200">{t('landingSections.trust.certifications.gdpr')}</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30">
+            <Shield className="h-5 w-5 text-blue-400" />
+            <span className="text-sm text-blue-300 font-medium">{t('landingSections.trust.certifications.gdpr')}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-amber-500/40 min-h-[2.75rem]">
-            <Lock className="h-5 w-5 shrink-0 text-amber-400" strokeWidth={2} aria-hidden />
-            <span className="text-sm font-medium text-amber-200">SOC 2 Type II</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30">
+            <Lock className="h-5 w-5 text-purple-400" />
+            <span className="text-sm text-purple-300 font-medium">SOC 2 Type II</span>
           </div>
         </div>
 
-        {/* Supported Countries - 3 cols desktop (3+3+3+2), no orphan; clamp long names */}
+        {/* Supported Countries */}
         <div className="border-t border-gold/10 pt-12">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
@@ -108,16 +100,15 @@ export function TrustSecuritySection({ id }: TrustSecuritySectionProps) {
               {t('landingSections.trust.countriesSubtitle')}
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 max-w-4xl mx-auto justify-items-stretch">
+          
+          <div className="flex flex-wrap justify-center gap-4">
             {countries.map((country) => (
               <div
                 key={country.code}
-                className="flex items-center justify-center gap-3 p-4 min-h-[80px] rounded-xl bg-ivory/5 border border-gold/20 hover:border-gold/40 transition-all overflow-hidden min-w-0"
+                className="flex items-center gap-3 px-6 py-3 rounded-lg bg-ivory/5 border border-gold/20 hover:border-gold/40 transition-all"
               >
-                <span className="text-2xl md:text-3xl shrink-0" aria-hidden>{country.flag}</span>
-                <span className="font-medium text-ivory text-center text-sm md:text-base line-clamp-2 break-words leading-tight min-w-0 flex-1">
-                  {country.name}
-                </span>
+                <span className="text-3xl">{country.flag}</span>
+                <span className="font-medium text-ivory">{country.name}</span>
               </div>
             ))}
           </div>

@@ -5,7 +5,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLogout } from '@/hooks/useLogout';
 import { LogOut, User, Settings, ChevronDown, HeadsetIcon, Menu, X } from 'lucide-react';
-import { InstallAppButton } from '@/components/InstallAppButton';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -25,16 +24,11 @@ export function Header() {
 
   const isLanding = location.pathname === '/';
 
-  const navLabel = (key: string, fallback: string) => {
-    const v = t(key);
-    return v && v !== key && !v.startsWith('nav.') ? v : fallback;
-  };
-
-  // Nav links for landing page (i18n)
+  // Nav links for landing page
   const landingNavLinks = [
-    { href: '#how-it-works', labelKey: 'nav.howItWorks', fallback: 'How it works' },
-    { href: '#pricing', labelKey: 'nav.pricing', fallback: 'Pricing' },
-    { href: '#faq', labelKey: 'nav.faq', fallback: 'FAQ' },
+    { href: '#how-it-works', label: 'So funktioniert\'s' },
+    { href: '#pricing', label: 'Preise' },
+    { href: '#faq', label: 'FAQ' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -47,7 +41,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-navy border-b border-gold/20 safe-area-top">
+    <header className="sticky top-0 z-50 w-full bg-navy border-b border-gold/20">
       <div className="flex h-16 items-center justify-between px-3 sm:px-4 md:px-6 lg:container md:h-20">
         {/* Logo - Premium Legal Style */}
         <Link to={user ? "/app" : "/"} className="flex items-center gap-2 py-2 shrink-0">
@@ -65,18 +59,16 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Desktop Navigation (landing page only) - flex, truncate long labels */}
+        {/* Desktop Navigation (landing page only) */}
         {isLanding && !user && (
-          <nav className="hidden md:flex items-center gap-3 lg:gap-5 min-w-0 flex-1 justify-center max-w-2xl">
-            <InstallAppButton variant="menu" />
+          <nav className="hidden md:flex items-center gap-6">
             {landingNavLinks.map((link) => (
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium whitespace-nowrap truncate max-w-[140px] lg:max-w-none lg:truncate-none"
-                title={navLabel(link.labelKey, link.fallback)}
+                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium"
               >
-                {navLabel(link.labelKey, link.fallback)}
+                {link.label}
               </button>
             ))}
           </nav>
@@ -133,7 +125,6 @@ export function Header() {
                   <HeadsetIcon className="mr-2 h-4 w-4" />
                   {t('nav.support')}
                 </DropdownMenuItem>
-                <InstallAppButton />
                 <DropdownMenuSeparator className="bg-navy/10" />
                 <DropdownMenuItem onClick={logout} className="text-destructive hover:bg-destructive/10">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -157,9 +148,9 @@ export function Header() {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href)}
-                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium text-left py-2 break-words"
+                className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium text-left py-2"
               >
-                {navLabel(link.labelKey, link.fallback)}
+                {link.label}
               </button>
             ))}
             <Link
@@ -167,9 +158,8 @@ export function Header() {
               className="text-ivory/70 hover:text-gold transition-colors text-sm font-medium py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
-              {t('nav.support')}
+              Support
             </Link>
-            <InstallAppButton variant="menu" />
           </nav>
         </div>
       )}

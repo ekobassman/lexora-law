@@ -74,10 +74,10 @@ export function FAQSection({ id }: FAQSectionProps) {
                 value={`item-${index}`}
                 className="border border-navy/10 rounded-lg px-6 bg-white shadow-sm"
               >
-                <AccordionTrigger className="text-left text-navy font-semibold hover:text-gold hover:no-underline py-4 break-words">
+                <AccordionTrigger className="text-left text-navy font-semibold hover:text-gold hover:no-underline py-4">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-navy/70 pb-4 leading-relaxed break-words">
+                <AccordionContent className="text-navy/70 pb-4 leading-relaxed">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

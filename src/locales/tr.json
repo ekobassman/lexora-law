@@ -487,8 +487,6 @@
     "modifyButton": "Taslağı değiştir",
     "send": "Gönder",
     "thinking": "Düşünüyor...",
-    "outOfScopeRefusal": "Üzgünüm, yalnızca hukuki ve idari konularda yardımcı olabilirim. Sözleşmeler, resmi yazılar, hukuki danışmanlık veya bürokratik işlemler konusunda size yardımcı olabilirim. Bu konulardan biriyle ilgili yardıma ihtiyacınız var mı?",
-    "searchingLegalSources": "🔍 Güncel hukuki kaynaklar aranıyor...",
     "error": "Mesaj gönderme hatası",
     "welcome": "Merhaba! Bu mektupla nasıl yardımcı olabilirim?",
     "regenerate": "Yanıtı yeniden oluştur",
@@ -566,27 +564,13 @@
     "deleteCase": "Davayı sil"
   },
   "footer": {
-    "product": "Ürün",
-    "howItWorks": "Nasıl çalışır",
-    "pricing": "Fiyatlar",
-    "supportedDocuments": "Desteklenen belgeler",
-    "faq": "SSS",
-    "company": "Şirket",
-    "aboutUs": "Hakkımızda",
-    "contact": "İletişim",
-    "legal": "Yasal",
     "privacy": "Gizlilik Politikası",
     "terms": "Kullanım Koşulları",
     "disclaimer": "Sorumluluk Reddi",
-    "support": "Destek",
-    "helpCenter": "Yardım Merkezi",
+    "legal": "Yasal Bildirim",
     "impressum": "Künye",
-    "disclaimerText": "Lexora bir YZ asistanıdır ve hukuki danışmanlık sunmaz. Üretilen içerik yalnızca bilgilendirme amaçlıdır. Hukuki kararlar için bir avukata danışın.",
+    "disclaimerText": "Bu hizmet hukuki danışmanlık oluşturmaz. Karmaşık durumlar için bir avukata danışın.",
     "copyright": "© {year} LEXORA. Tüm hakları saklıdır."
-  },
-  "pullToRefresh": {
-    "pull": "Yenilemek için aşağı çekin",
-    "release": "Yenilemek için bırakın"
   },
   "pricing": {
     "localCurrencyNote": "Fiyatlar yerel para biriminizde gösterilir.",
@@ -1014,10 +998,7 @@
     "logout": "Çıkış",
     "login": "Giriş",
     "signup": "Kayıt Ol",
-    "support": "Destek",
-    "howItWorks": "Nasıl çalışır",
-    "pricing": "Fiyatlar",
-    "faq": "SSS"
+    "support": "Destek"
   },
   "tryChat": {
     "title": "Lexora'yı şimdi deneyin",
@@ -1117,7 +1098,6 @@
     "testimonials": { "badge": "Referanslar", "title": "Kullanıcılarımız ne diyor", "subtitle": "Binlerce kişi resmi mektuplara yanıt vermek için Lexora'ya güveniyor.", "stats": { "satisfaction": { "value": "98%", "label": "Memnuniyet oranı" }, "rating": { "value": "4.8/5", "label": "Ortalama puan" }, "documents": { "value": "2.500+", "label": "Analiz edilen belge" } }, "users": [ { "name": "Thomas M.", "location": "Münih, Almanya", "text": "Vergi dairesinden bir mektup aldım ve nasıl yanıtlayacağımı bilmiyordum. Lexora 10 dakikada profesyonel bir yanıt oluşturmama yardımcı oldu.", "useCase": "Vergi Bildirimi" }, { "name": "Maria K.", "location": "Viyana, Avusturya", "text": "Yabancı olarak resmi dili çoğu zaman anlamıyorum. Lexora her şeyi açıkça açıklıyor. Kesinlikle tavsiye ederim!", "useCase": "Oturma İzni" }, { "name": "Stefan B.", "location": "Zürih, İsviçre", "text": "Ev sahibim haksız bir uyarı göndermek istedi. Lexora ile yasal gerekçeli bir itiraz oluşturdum. Dava düşürüldü.", "useCase": "Kira Hukuku" }, { "name": "Anna L.", "location": "Berlin, Almanya", "text": "Radar cezası aldım, Lexora ile itiraz ettim - ceza azaltıldı! YZ gerçekten ilgili yasaları biliyor.", "useCase": "Trafik" } ] },
     "faq": { "badge": "SSS", "title": "Sık Sorulan Sorular", "subtitle": "Lexora hakkında önemli soruların yanıtlarını bulun.", "contactCta": "Hâlâ sorularınız mı var?", "contactLink": "Bize ulaşın", "items": [ { "question": "Verilerim güvende mi?", "answer": "Evet, verileriniz tamamen korunmaktadır. Uçtan uca şifreleme kullanıyoruz ve tüm verileri AB sunucularında saklıyoruz." }, { "question": "Hangi ülkeler destekleniyor?", "answer": "Lexora şu anda Almanya, Avusturya ve İsviçre'yi tam yasal adaptasyonla destekliyor." }, { "question": "YZ analizi ne kadar doğru?", "answer": "YZ'miz belge tanıma ve analizinde %98'in üzerinde doğruluk elde ediyor." }, { "question": "Oluşturulan yanıtları düzenleyebilir miyim?", "answer": "Elbette! Tüm yanıtlar tamamen özelleştirilebilir." }, { "question": "Hangi dosya formatları destekleniyor?", "answer": "Lexora 10MB'a kadar PDF, JPG, PNG, WEBP ve HEIC dosyalarını kabul eder." }, { "question": "Lexora bir avukatın yerini alır mı?", "answer": "Lexora bir YZ asistanıdır ve yasal tavsiyenin yerine geçmez." }, { "question": "Ücretsiz sürüm nasıl çalışır?", "answer": "Ücretsiz sürümle bir tam dosya işleyebilirsiniz." }, { "question": "Aboneliğimi iptal edebilir miyim?", "answer": "Evet, istediğiniz zaman iptal edebilirsiniz." } ] },
     "documents": { "badge": "Desteklenen Belgeler", "title": "Lexora hangi belgeleri analiz edebilir?", "subtitle": "Lexora çeşitli resmi mektupları anlar ve doğru yanıtı oluşturmanıza yardımcı olur.", "formatsTitle": "Desteklenen dosya formatları:", "types": [ { "title": "Vergi Bildirimleri", "description": "Gelir vergisi, KDV, emlak vergisi" }, { "title": "Mahkeme Yazıları", "description": "Ödeme emirleri, celpler, kararlar" }, { "title": "Göçmenlik Ofisi", "description": "Oturma izinleri, vizeler, vatandaşlık" }, { "title": "Sigortalar", "description": "Hasar raporları, redler, iptaller" }, { "title": "Kira Hukuku", "description": "Kira artışları, uyarılar, fesihler" }, { "title": "İş Hukuku", "description": "Uyarılar, fesihler, referanslar" }, { "title": "Ceza Bildirimleri", "description": "Radarlar, park ihlalleri, kabahatler" }, { "title": "Borç Tahsilatı", "description": "Ödeme talepleri, tahsilat işlemleri" }, { "title": "Resmi Yazılar", "description": "İş bulma kurumu, sosyal hizmetler" } ] },
-    "trust": { "badge": "Güvenlik", "title": "Verileriniz bizimle güvende", "subtitle": "Güvenlik ve gizlilik en önemli önceliklerimizdir.", "countriesTitle": "Desteklenen Ülkeler", "countriesSubtitle": "11 ülkede yasal gereksinimlere özel uyarlanmış:", "certifications": { "gdpr": "KVKK" }, "countries": { "us": "ABD", "de": "Almanya", "at": "Avusturya", "ch": "İsviçre", "it": "İtalya", "fr": "Fransa", "es": "İspanya", "uk": "Birleşik Krallık", "ua": "Ukrayna", "tr": "Türkiye", "latam": "Latin Amerika" }, "features": [ { "title": "KVKK Uyumlu", "description": "Avrupa veri koruma düzenlemelerine tam uyumlu." }, { "title": "SSL Şifreleme", "description": "Tüm veri transferleri için 256-bit SSL şifreleme." }, { "title": "AB Sunucuları", "description": "Tüm veriler yalnızca AB sunucularında saklanır." }, { "title": "Veri Paylaşımı Yok", "description": "Belgeleriniz asla üçüncü taraflarla paylaşılmaz." } ] }
-  },
-  "pwa": { "installPrompt": "Lexora'yı ana ekrana ekleyin", "installButton": "Uygulamayı Yükle", "installLater": "Daha sonra", "installing": "Yükleniyor...", "installed": "Uygulama yüklendi!", "alreadyInstalled": "Uygulama zaten yüklü", "updateApp": "Uygulamayı Güncelle", "offlineTitle": "Çevrimdışısınız", "offlineMessage": "Bazı özellikler sınırlıdır. Kaydedilen belgeler kullanılabilir.", "online": "Çevrimiçi", "offline": "Çevrimdışı", "iOSGuide": { "title": "Lexora'yı iPhone'unuza yükleyin", "installTitle": "Lexora'yı Yükle", "subtitle": "Anında erişim için ana ekrana ekleyin", "shareHint": "Paylaş düğmesine dokunun", "addToHomeButton": "Ana Ekrana Ekle", "hint": "Paylaş → Ana Ekrana Ekle", "step1": "Alttaki Paylaş butonuna dokunun", "step2": "\"Ana Ekrana Ekle\"yi seçin", "step3": "\"Ekle\" ile onaylayın", "gotIt": "Anladım, bir daha gösterme" }, "updateAvailable": "Yeni sürüm mevcut. Güncellemek için yenileyin." }
+    "trust": { "badge": "Güvenlik", "title": "Verileriniz bizimle güvende", "subtitle": "Güvenlik ve gizlilik en önemli önceliklerimizdir.", "countriesTitle": "Desteklenen Ülkeler", "countriesSubtitle": "Yasal gereksinimlere özel uyarlanmış:", "certifications": { "gdpr": "KVKK" }, "countries": { "de": "Almanya", "at": "Avusturya", "ch": "İsviçre" }, "features": [ { "title": "KVKK Uyumlu", "description": "Avrupa veri koruma düzenlemelerine tam uyumlu." }, { "title": "SSL Şifreleme", "description": "Tüm veri transferleri için 256-bit SSL şifreleme." }, { "title": "AB Sunucuları", "description": "Tüm veriler yalnızca AB sunucularında saklanır." }, { "title": "Veri Paylaşımı Yok", "description": "Belgeleriniz asla üçüncü taraflarla paylaşılmaz." } ] }
+  }
 }

@@ -46,18 +46,6 @@ npm run test:e2e:report
 - Direct route access protection
 - Backend limit enforcement
 
-### 4. `health.spec.ts` - Health Check (optional)
-- Calls Supabase Edge Function `health` when `VITE_SUPABASE_URL` or `SUPABASE_URL` is set
-- Skips when env is not set
-
-### 5. `demo-scan-document-flow.spec.ts` - Demo Chat Scan/Upload
-- Scan document button → InAppCamera → simulate photo → pipeline → analysis/draft in chat
-- Upload file in demo chat → pipeline → analysis or draft
-
-### 6. `dashboard-scan-document-flow.spec.ts` - Dashboard Scan (requires auth)
-- Login → Dashboard → "Scan document" → redirect to `/scan` → camera → name case → pipeline → redirect to `/pratiche/:id`
-- **Skips** if `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` are not set or login fails
-
 ## Environment Variables
 
 For testing with real users:

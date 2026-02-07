@@ -1,6 +1,5 @@
-// TEST
 import { useEffect, useRef, useState, useCallback, ChangeEvent, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -43,11 +42,6 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
 import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
-import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
-import { runCanonicalPipeline, isHeicFile, HEIC_NOT_SUPPORTED_MSG, type AnalysisItem } from '@/lib/canonicalPipeline';
-import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -69,53 +63,6 @@ const DEMO_BUFFER_KEY = 'lexora_demo_chat_buffer_v1';
 const DEMO_AI_CONTEXT_KEY = 'lexora_demo_ai_context_start_v1';
 // Key to migrate demo chat to dashboard after registration
 export const DEMO_PENDING_MIGRATION_KEY = 'lexora_demo_pending_migration_v1';
-
-/** Mock AI reply in demo mode – no backend, no auth, works in all UI languages */
-const DEMO_MOCK_REPLY_BY_LANG: Record<string, string> = {
-  IT: "Questa è una demo di Lexora. Nella versione completa puoi caricare una lettera ufficiale, ricevere un'analisi dei rischi e una risposta pronta da inviare.",
-  EN: "This is a Lexora demo. In the full version you can upload an official letter, get a risk analysis and a ready-to-send response.",
-  DE: "Dies ist eine Lexora-Demo. In der Vollversion können Sie ein offizielles Schreiben hochladen, eine Risikoanalyse und eine versandfertige Antwort erhalten.",
-  FR: "Ceci est une démo Lexora. Dans la version complète vous pouvez télécharger une lettre officielle, recevoir une analyse des risques et une réponse prête à envoyer.",
-  ES: "Esta es una demo de Lexora. En la versión completa puedes subir una carta oficial, recibir un análisis de riesgos y una respuesta lista para enviar.",
-  PL: "To jest demo Lexora. W pełnej wersji możesz przesłać oficjalny list, uzyskać analizę ryzyka i gotową odpowiedź.",
-  RO: "Aceasta este o demonstrație Lexora. În versiunea completă poți încărca o scrisoare oficială, primi o analiză a riscurilor și un răspuns gata de trimis.",
-  TR: "Bu bir Lexora demosudur. Tam sürümde resmi bir mektup yükleyebilir, risk analizi ve gönderilmeye hazır yanıt alabilirsiniz.",
-  AR: "هذا عرض تجريبي لـ Lexora. في النسخة الكاملة يمكنك تحميل خطاب رسمي والحصول على تحليل للمخاطر ورد جاهز للإرسال.",
-  UK: "Це демо Lexora. У повній версії ви можете завантажити офіційний лист, отримати аналіз ризикіv та готову відповідь.",
-  RU: "Это демо Lexora. В полной версии вы можете загрузить официальное письмо, получить анализ рисков и готовый ответ.",
-};
-const DEMO_MOCK_REPLY_FALLBACK = DEMO_MOCK_REPLY_BY_LANG.EN;
-
-/** First message in demo: Lexora asks for situation (conversion-oriented) */
-const DEMO_GREETING_BY_LANG: Record<string, string> = {
-  IT: "Ciao, sono Lexora. Descrivimi brevemente la tua situazione legale così vedo come posso aiutarti.",
-  EN: "Hi, I'm Lexora. Describe your legal situation briefly so I can see how to help you.",
-  DE: "Hallo, ich bin Lexora. Schildern Sie kurz Ihre rechtliche Situation, damit ich sehen kann, wie ich helfen kann.",
-  FR: "Bonjour, je suis Lexora. Décrivez brièvement votre situation juridique pour que je puisse vous aider.",
-  ES: "Hola, soy Lexora. Descríbeme brevemente tu situación legal para ver cómo puedo ayudarte.",
-  PL: "Cześć, jestem Lexora. Opisz krótko swoją sytuację prawną, abym mógł zobaczyć, jak mogę pomóc.",
-  RO: "Bună, sunt Lexora. Descrie-mi pe scurt situația ta juridică ca să văd cum te pot ajuta.",
-  TR: "Merhaba, ben Lexora. Bana kısa bir şekilde hukuki durumunuzu anlatın, nasıl yardımcı olabileceğimi göreyim.",
-  AR: "مرحباً، أنا Lexora. صف لي وضعك القانوني باختصار لأرى كيف أستطيع مساعدتك.",
-  UK: "Привіт, я Lexora. Коротко опиши свою правову ситуацію, щоб я міг побачити, як допомогти.",
-  RU: "Привет, я Lexora. Кратко опишите вашу правовую ситуацию, чтобы я мог понять, как помочь.",
-};
-
-/** Badge text: "Demo gratuita – nessun login richiesto" in all UI languages */
-const DEMO_BADGE_BY_LANG: Record<string, string> = {
-  IT: "Demo gratuita – nessun login richiesto",
-  EN: "Free demo – no login required",
-  DE: "Kostenlose Demo – keine Anmeldung",
-  FR: "Démo gratuite – pas de connexion",
-  ES: "Demo gratuita – sin registro",
-  PL: "Darmowe demo – bez logowania",
-  RO: "Demo gratuit – fără autentificare",
-  TR: "Ücretsiz demo – giriş gerekmez",
-  AR: "عرض تجريبي مجاني – لا حاجة لتسجيل الدخول",
-  UK: "Безкоштовна демо – без входу",
-  RU: "Бесплатная демо – без входа",
-};
-const DEMO_BADGE_FALLBACK = DEMO_BADGE_BY_LANG.EN;
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
@@ -280,17 +227,6 @@ function getSafeText(t: (key: string) => string, key: string, fallback: string):
   return result;
 }
 
-/** Format pipeline analysis for display in chat (OCR + analysis summary). */
-function formatAnalysisForChat(analysis: AnalysisItem | undefined, ocrSnippet?: string): string {
-  const parts: string[] = [];
-  if (analysis?.summary) parts.push(`**Summary:** ${analysis.summary}`);
-  if (analysis?.deadlines?.length) parts.push(`**Deadlines:** ${analysis.deadlines.join('; ')}`);
-  if (analysis?.risks?.length) parts.push(`**Risks:** ${analysis.risks.join('; ')}`);
-  if (analysis?.suggested_action) parts.push(`**Suggested action:** ${analysis.suggested_action}`);
-  if (ocrSnippet && ocrSnippet.trim()) parts.push(`\n*Extracted text (excerpt):*\n${ocrSnippet.trim().slice(0, 500)}${ocrSnippet.length > 500 ? '…' : ''}`);
-  return parts.length ? parts.join('\n\n') : 'Analysis completed. See draft below.';
-}
-
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -420,37 +356,25 @@ function cleanLetterTags(text: string): string {
 export function DemoChatSection() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
-
-  /** Demo mode: no auth, no backend, no Supabase, no rate limit – chat always works */
-  const qsDemo = new URLSearchParams(location.search).get('demo') === '1';
-  const envDemo = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_DEMO_MODE === true;
-  const pathDemo = location.pathname.includes('/demo');
-  const demoMode = Boolean(qsDemo || pathDemo || envDemo || !user);
-
-  /** Normalizza lingua per mock (evita undefined) */
-  const normalizeLang = useCallback((l?: string) => (l || 'en').slice(0, 2).toUpperCase(), []);
-  const lang = normalizeLang(language);
   
   const { isPaid, isUnlimited } = usePlanState();
   const { isAdmin } = useEntitlements();
 
-  // Anonymous terms acceptance - only for non-logged-in users (disabled in demo mode)
+  // Anonymous terms acceptance - only for non-logged-in users
   const { needsAcceptance: anonNeedsTerms, acceptTerms: acceptAnonTerms } = useAnonymousTermsCheck();
   
   // Track if user attempted to interact - only show terms dialog on interaction, not on page load
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   
-  // Helper to check terms before interaction – never block in demo mode
+  // Helper to check terms before interaction
   const checkTermsBeforeInteraction = useCallback(() => {
-    if (demoMode) return true; // No auth/terms check in demo
     if (!user && anonNeedsTerms) {
       setShowTermsDialog(true);
       return false; // Block interaction
     }
     return true; // Allow interaction
-  }, [demoMode, user, anonNeedsTerms]);
+  }, [user, anonNeedsTerms]);
   
   // Handle terms acceptance
   const handleTermsAccept = useCallback(() => {
@@ -487,9 +411,6 @@ export function DemoChatSection() {
   // This prevents action buttons from being enabled when draftText is restored from localStorage
   // but no document was actually generated in this conversation
   const [generatedInSession, setGeneratedInSession] = useState<boolean>(false);
-  const hasIncrementedCounterThisSession = useRef(false);
-  const [showSaveDocumentPWA, setShowSaveDocumentPWA] = useState(false);
-  const isMobile = useIsMobile();
 
   // Keep full UI history, but do NOT allow old sessions/drafts to pollute AI context.
   // Default behavior: start AI context at the end of any restored history.
@@ -516,13 +437,6 @@ export function DemoChatSection() {
     if (typeof buf.draftText === 'string' && buf.draftText) setDraftText(buf.draftText);
     if (typeof buf.input === 'string' && buf.input) setInput(buf.input);
   }, []); // run once
-
-  // Demo: show Lexora greeting when chat is empty (conversion-oriented first message)
-  useEffect(() => {
-    if (!demoMode || messages.length !== 0) return;
-    const greeting = DEMO_GREETING_BY_LANG[lang] || DEMO_GREETING_BY_LANG.EN;
-    setMessages([{ role: 'assistant', content: greeting, timestamp: new Date() }]);
-  }, [demoMode, messages.length, lang]);
 
   // Ensure AI context starts "fresh" when arriving with restored UI state.
   // This keeps the transcript visible, but prevents the AI from reusing old drafts/topics.
@@ -568,13 +482,12 @@ export function DemoChatSection() {
 
   const [showCamera, setShowCamera] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'ocr' | 'analyzing' | 'completed'>('idle');
+  const [processingStep, setProcessingStep] = useState<'idle' | 'uploading' | 'extracting' | 'analyzing' | 'completed'>('idle');
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const isRecordingRef = useRef(false);
   const finalTranscriptRef = useRef('');
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [isSearchingLegal, setIsSearchingLegal] = useState(false);
   
   const openLetterOnlyPreviewWithText = (text: string) => {
     const trimmed = (text || '').trim();
@@ -650,8 +563,6 @@ export function DemoChatSection() {
     placeholder: placeholderByLang[language] || 'Write here...',
     emptyState: getSafeText(t, 'demoChat.emptyState', 'Upload a document or describe what happened.'),
     thinking: getSafeText(t, 'chat.thinking', 'Thinking...'),
-    outOfScopeRefusal: getSafeText(t, 'chat.outOfScopeRefusal', 'I can only assist with legal and administrative matters.'),
-    searchingLegalSources: getSafeText(t, 'chat.searchingLegalSources', '🔍 Searching for updated legal sources...'),
     limitTitle: getSafeText(t, 'demoChat.limit.title', 'Free preview ended'),
     limitBody: getSafeText(t, 'demoChat.limit.body', 'Create a free account to continue and save your case.'),
     limitSignup: getSafeText(t, 'demoChat.limit.signup', 'Create account'),
@@ -839,8 +750,8 @@ export function DemoChatSection() {
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
   // Limit is reached ONLY if: limit exceeded AND a document was already generated
-  // In demo mode: no limit (chat always works)
-  const isLimitReached = demoMode ? false : (!shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft);
+  // This ensures users can always complete at least one document before being blocked
+  const isLimitReached = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft;
   const showDisclaimer = sessionCount >= DISCLAIMER_TRIGGER;
   const trimmedInput = input.trim();
   
@@ -895,36 +806,32 @@ export function DemoChatSection() {
     }
   };
 
-  /** Canonical pipeline: upload → ocr → analyze-and-draft. Returns { text, analysis, draft } or null. */
-  const processOCRSingle = async (
-    file: File,
-    isDemo?: boolean,
-    source?: 'upload' | 'camera'
-  ): Promise<{ text: string | null; analysis?: AnalysisItem; draft?: string; error?: string; details?: string }> => {
-    if (isHeicFile(file)) {
-      toast.error(HEIC_NOT_SUPPORTED_MSG, { duration: 6000 });
-      return { text: null, error: 'HEIC_NOT_SUPPORTED', details: HEIC_NOT_SUPPORTED_MSG };
-    }
+  const processOCRSingle = async (file: File): Promise<string | null> => {
     try {
-      const result = await runCanonicalPipeline(file, {
-        isDemo: isDemo ?? false,
-        source: source ?? 'upload',
-        onProgress: (step) => {
-          if (step === 'uploading') setProcessingStep('uploading');
-          else if (step === 'ocr') setProcessingStep('ocr');
-          else if (step === 'analyzing') setProcessingStep('analyzing');
-          else setProcessingStep('completed');
-        },
-        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
-      });
-      return {
-        text: result.ocr_text || null,
-        analysis: result.analysis as AnalysisItem,
-        draft: result.draft_text,
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { text: null, error: msg, details: msg };
+      const base64 = await fileToBase64(file);
+      const mimeType = guessMimeType(file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anonymous-ocr`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ base64, mimeType, language }),
+        }
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.ok) {
+        return null;
+      }
+
+      return data.text || '';
+    } catch {
+      return null;
     }
   };
 
@@ -932,13 +839,22 @@ export function DemoChatSection() {
     setIsProcessingFile(true);
     setProcessingStep('uploading');
     try {
-      const result = await processOCRSingle(file, demoMode);
-      if (result.text) {
+      // Step 1: Uploading (brief delay to show step)
+      await new Promise(r => setTimeout(r, 300));
+      setProcessingStep('extracting');
+      
+      // Step 2: Extracting text via OCR
+      const result = await processOCRSingle(file);
+      
+      if (result) {
+        setProcessingStep('analyzing');
+        // Step 3: Brief pause to show analyzing step before AI processes
+        await new Promise(r => setTimeout(r, 400));
         toast.success(txt.ocrSuccess);
-        return result.text;
+      } else {
+        toast.error(txt.ocrError);
       }
-      toast.error(result.details || result.error || txt.ocrError, { duration: 7000 });
-      return null;
+      return result;
     } finally {
       setProcessingStep('idle');
       setIsProcessingFile(false);
@@ -947,6 +863,16 @@ export function DemoChatSection() {
 
   const sendMessage = useCallback(async (messageContent: string, attachmentType?: 'image' | 'pdf' | null) => {
     if (isLoading || !messageContent.trim()) return;
+    
+    // Check terms before allowing interaction
+    if (!checkTermsBeforeInteraction()) return;
+
+    if (isLimitReached) {
+      setShowUpgradePopup(true);
+      return;
+    }
+
+    const isFirstMessage = messages.length === 0;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -955,43 +881,9 @@ export function DemoChatSection() {
       attachmentType,
     };
 
-    // Demo mode: call API with isDemo=true (Lexora asks questions, then CTA; no static mock)
-    // Check terms before allowing interaction (skipped in demo via checkTermsBeforeInteraction)
-    if (!checkTermsBeforeInteraction()) return;
-
-    if (isLimitReached) {
-      setShowUpgradePopup(true);
-      return;
-    }
-
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-
-    // Guardrail: block non-legal/administrative queries (skip in demo so "Ciao" / first message is allowed)
-    if (!demoMode && !isLegalAdministrativeQuery(messageContent.trim())) {
-      toast.error(txt.outOfScopeRefusal);
-      setMessages(prev => prev.slice(0, -1));
-      setIsLoading(false);
-      return;
-    }
-
-    const isFirstMessage = messages.length === 0 || (demoMode && messages.length === 1 && messages[0].role === 'assistant');
-
-    // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
-    let legalSearchContext: LegalSearchResult[] = [];
-    if (shouldSearchLegalInfo(messageContent.trim())) {
-      setIsSearchingLegal(true);
-      try {
-        legalSearchContext = await searchLegalInfoWithTimeout(
-          buildLegalSearchQuery(messageContent.trim()),
-          language.toLowerCase().slice(0, 2),
-          3
-        );
-      } finally {
-        setIsSearchingLegal(false);
-      }
-    }
 
     // Build AI context from a "fresh" point onward.
     // Include conversation history AND the current draft so AI can remember it for follow-up requests.
@@ -1026,42 +918,29 @@ export function DemoChatSection() {
       }
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-    const chatUrl = `${supabaseUrl}/functions/v1/homepage-trial-chat`;
-    console.log('[DEBUG CHAT] Chiamata a:', chatUrl);
-
     try {
-      const { data, error } = await supabase.functions.invoke('homepage-trial-chat', {
-        body: {
-          message: messageContent.trim(),
-          language,
-          isFirstMessage,
-          conversationHistory,
-          legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
-          isDemo: demoMode,
-        },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ 
+            message: messageContent.trim(), 
+            language,
+            isFirstMessage,
+            conversationHistory,
+          }),
+        }
+      );
 
-      if (error) {
-        console.error('[DEBUG CHAT] API fallita (invoke error):', error);
-        console.error('[DEBUG CHAT] error.message:', (error as { message?: string })?.message);
-        console.error('[DEBUG CHAT] error.context?:', (error as { context?: unknown })?.context);
-        const fallbackMsg = demoMode
-          ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
-          : txt.errorToast;
-        if (!demoMode) toast.error(txt.errorToast);
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
-        scrollToBottom();
-        return;
-      }
-      if (!data?.ok) {
-        console.error('[DEBUG-demo-chat] API fallita (data.ok false):', { ok: data?.ok, error: data?.error, message: data?.message });
-        const fallbackMsg = demoMode
-          ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
-          : txt.errorToast;
-        if (!demoMode) toast.error(txt.errorToast);
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
-        scrollToBottom();
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.ok) {
+        toast.error(txt.errorToast);
+        setMessages(prev => prev.slice(0, -1));
         return;
       }
 
@@ -1094,8 +973,6 @@ export function DemoChatSection() {
         draftTextRef.current = newDraft;
         // BUG FIX: Mark that a document was generated in this session
         setGeneratedInSession(true);
-        // Mobile-only: show PWA install prompt after generating a document
-        if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
         // IMPORTANT: Do NOT reset AI context after document generation.
         // Keep full context so user can ask follow-up questions like "translate to German".
         // The AI needs to remember the conversation and the generated draft.
@@ -1114,17 +991,14 @@ export function DemoChatSection() {
         setMessages((prev) => [...prev, confirmation]);
         toast.success(confirmation.content);
         
-        // Increment global document counter once per session (avoid spam from multiple drafts)
-        if (!hasIncrementedCounterThisSession.current) {
-          hasIncrementedCounterThisSession.current = true;
-          (async () => {
-            try {
-              await supabase.rpc('increment_documents_processed');
-            } catch {
-              // Silently ignore errors - counter is not critical
-            }
-          })();
-        }
+        // Increment global document counter (fire and forget)
+        (async () => {
+          try {
+            await supabase.rpc('increment_documents_processed');
+          } catch {
+            // Silently ignore errors - counter is not critical
+          }
+        })();
       }
 
       const nextCount = incrementSessionCount();
@@ -1135,26 +1009,15 @@ export function DemoChatSection() {
       }
 
       setTimeout(scrollToBottom, 100);
-    } catch (err: unknown) {
-      const e = err as { message?: string; status?: number; response?: unknown };
-      console.error('[DEBUG CHAT] Errore completo:', err);
-      console.error('[DEBUG CHAT] Messaggio:', e?.message);
-      console.error('[DEBUG CHAT] Status:', e?.status);
-      console.error('[DEBUG CHAT] Response:', e?.response);
-      // Non mostrare "Riprova tra poco o registrati" in demo: messaggio generico
-      const fallbackMsg = demoMode
-        ? (lang === 'IT' ? 'Errore temporaneo. Riprova tra un attimo.' : 'Temporary error. Please try again in a moment.')
-        : (lang === 'IT' ? 'Si è verificato un errore. Riprova.' : 'Something went wrong. Please try again.');
-      setMessages(prev => [...prev, { role: 'assistant', content: fallbackMsg, timestamp: new Date() }]);
-      scrollToBottom();
+    } catch {
+      toast.error(txt.errorToast);
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
   }, [
     isLoading,
     isLimitReached,
-    demoMode,
-    lang,
     messages,
     aiContextStart,
     draftText,
@@ -1163,8 +1026,6 @@ export function DemoChatSection() {
     txt.errorToast,
     letterGeneratedByLang,
     scrollToBottom,
-    isMobile,
-    checkTermsBeforeInteraction,
   ]);
 
   const handleSend = () => {
@@ -1213,29 +1074,9 @@ export function DemoChatSection() {
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files ?? []);
-    console.log("[DEBUG-UPLOAD] DemoChatSection: prima upload", { numFiles: selected.length });
     if (selected.length === 0) return;
 
-    for (const f of selected) {
-      console.log("[DEBUG-UPLOAD] File:", f.name, f.size, f.type);
-    }
     if (fileInputRef.current) fileInputRef.current.value = '';
-
-    // Demo mode: no backend/OCR – simulate steps and send mock reply
-    if (demoMode) {
-      setIsProcessingFile(true);
-      setProcessingStep('uploading');
-      await new Promise(r => setTimeout(r, 300));
-      setProcessingStep('ocr');
-      await new Promise(r => setTimeout(r, 400));
-      setProcessingStep('analyzing');
-      await new Promise(r => setTimeout(r, 400));
-      setProcessingStep('idle');
-      setIsProcessingFile(false);
-      const uploadPlaceholder = language === 'IT' ? '[Documento caricato in demo]' : '[Document uploaded in demo]';
-      await sendMessage(uploadPlaceholder);
-      return;
-    }
 
     const validFiles = selected.filter((file) => {
       if (isHeicLike(file)) {
@@ -1256,93 +1097,60 @@ export function DemoChatSection() {
     setProcessingStep('uploading');
 
     try {
-      console.log("[DEBUG-UPLOAD] DemoChatSection: durante upload (pipeline)");
-      const extractedParts: { name: string; text: string; isPDF: boolean; analysis?: AnalysisItem; draft?: string }[] = [];
+      const extractedParts: { name: string; text: string; isPDF: boolean }[] = [];
       
-      // Step 1: Uploading (handled inside processOCRSingle via pipeline)
-      setProcessingStep('ocr');
+      // Step 1: Uploading
+      await new Promise(r => setTimeout(r, 300));
+      setProcessingStep('extracting');
       
-      // Step 2: Run canonical pipeline per file (upload → ocr → analyze-and-draft)
+      // Step 2: Extracting text from each file
       for (const file of validFiles) {
-        console.log("[DEBUG-UPLOAD] File in pipeline:", file.name, file.size, file.type);
         const isPDF = isLikelyPdf(file);
-        const ocrResult = await processOCRSingle(file, demoMode);
-        console.log("[DEBUG-UPLOAD] Risposta processOCRSingle:", { name: file.name, hasText: !!ocrResult.text, hasDraft: !!ocrResult.draft, error: ocrResult.error });
-        if (ocrResult.text !== null || ocrResult.draft) {
-          extractedParts.push({
-            name: file.name,
-            text: ocrResult.text ?? '',
-            isPDF,
-            analysis: ocrResult.analysis as AnalysisItem | undefined,
-            draft: ocrResult.draft,
-          });
+        const extractedText = await processOCRSingle(file);
+        
+        if (extractedText) {
+          extractedParts.push({ name: file.name, text: extractedText, isPDF });
         } else {
-          toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
+          toast.error(`${file.name}: ${txt.ocrError}`);
         }
       }
 
       if (extractedParts.length > 0) {
-        // Use first part that has draft for display (canonical pipeline result)
-        const withDraft = extractedParts.find((p) => p.draft && p.draft.trim().length >= 50);
-        if (withDraft?.draft) {
-          setDraftText(withDraft.draft);
-          draftTextRef.current = withDraft.draft;
-          setGeneratedInSession(true);
-          const hasPDF = extractedParts.some((p) => p.isPDF);
-          const hasImage = extractedParts.some((p) => !p.isPDF);
-          const attachmentType: 'pdf' | 'image' = hasPDF && !hasImage ? 'pdf' : 'image';
-          const userLabel =
-            extractedParts.length === 1
-              ? hasPDF
-                ? '[PDF uploaded]'
-                : '[Document uploaded]'
-              : `[${extractedParts.length} documents uploaded]`;
-          const ocrSnippet = extractedParts.length === 1 ? extractedParts[0].text : undefined;
-          const analysisContent = formatAnalysisForChat(withDraft.analysis, ocrSnippet);
-          setMessages((prev) => [
-            ...prev,
-            { role: 'user', content: userLabel, timestamp: new Date(), attachmentType },
-            { role: 'assistant', content: analysisContent, timestamp: new Date() },
-          ]);
-          if (withDraft.draft.trim().length >= 50) {
-            openLetterOnlyPreviewWithText(withDraft.draft);
-          }
-          if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
-          if (!hasIncrementedCounterThisSession.current) {
-            hasIncrementedCounterThisSession.current = true;
-            (async () => {
-              try {
-                await supabase.rpc('increment_documents_processed');
-              } catch {
-                /* ignore */
-              }
-            })();
-          }
-          scrollToBottom();
-          toast.success(`${extractedParts.length} ${extractedParts.length === 1 ? 'document' : 'documents'} processed`);
+        // Step 3: Analyzing
+        setProcessingStep('analyzing');
+        await new Promise(r => setTimeout(r, 400));
+        
+        let combinedMessage: string;
+        
+        if (extractedParts.length === 1) {
+          const part = extractedParts[0];
+          const prefix = part.isPDF ? '[PDF uploaded]' : '[Document uploaded]';
+          combinedMessage = `${prefix}\n\n${part.text}`;
         } else {
-          // Pipeline completed but no draft (e.g. analyze failed or empty)
-          const userLabel =
-            extractedParts.length === 1 ? '[Document uploaded]' : `[${extractedParts.length} documents uploaded]`;
-          setMessages((prev) => [
-            ...prev,
-            { role: 'user', content: userLabel, timestamp: new Date() },
-            {
-              role: 'assistant',
-              content: language === 'IT' ? 'Analisi non disponibile. Riprova.' : 'Analysis unavailable. Please try again.',
-              timestamp: new Date(),
-            },
-          ]);
-          toast.error(txt.ocrError);
+          const header = `[${extractedParts.length} documents uploaded]`;
+          const sections = extractedParts.map((part, idx) => {
+            const typeLabel = part.isPDF ? 'PDF' : 'Image';
+            return `--- Page ${idx + 1} (${typeLabel}: ${part.name}) ---\n${part.text}`;
+          }).join('\n\n');
+          combinedMessage = `${header}\n\n${sections}`;
         }
+
+        const hasPDF = extractedParts.some(p => p.isPDF);
+        const hasImage = extractedParts.some(p => !p.isPDF);
+        const attachmentType: 'pdf' | 'image' = hasPDF && !hasImage ? 'pdf' : 'image';
+
+        await sendMessage(combinedMessage, attachmentType);
+
+        // Match the original demo flow: after generating the draft, open the light "modify/preview" page.
+        // (Only for Scan/Upload-triggered flows; normal chat remains unchanged.)
+        const maybeDraft = (draftTextRef.current || '').trim();
+        if (maybeDraft.length >= 50) {
+          openLetterOnlyPreviewWithText(maybeDraft);
+        }
+        toast.success(`${extractedParts.length} ${extractedParts.length === 1 ? 'document' : 'documents'} processed`);
       } else {
         toast.error(txt.ocrError);
       }
-      console.log("[DEBUG-UPLOAD] DemoChatSection: dopo upload", { extractedPartsCount: extractedParts.length });
-    } catch (err) {
-      console.error("[DEBUG-processDocument] ERRORE in handleFileChange (DemoChatSection):", err);
-      console.error("[DEBUG-processDocument] Stack:", err instanceof Error ? err.stack : "(no stack)");
-      throw err;
     } finally {
       setProcessingStep('idle');
       setIsProcessingFile(false);
@@ -1490,22 +1298,20 @@ export function DemoChatSection() {
 
           if (validFiles.length === 0) return;
 
+          // Build a single combined message, consistent with the upload flow.
           setIsProcessingFile(true);
           setProcessingStep('uploading');
           try {
-            setProcessingStep('ocr');
-            const extractedParts: { name: string; text: string; analysis?: AnalysisItem; draft?: string }[] = [];
+            await new Promise((r) => setTimeout(r, 300));
+            setProcessingStep('extracting');
+
+            const extractedParts: { name: string; text: string }[] = [];
             for (const file of validFiles) {
-              const ocrResult = await processOCRSingle(file, demoMode, 'camera');
-              if (ocrResult.text !== null || ocrResult.draft) {
-                extractedParts.push({
-                  name: file.name,
-                  text: ocrResult.text ?? '',
-                  analysis: ocrResult.analysis as AnalysisItem | undefined,
-                  draft: ocrResult.draft,
-                });
+              const extractedText = await processOCRSingle(file);
+              if (extractedText) {
+                extractedParts.push({ name: file.name, text: extractedText });
               } else {
-                toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
+                toast.error(`${file.name}: ${txt.ocrError}`);
               }
             }
 
@@ -1514,51 +1320,22 @@ export function DemoChatSection() {
               return;
             }
 
-            const withDraft = extractedParts.find((p) => p.draft && p.draft.trim().length >= 50);
-            if (withDraft?.draft) {
-              setDraftText(withDraft.draft);
-              draftTextRef.current = withDraft.draft;
-              setGeneratedInSession(true);
-              const userLabel =
-                extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
-              const ocrSnippet = extractedParts.length === 1 ? extractedParts[0].text : undefined;
-              const analysisContent = formatAnalysisForChat(withDraft.analysis, ocrSnippet);
-              setMessages((prev) => [
-                ...prev,
-                { role: 'user', content: userLabel, timestamp: new Date(), attachmentType: 'image' },
-                { role: 'assistant', content: analysisContent, timestamp: new Date() },
-              ]);
-              if (withDraft.draft.trim().length >= 50) {
-                openLetterOnlyPreviewWithText(withDraft.draft);
-              }
-              if (isMobile) setTimeout(() => setShowSaveDocumentPWA(true), 600);
-              if (!hasIncrementedCounterThisSession.current) {
-                hasIncrementedCounterThisSession.current = true;
-                (async () => {
-                  try {
-                    await supabase.rpc('increment_documents_processed');
-                  } catch {
-                    /* ignore */
-                  }
-                })();
-              }
-              scrollToBottom();
-              toast.success(
-                extractedParts.length === 1 ? (language === 'IT' ? 'Documento elaborato' : 'Document processed') : `${extractedParts.length} documents processed`
-              );
-            } else {
-              const userLabel =
-                extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
-              setMessages((prev) => [
-                ...prev,
-                { role: 'user', content: userLabel, timestamp: new Date() },
-                {
-                  role: 'assistant',
-                  content: language === 'IT' ? 'Analisi non disponibile. Riprova.' : 'Analysis unavailable. Please try again.',
-                  timestamp: new Date(),
-                },
-              ]);
-              toast.error(txt.ocrError);
+            setProcessingStep('analyzing');
+            await new Promise((r) => setTimeout(r, 400));
+
+            const header = extractedParts.length === 1 ? '[Photo captured]' : `[${extractedParts.length} photos captured]`;
+            const body =
+              extractedParts.length === 1
+                ? extractedParts[0].text
+                : extractedParts
+                    .map((p, idx) => `--- Photo ${idx + 1} (${p.name}) ---\n${p.text}`)
+                    .join('\n\n');
+
+            await sendMessage(`${header}\n\n${body}`, 'image');
+
+            const maybeDraft = (draftTextRef.current || '').trim();
+            if (maybeDraft.length >= 50) {
+              openLetterOnlyPreviewWithText(maybeDraft);
             }
           } finally {
             setProcessingStep('idle');
@@ -1590,11 +1367,6 @@ export function DemoChatSection() {
           <span className="demo-title">{txt.sectionTitle}</span>
           <span className="demo-fleur">❧</span>
         </div>
-        {demoMode && (
-          <div className="text-center py-1.5 px-2 text-xs font-medium text-muted-foreground bg-muted/50 rounded-b-md border-b border-border/50">
-            {DEMO_BADGE_BY_LANG[lang] || DEMO_BADGE_FALLBACK}
-          </div>
-        )}
 
         {/* Inner content area (parchment look) */}
         <div className="demo-inner-content">
@@ -1611,7 +1383,7 @@ export function DemoChatSection() {
                     {/* Progress Steps */}
                     <div className="flex flex-col gap-2">
                       {/* Step 1: Uploading */}
-                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'uploading' || processingStep === 'ocr' || processingStep === 'analyzing' ? 'opacity-100' : 'opacity-40'}`}>
+                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'uploading' || processingStep === 'extracting' || processingStep === 'analyzing' ? 'opacity-100' : 'opacity-40'}`}>
                         {processingStep === 'uploading' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         ) : (
@@ -1621,15 +1393,15 @@ export function DemoChatSection() {
                       </div>
                       
                       {/* Step 2: Extracting */}
-                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'ocr' || processingStep === 'analyzing' ? 'opacity-100' : processingStep === 'uploading' ? 'opacity-40' : 'opacity-40'}`}>
-                        {processingStep === 'ocr' ? (
+                      <div className={`flex items-center gap-2 transition-opacity ${processingStep === 'extracting' || processingStep === 'analyzing' ? 'opacity-100' : processingStep === 'uploading' ? 'opacity-40' : 'opacity-40'}`}>
+                        {processingStep === 'extracting' ? (
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
                         ) : processingStep === 'analyzing' ? (
                           <Check className="h-4 w-4 text-success" />
                         ) : (
                           <div className="h-4 w-4 rounded-full border-2 border-muted" />
                         )}
-                        <span className={`text-sm ${processingStep === 'ocr' ? 'font-medium' : ''}`}>{txt.stepExtracting}</span>
+                        <span className={`text-sm ${processingStep === 'extracting' ? 'font-medium' : ''}`}>{txt.stepExtracting}</span>
                       </div>
                       
                       {/* Step 3: Analyzing */}
@@ -1649,7 +1421,7 @@ export function DemoChatSection() {
                         className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
                         style={{ 
                           width: processingStep === 'uploading' ? '20%' : 
-                                 processingStep === 'ocr' ? '50%' : 
+                                 processingStep === 'extracting' ? '50%' : 
                                  processingStep === 'analyzing' ? '85%' : '100%' 
                         }}
                       />
@@ -1712,7 +1484,7 @@ export function DemoChatSection() {
                     <div className="demo-message-bubble ai-bubble">
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm opacity-70">{isSearchingLegal ? txt.searchingLegalSources : txt.thinking}</span>
+                        <span className="text-sm opacity-70">{txt.thinking}</span>
                       </div>
                     </div>
                   </div>
@@ -1945,12 +1717,6 @@ export function DemoChatSection() {
         />
       )}
 
-      {/* Mobile-only: PWA install prompt after generating a document */}
-      <MobileDocumentPrompt
-        isOpen={showSaveDocumentPWA}
-        onClose={() => setShowSaveDocumentPWA(false)}
-      />
-
       {/* Save Case Popup - shown after export actions */}
       <AlertDialog open={showSaveCasePopup} onOpenChange={setShowSaveCasePopup}>
         <AlertDialogContent className="max-w-sm">
@@ -2019,7 +1785,7 @@ export function DemoChatSection() {
       {/* Anonymous Terms Acceptance Dialog - only shown when user attempts to interact */}
       {!user && (
         <AnonymousTermsDialog
-          open={showTermsDialog && !demoMode}
+          open={showTermsDialog}
           onAccept={handleTermsAccept}
         />
       )}

@@ -8,9 +8,6 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { useLogout } from '@/hooks/useLogout';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { LogOut, User, Settings, ChevronDown, CreditCard, Shield, LayoutDashboard, HeadsetIcon } from 'lucide-react';
-import { InstallAppButton } from '@/components/InstallAppButton';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { usePWA } from '@/hooks/usePWA';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,22 +19,15 @@ import {
 export function AppHeader() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const isMobile = useIsMobile();
-  const { canInstall, isStandalone, isIOS } = usePWA();
-  const showInstallApp = isMobile && (canInstall || isIOS || isStandalone);
   const { entitlements, isLoading: entitlementsLoading, isAdmin } = useEntitlements();
   const navigate = useNavigate();
   const logout = useLogout();
 
-  const planLabel = entitlementsLoading
-    ? null
-    : isAdmin
-      ? 'ADMIN'
-      : (entitlements.plan || 'free').toUpperCase();
+  const planLabel = entitlementsLoading ? null : (entitlements.plan || 'free').toUpperCase();
   const planSource = (entitlements as any)?.plan_source || 'unknown';
 
   return (
-    <header className="sticky top-0 z-50 w-full overflow-x-hidden bg-navy border-b border-gold/20 safe-area-top">
+    <header className="sticky top-0 z-50 w-full overflow-x-hidden bg-navy border-b border-gold/20">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-3 sm:h-20 sm:px-6">
         {/* Logo - Premium Legal Crest Style */}
         <Link to="/app" className="flex min-w-0 items-center gap-3 py-2">
@@ -77,16 +67,6 @@ export function AppHeader() {
             </div>
           )}
 
-          {/* Admin Panel - native <a> so click always goes to /admin */}
-          {user && isAdmin && (
-            <a href="/admin" className="inline-flex">
-              <Button type="button" variant="ghost" size="sm" className="gap-1 text-purple-300 hover:text-purple-200 hover:bg-purple-500/20 px-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden lg:inline text-xs font-medium">{t('header.adminPanel') || 'Admin'}</span>
-              </Button>
-            </a>
-          )}
-
           {/* Support Link */}
           <Link to="/support">
             <Button variant="ghost" size="sm" className="gap-1 text-ivory/70 hover:text-gold hover:bg-transparent px-2">
@@ -115,7 +95,7 @@ export function AppHeader() {
                     <p className="text-xs text-navy/60">
                       Plan: <span className="font-bold">{planLabel}</span>
                       <span className="ml-1 text-[10px]">
-                        ({isAdmin ? '🛡️ admin' : planSource === 'override' ? '🛡️ override' : planSource === 'stripe' ? '💳 stripe' : '🆓 free'})
+                        ({planSource === 'override' ? '🛡️ override' : planSource === 'stripe' ? '💳 stripe' : '🆓 free'})
                       </span>
                     </p>
                   )}
@@ -142,24 +122,14 @@ export function AppHeader() {
                   {t('nav.support')}
                 </DropdownMenuItem>
 
-                {/* Admin Panel - native <a> so click always navigates to /admin (avoids Radix closing menu blocking navigation) */}
+                {/* Admin Panel - only show for admins */}
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator className="bg-navy/10" />
-                    <DropdownMenuItem asChild>
-                      <a href="/admin" className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm text-purple-700 outline-none hover:bg-purple-50 focus:bg-purple-50">
-                        <Shield className="mr-2 h-4 w-4" />
-                        {t('header.adminPanel') || 'Admin Panel'}
-                      </a>
+                    <DropdownMenuItem onClick={() => navigate('/admin')} className="text-purple-700 hover:bg-purple-50">
+                      <Shield className="mr-2 h-4 w-4" />
+                      {t('header.adminPanel') || 'Admin Panel'}
                     </DropdownMenuItem>
-                  </>
-                )}
-
-                {/* Installa App - solo mobile/tablet quando installabile */}
-                {showInstallApp && (
-                  <>
-                    <DropdownMenuSeparator className="bg-navy/10" />
-                    <InstallAppButton />
                   </>
                 )}
 

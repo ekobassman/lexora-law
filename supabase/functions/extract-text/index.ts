@@ -114,11 +114,7 @@ serve(async (req) => {
 
     const isPdf = mimeType === "application/pdf";
 
-    const GERMAN_OCR_PROMPT = `OCR per documenti ufficiali tedeschi (Finanzamt, Amt, Behörden).
-Estrai TUTTO il testo visibile. Mantieni formattazione, nomi, indirizzi, importi.
-Correzioni obbligatorie: "pinanzamt"→"Finanzamt", "£"→"€", "Herm"→"Herrn", "Raden-" + spazi → "Baden-Württemberg".
-Ignora macchie e sfocature. Ritorna SOLO il testo estratto, niente commenti.`;
-
+    // Use OpenAI API directly for OCR (vision model)
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -126,9 +122,7 @@ Ignora macchie e sfocature. Ritorna SOLO il testo estratto, niente commenti.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        temperature: 0.0,
-        max_tokens: 4096,
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
@@ -137,12 +131,11 @@ Ignora macchie e sfocature. Ritorna SOLO il testo estratto, niente commenti.`;
                 type: "image_url",
                 image_url: {
                   url: `data:${mimeType || "image/jpeg"};base64,${fileBase64}`,
-                  detail: "high",
                 },
               },
               {
                 type: "text",
-                text: GERMAN_OCR_PROMPT,
+                text: "OCR: estrai tutto il testo visibile. Solo testo, nessuna istruzione o commento.",
               },
             ],
           },

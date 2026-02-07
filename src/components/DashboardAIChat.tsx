@@ -19,9 +19,6 @@ import { PlanLimitPopup } from '@/components/PlanLimitPopup';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
-import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
-import { ocrFromFile } from '@/lib/ocrClient';
-import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
   AlertDialog,
@@ -65,17 +62,6 @@ interface SuggestedAction {
     chatHistory?: ChatMessage[];
   };
 }
-
-// Fallback assistant message on API/network error – evita UI rotta e "temporary error" senza contesto
-const FALLBACK_REPLY_BY_LANG: Record<string, string> = {
-  IT: "Si è verificato un errore temporaneo. Riprova tra poco.",
-  EN: "Something went wrong. Please try again in a moment.",
-  DE: "Ein vorübergehender Fehler ist aufgetreten. Bitte versuche es gleich noch einmal.",
-  FR: "Une erreur temporaire s'est produite. Veuillez réessayer dans un instant.",
-  ES: "Ha ocurrido un error temporal. Por favor, inténtalo de nuevo en un momento.",
-  PL: "Wystąpił tymczasowy błąd. Spróbuj ponownie za chwilę.",
-};
-const FALLBACK_REPLY_DEFAULT = FALLBACK_REPLY_BY_LANG.EN;
 
 // Hardening: ensure we never store "next steps" / chatty CTAs in the case draft.
 function sanitizeDraftForCase(raw: string): string {
@@ -281,7 +267,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const [speechSupported, setSpeechSupported] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showPaymentBlockedPopup, setShowPaymentBlockedPopup] = useState(false);
-  const [isSearchingLegal, setIsSearchingLegal] = useState(false);
   
   // =====================
   // FETCH USER PROFILE (once on mount)
@@ -399,8 +384,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   // No case selected state - IMPORTANT: Dashboard chat does NOT require a case!
   // Users must be able to start new conversations without selecting a case first.
   const isCaseRequired = false;
-  const hasCase = Boolean(selectedCaseId);
-  const noCaseSelected = false; // Always allow chatting (general mode when !hasCase)
+  const noCaseSelected = false; // Always allow chatting
   
   const MIN_DRAFT_LENGTH = 200;
   
@@ -517,21 +501,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     RU: 'Выберите дело, чтобы продолжить чат',
   };
 
-  // General mode badge (no case selected): chat not saved, invite to select a practice
-  const generalModeBadgeByLang: Record<string, string> = {
-    IT: 'Chat generale (non salvata). Seleziona una pratica per salvare.',
-    DE: 'Allgemeiner Chat (nicht gespeichert). Wählen Sie eine Praxis, um zu speichern.',
-    EN: 'General chat (not saved). Select a practice to save.',
-    FR: 'Chat général (non enregistré). Sélectionnez une pratique pour enregistrer.',
-    ES: 'Chat general (no guardado). Selecciona una práctica para guardar.',
-    PL: 'Czat ogólny (nie zapisany). Wybierz sprawę, aby zapisać.',
-    RO: 'Chat general (nesalvat). Selectați o practică pentru a salva.',
-    TR: 'Genel sohbet (kaydedilmedi). Kaydetmek için bir dosya seçin.',
-    AR: 'محادثة عامة (غير محفوظة). اختر ملفًا للحفظ.',
-    UK: 'Загальний чат (не збережено). Виберіть справу для збереження.',
-    RU: 'Общий чат (не сохранён). Выберите дело для сохранения.',
-  };
-
   const txt = useMemo(() => ({
     sectionTitle: getSafeText(t, 'dashboardChat.title', 'AI Legal Assistant'),
     placeholder: noCaseSelected 
@@ -557,7 +526,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     preview: getSafeText(t, 'demoChat.preview', 'Preview'),
     print: getSafeText(t, 'demoChat.print', 'Print'),
     selectCase: selectCaseByLang[language] || 'Select a case to continue chatting',
-    generalModeBadge: generalModeBadgeByLang[language] || generalModeBadgeByLang.EN,
     email: getSafeText(t, 'demoChat.email', 'Email'),
     noDraft: getSafeText(t, 'demoChat.noDraft', 'No letter draft available yet'),
     processingOCR: getSafeText(t, 'demoChat.processingOCR', 'Extracting text...'),
@@ -574,8 +542,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     saveCase: getSafeText(t, 'dashboardChat.saveCase', 'Save case'),
     cancel: getSafeText(t, 'common.cancel', 'Cancel'),
     clearConversation: clearConversationByLang[language] || 'Clear conversation',
-    outOfScopeRefusal: getSafeText(t, 'chat.outOfScopeRefusal', 'I can only assist with legal and administrative matters. Do you need help with contracts, formal letters or bureaucratic procedures?'),
-    searchingLegalSources: getSafeText(t, 'chat.searchingLegalSources', '🔍 Searching for updated legal sources...'),
   }), [t, language]);
 
   // Check speech recognition support
@@ -700,11 +666,9 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const isUnlimitedPlan = isUnlimited;
   const shouldBypassLimits = isAdmin || isUnlimitedPlan || isPaid;
   const isLimitReached = !shouldBypassLimits && messagesUsed >= messagesLimit;
-  // In general mode (!hasCase) the backend does not count messages; do not block send or camera/file
-  const effectiveLimitReached = hasCase && isLimitReached;
 
   const toggleListening = useCallback(() => {
-    if (effectiveLimitReached) {
+    if (isLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
@@ -713,15 +677,15 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     } else {
       startRecording();
     }
-  }, [effectiveLimitReached, isListening, stopRecording, startRecording]);
+  }, [isLimitReached, isListening, stopRecording, startRecording]);
 
   const handleLimitedInteraction = useCallback(() => {
-    if (effectiveLimitReached) {
+    if (isLimitReached) {
       setShowUpgradeModal(true);
       return true;
     }
     return false;
-  }, [effectiveLimitReached]);
+  }, [isLimitReached]);
 
   // Load chat history and usage on mount
   useEffect(() => {
@@ -886,23 +850,43 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     }
   };
 
-  // OCR via Vercel /api/ocr (Google Cloud Vision)
-  const processOCRSingle = async (file: File) => {
-    const result = await ocrFromFile(file);
-    return result;
+  // OCR processing
+  const processOCRSingle = async (file: File): Promise<string | null> => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      const base64 = await fileToBase64(file);
+      const mimeType = guessMimeType(file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-text`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ base64, mimeType, language }),
+        }
+      );
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.text) return null;
+      return data.text || '';
+    } catch {
+      return null;
+    }
   };
 
   const processOCR = async (file: File): Promise<string | null> => {
     setIsProcessingFile(true);
     try {
       const result = await processOCRSingle(file);
-      if (result.text) {
-        toast.success(txt.ocrSuccess);
-        return result.text;
-      }
-      const errMsg = result.details || result.error || txt.ocrError;
-      toast.error(errMsg, { duration: 7000 });
-      return null;
+      if (result) toast.success(txt.ocrSuccess);
+      else toast.error(txt.ocrError);
+      return result;
     } finally {
       setIsProcessingFile(false);
     }
@@ -912,13 +896,12 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     const content = messageContent || input.trim();
     if (!content || isLoading) return;
 
-    // Guardrail: block non-legal/administrative queries only when a case is selected (case mode)
-    if (hasCase && !isLegalAdministrativeQuery(content)) {
-      toast.error(txt.outOfScopeRefusal);
+    // CASE-SCOPED: Block if no case selected
+    if (noCaseSelected) {
+      toast.info(txt.selectCase);
+      onCaseSelect?.();
       return;
     }
-
-    // No block when no case: general mode is allowed (no "select case" required)
 
     // Payment enforcement: blocked users cannot use AI chat
     if ((entitlements as any)?.access_state === 'blocked') {
@@ -926,7 +909,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       return;
     }
     
-    if (effectiveLimitReached) {
+    if (isLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
@@ -955,21 +938,6 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     shouldScrollToUserMessage.current = true;
     
     abortControllerRef.current = new AbortController();
-    
-    // Legal web search: if message matches patterns (recent law, decree, Cassation, etc.), fetch official sources first
-    let legalSearchContext: LegalSearchResult[] = [];
-    if (shouldSearchLegalInfo(content)) {
-      setIsSearchingLegal(true);
-      try {
-        legalSearchContext = await searchLegalInfoWithTimeout(
-          buildLegalSearchQuery(content),
-          language?.toLowerCase().slice(0, 2) || 'de',
-          3
-        );
-      } finally {
-        setIsSearchingLegal(false);
-      }
-    }
     
     try {
       // Ensure we have profile context for logged-in users to avoid re-asking name/surname.
@@ -1006,20 +974,17 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('No session token (user not authenticated)');
-
-      // General mode (!hasCase): minimal payload, no DB writes, edge returns { ok, reply }
-      const payload = hasCase
-        ? {
-            message: userMessage.content,
-            userLanguage: language?.toUpperCase() || 'DE',
-            isFirstMessage: nextHistory.length === 1,
-            chatHistory: nextHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
-            caseId: selectedCaseId,
-            userProfile: effectiveUserProfile || undefined,
-            caseContext: caseContext || undefined,
-            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
-          }
-        : { message: userMessage.content, userLanguage: language?.toUpperCase() || 'DE' };
+      
+      const payload = {
+        message: userMessage.content,
+        userLanguage: language?.toUpperCase() || 'DE',
+        isFirstMessage: nextHistory.length === 1,
+        chatHistory: nextHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
+        caseId: selectedCaseId,
+        // AUTO-CONTEXT: Pass user profile and case context
+        userProfile: effectiveUserProfile || undefined,
+        caseContext: caseContext || undefined,
+      };
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dashboard-chat`,
@@ -1035,146 +1000,110 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         }
       );
 
-      let data: any = null;
-      try {
-        const text = await response.text();
-        data = text ? JSON.parse(text) : null;
-      } catch (parseErr) {
-        console.error('[DashboardAIChat] Response parse error', parseErr);
-        throw new Error('Invalid response from chat service');
-      }
-
-      const lang = (language || 'en').slice(0, 2).toUpperCase();
-      const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
-      const errorData = data && typeof data === 'object' ? data : null;
-
       if (!response.ok) {
+        let errorBody = '';
+        let errorData: any = null;
+        try {
+          errorBody = await response.text();
+          errorData = errorBody ? JSON.parse(errorBody) : null;
+        } catch {}
+        
         if (response.status === 503 || errorData?.error === 'SYSTEM_CREDITS_EXHAUSTED') {
-          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           toast.error(errorData?.message || "System AI temporarily unavailable.", { duration: 8000 });
           return;
         }
-
+        
         if (response.status === 402 || errorData?.error === 'AI_CREDITS_EXHAUSTED') {
-          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           setShowUpgradeModal(true);
           return;
         }
-
+        
         if (response.status === 429) {
-          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           if (errorData?.error === 'limit_reached') {
             setMessagesUsed(errorData.messagesUsed);
             setMessagesLimit(errorData.messagesLimit);
             toast.error(t('dashboardChat.limitReached'));
-          } else {
-            toast.error(t('dashboardChat.rateLimitError'));
+            return;
           }
+          toast.error(t('dashboardChat.rateLimitError'));
           return;
         }
-
+        
         if (response.status === 401) {
-          setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
           toast.error(`Auth error: ${response.status}`, { duration: 8000 });
           return;
         }
-
-        // 500 or other: show user-facing message; never show raw "AI_PROVIDER_ERROR" code
-        const rawMsg = errorData?.message || errorData?.details || response.statusText;
-        const serverMsg = (errorData?.error === 'AI_PROVIDER_ERROR' && !rawMsg)
-          ? (t('dashboardChat.aiUnavailable') || 'AI is temporarily unavailable. Please try again later.')
-          : (rawMsg || (errorData?.error !== 'AI_PROVIDER_ERROR' ? errorData?.error : null) || t('dashboardChat.aiUnavailable') || fallbackContent);
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-        toast.error(serverMsg, { duration: 8000 });
-        return;
+        
+        const errMsg = errorData?.error || errorData?.message || response.statusText;
+        throw new Error(`dashboard-chat failed: ${response.status} ${errMsg}`);
       }
 
-      // General mode can return { ok: false, error: "AI_PROVIDER_ERROR", message: "..." } with 200/500; treat as failure
-      if (data && data.ok === false) {
-        const errMsg = data.message || data.details || (data.error !== 'AI_PROVIDER_ERROR' ? data.error : null) || t('dashboardChat.aiUnavailable') || 'Chat temporarily unavailable';
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-        toast.error(errMsg, { duration: 8000 });
-        return;
-      }
-
-      const replyText = (data?.reply ?? data?.response ?? '').trim();
-      if (!replyText) {
-        setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-        toast.error(t('dashboardChat.error') || fallbackContent, { duration: 5000 });
-        return;
-      }
-
-      const assistantMessage: ChatMessage = {
+      const data = await response.json();
+      
+       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: replyText,
+        content: data.response,
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+       // OPTIMISTIC UI: show assistant immediately (no waiting on DB)
+       setMessages(prev => [...prev, assistantMessage]);
 
-      if (hasCase) {
-        void addCaseChatMessage('assistant', replyText);
-      }
-      if (data.messagesUsed != null) setMessagesUsed(data.messagesUsed);
-      if (data.messagesLimit != null) setMessagesLimit(data.messagesLimit);
+       // Persist only when a case is selected
+       if (selectedCaseId) {
+         void addCaseChatMessage('assistant', data.response);
+       }
+      
+      setMessagesUsed(data.messagesUsed);
+      setMessagesLimit(data.messagesLimit);
+      
+      const backendDraft = (data?.suggestedAction?.payload?.draftResponse ?? data?.draftResponse ?? null) as string | null;
+      const backendDraftReady = Boolean(data?.draftReady) && Boolean(backendDraft);
 
-      // Case-only: draft, suggested action, case naming dialog (not in general mode)
-      if (hasCase) {
-        const backendDraft = (data?.suggestedAction?.payload?.draftResponse ?? data?.draftResponse ?? null) as string | null;
-        const backendDraftReady = Boolean(data?.draftReady) && Boolean(backendDraft);
-
-        if (data.suggestedAction && data.suggestedAction.type === 'CREATE_CASE_FROM_CHAT') {
-          setSuggestedAction(data.suggestedAction);
-          setChatTopic(data.suggestedAction.payload?.title || null);
-        } else {
-          setSuggestedAction(null);
-        }
-
-        setLastDraftText(backendDraft);
-        setDraftReady(backendDraftReady);
-
-        if (backendDraftReady && backendDraft && !containsPlaceholders(backendDraft) && !hasPromptedForName) {
-          setHasPromptedForName(true);
-          setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
-          setShowCaseNameDialog(true);
-        }
+      if (data.suggestedAction && data.suggestedAction.type === 'CREATE_CASE_FROM_CHAT') {
+        setSuggestedAction(data.suggestedAction);
+        setChatTopic(data.suggestedAction.payload?.title || null);
       } else {
         setSuggestedAction(null);
-        setLastDraftText(null);
-        setDraftReady(false);
+      }
+
+      setLastDraftText(backendDraft);
+      setDraftReady(backendDraftReady);
+      
+      // Auto-show case naming dialog when document is ready
+      if (backendDraftReady && backendDraft && !containsPlaceholders(backendDraft) && !hasPromptedForName) {
+        setHasPromptedForName(true);
+        setCaseName(data.suggestedAction?.payload?.title || chatTopic || '');
+        setShowCaseNameDialog(true);
       }
      } catch (error: any) {
       if (error?.name === 'AbortError') return;
-      console.error('[DashboardAIChat] Chat error:', error?.message || error);
-      const lang = (language || 'en').slice(0, 2).toUpperCase();
-      const fallbackContent = FALLBACK_REPLY_BY_LANG[lang] || FALLBACK_REPLY_DEFAULT;
-      setMessages(prev => [...prev, { role: 'assistant', content: fallbackContent, timestamp: new Date() }]);
-      // Prefer server/network hint for debugging; avoid double generic message
-      const hint = error?.message?.includes('fetch') || error?.message?.includes('Network')
-        ? (t('dashboardChat.networkError') || 'Network error. Check connection and try again.')
-        : (t('dashboardChat.error') || fallbackContent);
-      toast.error(hint, { duration: 6000 });
+      console.error('[DashboardAIChat] Chat error:', error);
+      toast.error(`Error: ${error?.message || 'Unknown'}`, { duration: 10000 });
+      // Keep the user's message visible; no rollback in PRE-CASE or slow network scenarios.
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [input, isLoading, effectiveLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements, hasCase, selectedCaseId, userProfile, caseContext, user?.id]);
+  }, [input, isLoading, isLimitReached, language, messages, t, chatTopic, hasPromptedForName, entitlements]);
 
   // Camera handlers - redirect to /scan page with camera + upload buttons
   const handleCameraClick = () => {
-    if (effectiveLimitReached) {
+    if (isLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
+    // Navigate to the ScanDocument page which has both camera and file upload buttons
     navigate('/scan');
   };
 
   // File handlers - redirect to /scan page with camera + upload buttons
   const handleFileClick = () => {
-    if (effectiveLimitReached) {
+    if (isLimitReached) {
       setShowUpgradeModal(true);
       return;
     }
+    // Navigate to the ScanDocument page which has both camera and file upload buttons
     navigate('/scan');
   };
 
@@ -1203,9 +1132,10 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       
       for (const file of validFiles) {
         const isPDF = isLikelyPdf(file);
-        const ocrResult = await processOCRSingle(file);
-        if (ocrResult.text) extractedParts.push({ name: file.name, text: ocrResult.text, isPDF });
-        else toast.error(`${file.name}: ${ocrResult.details || ocrResult.error || txt.ocrError}`, { duration: 7000 });
+        const extractedText = await processOCRSingle(file);
+        
+        if (extractedText) extractedParts.push({ name: file.name, text: extractedText, isPDF });
+        else toast.error(`${file.name}: ${txt.ocrError}`);
       }
 
       if (extractedParts.length > 0) {
@@ -1435,7 +1365,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   if (!user) return null;
 
   const handleInputClick = () => {
-    if (effectiveLimitReached) setShowUpgradeModal(true);
+    if (isLimitReached) setShowUpgradeModal(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1472,19 +1402,13 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           <span className="dashboard-title">{txt.sectionTitle}</span>
           <span className="dashboard-fleur">❧</span>
           
-          {/* Context Badge: case selected vs general mode (not saved) */}
-          {hasCase && caseContext && (
+          {/* Context Badge */}
+          {caseContext && (
             <div className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-primary/20 rounded-full text-xs">
               <FolderOpen className="h-3 w-3" />
               <span className="truncate max-w-[120px]" title={caseContext.title}>
                 {caseContext.title}
               </span>
-            </div>
-          )}
-          {!hasCase && (
-            <div className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-800 dark:text-amber-200 rounded-full text-xs" title={txt.generalModeBadge}>
-              <MessageCircle className="h-3 w-3 shrink-0" />
-              <span className="truncate max-w-[200px]">{txt.generalModeBadge}</span>
             </div>
           )}
         </div>
@@ -1556,7 +1480,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                     <div className="dashboard-message-bubble ai-bubble">
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm opacity-70">{isSearchingLegal ? txt.searchingLegalSources : txt.thinking}</span>
+                        <span className="text-sm opacity-70">{txt.thinking}</span>
                       </div>
                     </div>
                   </div>
@@ -1635,7 +1559,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 finalTranscriptRef.current = '';
               }
               
-              if (effectiveLimitReached) {
+              if (isLimitReached) {
                 setShowUpgradeModal(true);
                 return;
               }
@@ -1644,7 +1568,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 sendMessage(textToSend);
               }
             }}
-            disabled={(!input.trim() && !isListening) || isLoading || isProcessingFile || effectiveLimitReached}
+            disabled={(!input.trim() && !isListening) || isLoading || isProcessingFile}
             className="dashboard-send-btn"
             aria-label="Send"
           >
@@ -1657,16 +1581,15 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           {/* Row 1 */}
           <button 
             onClick={handleCameraClick} 
-            disabled={isLoading || isProcessingFile || effectiveLimitReached} 
+            disabled={isLoading || isProcessingFile || isLimitReached} 
             className="dashboard-action-btn"
-            data-testid="dashboard-scan-document-btn"
           >
             <Camera className="h-5 w-5" />
             <span>{txt.scanDocument}</span>
           </button>
           <button 
             onClick={handleFileClick} 
-            disabled={isLoading || isProcessingFile || effectiveLimitReached} 
+            disabled={isLoading || isProcessingFile || isLimitReached} 
             className="dashboard-action-btn"
           >
             <Paperclip className="h-5 w-5" />

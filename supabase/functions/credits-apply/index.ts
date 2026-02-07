@@ -68,9 +68,15 @@ serve(async (req) => {
 
     // For admin_adjustment, check if caller is admin and use target_user_id
     if (reason === "admin_adjustment") {
-      const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-      if (!ADMIN_EMAILS.some((e) => e.toLowerCase() === (user.email ?? "").toLowerCase())) {
-        return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .single();
+
+      if (!adminRole) {
+        return new Response(JSON.stringify({ error: "Unauthorized - admin only" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

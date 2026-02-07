@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const BASE_COUNT = 8746;
+const BASE_COUNT = 2450;
 const ANIMATION_DURATION = 2000; // 2 seconds
 
 // Translations for the counter section
@@ -83,23 +83,17 @@ export function SocialProofCounter() {
   const totalCount = dbCount + BASE_COUNT;
   const text = translations[language] || translations.EN;
 
-  // Fetch initial count (optional: table may not exist yet; default to 0 on 404/error)
+  // Fetch initial count
   useEffect(() => {
     async function fetchCount() {
-      try {
-        const { data, error } = await supabase
-          .from('global_stats')
-          .select('documents_processed')
-          .eq('id', 'main')
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from('global_stats')
+        .select('documents_processed')
+        .eq('id', 'main')
+        .maybeSingle();
 
-        if (!error && data != null) {
-          setDbCount(Number(data.documents_processed) || 0);
-        } else {
-          setDbCount(0);
-        }
-      } catch {
-        setDbCount(0);
+      if (!error && data) {
+        setDbCount(data.documents_processed);
       }
     }
     fetchCount();

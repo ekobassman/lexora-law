@@ -2,8 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-demo-mode',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 // Blocked country codes
@@ -45,7 +44,7 @@ async function lookupCountry(ip: string): Promise<string | null> {
   
   // Try ip-api.com first (free, no key needed, 45 req/min)
   try {
-    const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,countryCode`, {
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode`, {
       signal: AbortSignal.timeout(3000),
     });
     
@@ -81,8 +80,9 @@ async function lookupCountry(ip: string): Promise<string | null> {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {

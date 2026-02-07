@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Shield, User, AlertTriangle, Bug, Zap, Wifi, WifiOff, ArrowLeft, Users, UserCheck, UserPlus, Activity, RefreshCw, CreditCard, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { isAdminEmail } from '@/lib/adminConfig';
 
 interface UserMetrics {
   totalUsers: number;
@@ -151,12 +150,6 @@ export default function AdminPanel() {
   // Debug info from entitlements
   const debugInfo: EntitlementsDebug = (entitlements as any)?.debug || {};
 
-  // Debug: log when admin panel mounts
-  useEffect(() => {
-    console.log('[AdminPanel] mounted', { user: user?.email, authLoading, checkingAdmin });
-    return () => console.log('[AdminPanel] unmounted');
-  }, []);
-
   // Auth Debug (admin-only): show session/token proof on-screen
   useEffect(() => {
     const applySession = (session: any) => {
@@ -186,7 +179,7 @@ export default function AdminPanel() {
     };
   }, [user?.email]);
 
-  // Check admin status via RPC (user_roles / profiles). Fallback to email if DB not populated (e.g. after migration).
+  // Check admin status via RPC (server-side role verification)
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!user) {
@@ -194,35 +187,17 @@ export default function AdminPanel() {
         return;
       }
 
-      // Debug: log user / metadata
-      console.log('[AdminPanel] user for admin check:', {
-        id: user.id,
-        email: user.email,
-        user_metadata: user.user_metadata,
-        app_metadata: user.app_metadata,
-      });
-
       try {
         const { data, error } = await supabase.rpc('is_admin');
-        console.log('[AdminPanel] admin-check response:', { data, error: error?.message });
-
         if (error) {
-          console.error('[AdminPanel] Admin check error:', error);
-          // Fallback: known admin email when RPC fails (e.g. user_roles empty after migration)
-          setIsAdmin(isAdminEmail(user?.email));
-          if (isAdminEmail(user?.email)) console.log('[AdminPanel] fallback: admin by email');
-        } else if (data === true) {
-          setIsAdmin(true);
+          console.error('Admin check error:', error);
+          setIsAdmin(false);
         } else {
-          // RPC returned false: no row in user_roles. Fallback to email.
-          const byEmail = isAdminEmail(user?.email);
-          setIsAdmin(byEmail);
-          if (byEmail) console.log('[AdminPanel] fallback: admin by email (RPC false)');
+          setIsAdmin(data === true);
         }
       } catch (err) {
-        console.error('[AdminPanel] Admin check failed:', err);
-        setIsAdmin(isAdminEmail(user?.email));
-        if (isAdminEmail(user?.email)) console.log('[AdminPanel] fallback: admin by email (after throw)');
+        console.error('Admin check failed:', err);
+        setIsAdmin(false);
       } finally {
         setCheckingAdmin(false);
       }
@@ -233,12 +208,16 @@ export default function AdminPanel() {
     }
   }, [user, authLoading]);
 
-  // Only redirect to auth if not logged in; do NOT redirect non-admins — show message in panel instead (no white page)
+  // Redirect non-admins to app dashboard
   useEffect(() => {
-    if (!authLoading && !checkingAdmin && !user) {
-      navigate('/auth');
+    if (!authLoading && !checkingAdmin) {
+      if (!user) {
+        navigate('/auth');
+      } else if (isAdmin === false) {
+        navigate('/app');
+      }
     }
-  }, [user, authLoading, checkingAdmin, navigate]);
+  }, [user, authLoading, isAdmin, checkingAdmin, navigate]);
 
   // Fetch user metrics from edge function
   const fetchUserMetrics = useCallback(async (showToast = false) => {
@@ -254,38 +233,19 @@ export default function AdminPanel() {
         return;
       }
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-      console.log('[AdminPanel] admin-user-metrics request:', {
-        urlHint: supabaseUrl ? `${supabaseUrl.slice(0, 30)}.../functions/v1/admin-user-metrics` : 'MISSING VITE_SUPABASE_URL',
-      });
-
       const { data, error } = await supabase.functions.invoke('admin-user-metrics', {
         headers: { Authorization: `Bearer ${token}` },
         body: { windowMinutes: 10 },
       });
 
-      console.log('[AdminPanel] admin-user-metrics response:', { ok: data?.ok, reason: data?.reason, error, hasData: !!data });
-
       if (error) {
         const anyErr = error as any;
         const status = anyErr?.context?.status ?? anyErr?.status ?? '';
-        const msg = error?.message ?? '';
-        const isNetworkOrConfig =
-          !supabaseUrl ||
-          msg.includes('Failed to send') ||
-          msg.includes('fetch') ||
-          msg.includes('NetworkError');
-        const hint = isNetworkOrConfig
-          ? ' Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or ANON_KEY) in Vercel; deploy: supabase functions deploy admin-user-metrics'
-          : '';
-        setMetricsError(
-          status === 403 ? 'Admin only' : `Error: ${msg}${hint}`
-        );
-        return;
-      }
-
-      if (data?.ok === false) {
-        setMetricsError(data.reason || data.message || 'Not authorized');
+        if (status === 403) {
+          setMetricsError('403 - Admin only');
+        } else {
+          setMetricsError(`Error: ${error.message}`);
+        }
         return;
       }
 
@@ -301,12 +261,7 @@ export default function AdminPanel() {
       console.log('[admin-user-metrics] Fetched:', data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-      const hint =
-        !supabaseUrl || msg.includes('fetch') || msg.includes('Failed')
-          ? ' Set VITE_SUPABASE_URL and key in Vercel; run: supabase functions deploy admin-user-metrics'
-          : '';
-      setMetricsError(`Exception: ${msg}${hint}`);
+      setMetricsError(`Exception: ${msg}`);
     } finally {
       setMetricsLoading(false);
     }
@@ -500,13 +455,7 @@ export default function AdminPanel() {
         return;
       }
 
-      // Function returned 200 - check ok:false (not_admin, etc.) or found flag
-      if (result?.ok === false) {
-        const reason = result?.reason || result?.message || 'not_authorized';
-        console.log('[AdminPanel] API denied:', { reason, result });
-        toast.error(reason === 'not_admin' ? 'Solo admin' : String(reason));
-        return;
-      }
+      // Function returned 200 - check found flag
       if (!result?.found) {
         const reason = result?.reason || 'USER_NOT_FOUND';
         const detail = result?.detail || '';
@@ -674,22 +623,18 @@ export default function AdminPanel() {
       if (invokeError) {
         const anyErr = invokeError as any;
         const status = anyErr?.context?.status ?? anyErr?.status ?? 'N/A';
-        const details = `${invokeError.message} (status: ${status})`;
+        const context = anyErr?.context ?? {};
+        const details = `${invokeError.message} (status: ${status}) ${JSON.stringify(context)}`;
         console.error('[admin-remove-override] Invoke error:', details);
-        toast.error(`Errore rimozione: ${invokeError.message.slice(0, 150)}`);
+        toast.error(`Errore rimozione (${status}): ${invokeError.message.slice(0, 150)}`);
         setSaving(false);
         return;
       }
 
-      if (result?.ok === false) {
-        const msg = result?.reason || result?.message || 'Non autorizzato';
-        console.log('[admin-remove-override] API denied:', result);
-        toast.error(msg);
-        setSaving(false);
-        return;
-      }
       if (result?.error) {
-        toast.error(`${result.error} (${result.code || 'UNKNOWN'})`);
+        const errDetails = `${result.error} (${result.code || 'UNKNOWN'})`;
+        console.error('[admin-remove-override] App error:', errDetails);
+        toast.error(`Errore: ${errDetails}`);
         setSaving(false);
         return;
       }
@@ -715,35 +660,8 @@ export default function AdminPanel() {
     );
   }
 
-  // Always render panel (no white page). If not admin, show message instead of full content.
-  if (!user) {
+  if (!user || isAdmin !== true) {
     return null;
-  }
-
-  if (isAdmin !== true) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Admin Panel
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              {isAdmin === false
-                ? 'You are not authorized to view this page.'
-                : 'Could not verify admin access. Please try again or run the SQL script in Supabase to grant admin.'}
-            </p>
-            <Button onClick={() => navigate('/app', { replace: true })} className="w-full">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   // Frontend env fingerprint
@@ -760,26 +678,15 @@ export default function AdminPanel() {
             <Shield className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-semibold">Admin Panel</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin/pipeline-runs')}
-              className="flex items-center gap-2"
-            >
-              <Activity className="h-4 w-4" />
-              <span className="hidden sm:inline">Pipeline runs</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/app', { replace: true })}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('admin.backToDashboard')}</span>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/app', { replace: true })}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('admin.backToDashboard')}</span>
+          </Button>
         </div>
       </header>
 

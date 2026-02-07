@@ -50,14 +50,23 @@ serve(async (req) => {
         });
       }
 
-      const callerEmail = (user.email ?? "").toLowerCase();
-      const isCallerAdmin = ADMIN_EMAILS.some((e) => e.toLowerCase() === callerEmail);
+      const callerEmail = user.email ?? "";
+      const isCallerAdmin = ADMIN_EMAILS.includes(callerEmail.toLowerCase());
       
       if (!isCallerAdmin) {
-        return new Response(JSON.stringify({ error: "ADMIN_ONLY" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        if (!roleRow) {
+          return new Response(JSON.stringify({ error: "Admin only", code: "FORBIDDEN" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 

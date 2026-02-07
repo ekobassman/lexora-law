@@ -3,16 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-demo-mode",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-function json200(body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 // Blocked country codes
 const BLOCKED_COUNTRIES = ['RU', 'CN'];
@@ -39,7 +31,7 @@ async function getCountryFromIP(req: Request): Promise<string | null> {
   // Fallback to external API
   try {
     // ip-api.com is free for non-commercial use
-    const response = await fetch(`https://ip-api.com/json/${clientIP || ''}?fields=countryCode`, {
+    const response = await fetch(`http://ip-api.com/json/${clientIP || ''}?fields=countryCode`, {
       signal: AbortSignal.timeout(3000),
     });
     if (response.ok) {
@@ -156,17 +148,18 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  console.log("[entitlements] entry");
   if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 200, headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-  // GEO-BLOCK CHECK (FAIL-CLOSED) — return 200 for UI-safe responses
+  // GEO-BLOCK CHECK (FAIL-CLOSED)
   const geoCheck = await checkGeoBlock(req);
   if (geoCheck.blocked) {
     logStep('Jurisdiction blocked/unknown', { countryCode: geoCheck.countryCode, reason: geoCheck.reason });
-    return json200({ ok: false, error: "Jurisdiction blocked", code: geoCheck.reason, countryCode: geoCheck.countryCode || 'unknown' });
+    return new Response(
+      JSON.stringify({ code: geoCheck.reason, countryCode: geoCheck.countryCode || 'unknown' }),
+      { status: 451, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   // Environment (STRICT) — must be present or we fail loudly
@@ -207,7 +200,10 @@ serve(async (req) => {
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       logStep("No Bearer token");
-      return json200({ ok: false, error: "Missing Bearer token" });
+      return new Response(JSON.stringify({ error: "Missing Bearer token" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -232,16 +228,15 @@ serve(async (req) => {
       .eq("id", userId)
       .maybeSingle();
 
-    // Check admin role (allowlist + user_roles). Allowlist is case-insensitive.
-    const ADMIN_EMAILS = ["imbimbo.bassman@gmail.com"];
-    const emailLower = (userEmail ?? "").toLowerCase();
+    // Check admin role (both user_roles table AND hardcoded email fallback)
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = ADMIN_EMAILS.some((e) => e.toLowerCase() === emailLower) || roleData?.role === "admin";
-    logStep("Admin check", { isAdmin, role: roleData?.role ?? "none", email: userEmail });
+    // Admin check: user_roles table OR hardcoded admin email
+    const isAdmin = roleData?.role === "admin" || userEmail === "imbimbo.bassman@gmail.com";
+    logStep("Admin check", { isAdmin, role: roleData?.role ?? "none" });
 
     // PRIORITY 1: Check for active admin override FIRST
     const { data: override, error: overrideError } = await supabase
@@ -427,7 +422,6 @@ serve(async (req) => {
       ...legacy,
     };
 
-    console.log("[entitlements] exit: success", { role: response.role, plan: response.plan });
     logStep("Returning entitlements", {
       role: response.role,
       plan: response.plan,
@@ -442,14 +436,10 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    logStep("Error", { message: msg });
-    console.error("[entitlements] Unhandled error:", error);
-    return json200({ ok: false, error: "Internal server error", message: msg });
-  }
-  } catch (outerErr) {
-    const msg = outerErr instanceof Error ? outerErr.message : String(outerErr);
-    console.error("[entitlements] Uncaught error:", outerErr);
-    return json200({ ok: false, error: "Internal server error", message: msg });
+    logStep("Error", { message: error instanceof Error ? error.message : String(error) });
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });

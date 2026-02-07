@@ -60,28 +60,6 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## Vercel – Environment variables (Vite / client)
-
-This app uses **Vite**; env vars must be prefixed with `VITE_` to be available in the browser. Set in Vercel **Project → Settings → Environment Variables**:
-
-- **`VITE_SUPABASE_URL`** – Supabase project URL, e.g. `https://[project-ref].supabase.co` (not localhost)
-- **`VITE_SUPABASE_PUBLISHABLE_KEY`** or **`VITE_SUPABASE_ANON_KEY`** – Supabase anon (publishable) key
-
-Without these, the Admin Panel "User Monitoring" and other Edge Function calls will fail with "Failed to send a request to the Edge Function". After changing env vars, redeploy the project.
-
-**Do not** expose `SUPABASE_SERVICE_ROLE_KEY` to the client; it is used only in Supabase Edge Functions (server-side).
-
-## OCR (Google Cloud Vision)
-
-OCR runs on Vercel serverless (Node runtime) using **Google Cloud Vision** and credentials from `GOOGLE_APPLICATION_CREDENTIALS_JSON` only (no file path, no other env vars).
-
-**Verification:**
-
-1. **Ping:** Open `GET /api/ocr/ping`. You should see `ok: true`, `hasKey: true`, and `projectIdFromKey` matching your GCP project ID. If `hasKey` is false, the env var is missing or invalid.
-2. **OCR:** `POST /api/ocr` with body `{ "base64": "<raw base64 string>", "mimeType": "image/jpeg" }` (or `image/png`, `image/webp`, `application/pdf`) returns `{ "text": "...", "pages"?: number }`. On error: `{ "error": "OCR failed", "details": "..." }`.
-
-The frontend uses a single OCR client (`src/lib/ocrClient.ts`) that calls `/api/ocr`. On Vercel, `/api/ocr` is served by the same origin. For **local dev** (Vite only, no Vercel dev), set `VITE_OCR_API_ORIGIN` in `.env` to your deployed Vercel URL (e.g. `https://your-app.vercel.app`) so OCR requests go to the deployed API.
-
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

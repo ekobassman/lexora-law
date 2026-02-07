@@ -13,29 +13,42 @@ const testPassword = 'TestPassword123!';
 
 test.describe('Authentication Flow', () => {
   test('should complete full auth cycle: register → logout → login', async ({ page }) => {
-    // Go to signup page (Auth shows signup form by default on /signup)
-    await page.goto('/signup');
-    await expect(page).toHaveURL(/\/signup/);
-    await page.waitForTimeout(800);
+    // Go to login page
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/login/);
 
-    // Fill signup form (use IDs to avoid collision with login fields)
-    await page.locator('#signup-email').fill(testEmail);
-    await page.locator('#signup-password').fill(testPassword);
-    const confirmEl = page.locator('#signup-confirm-password');
-    if (await confirmEl.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmEl.fill(testPassword);
+    // Click on signup link
+    const signupLink = page.getByRole('link', { name: /registr|sign\s*up|konto\s*erstellen/i });
+    if (await signupLink.isVisible()) {
+      await signupLink.click();
+      await page.waitForURL(/\/(register|signup|login)/);
     }
 
-    // Accept terms and age checkboxes (signup tab)
-    const checkboxes = page.locator('input[type="checkbox"]');
-    const count = await checkboxes.count();
-    for (let i = 0; i < Math.min(count, 3); i++) {
-      await checkboxes.nth(i).check({ timeout: 1000 }).catch(() => {});
+    // Fill registration form
+    await page.getByLabel(/email/i).fill(testEmail);
+    await page.getByLabel(/^password$/i).first().fill(testPassword);
+    
+    // Check for confirm password field
+    const confirmPassword = page.getByLabel(/confirm|bestätigen|conferma/i);
+    if (await confirmPassword.isVisible()) {
+      await confirmPassword.fill(testPassword);
     }
 
-    // Submit: "Create account", "Crea account", "Konto erstellen", etc.
-    const submitBtn = page.getByRole('button', { name: /create\s*account|crea\s*account|konto\s*erstellen|crear\s*cuenta|créer\s*un\s*compte|utwórz\s*konto|conectează-te|creează\s*cont|hesap\s*oluştur|إنشاء\s*حساب|створити\s*акаунт/i });
-    await submitBtn.click({ timeout: 15000 });
+    // Accept terms if checkbox present
+    const termsCheckbox = page.getByRole('checkbox').first();
+    if (await termsCheckbox.isVisible()) {
+      await termsCheckbox.check();
+    }
+
+    // Age confirmation checkbox if present
+    const ageCheckbox = page.locator('input[type="checkbox"]').nth(1);
+    if (await ageCheckbox.isVisible()) {
+      await ageCheckbox.check();
+    }
+
+    // Submit registration
+    const submitBtn = page.getByRole('button', { name: /sign\s*up|registr|erstellen|create/i });
+    await submitBtn.click();
 
     // Wait for redirect to dashboard or verification message
     await page.waitForTimeout(3000);
@@ -84,10 +97,9 @@ test.describe('Authentication Flow', () => {
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
     await page.goto('/dashboard');
     
-    // Should redirect to login or auth
+    // Should redirect to login
     await page.waitForTimeout(2000);
     const url = page.url();
-    const redirectedToAuth = url.includes('/login') || url.includes('/auth') || url.includes('/signup');
-    expect(redirectedToAuth).toBeTruthy();
+    expect(url.includes('/login') || url === page.context().browser()?.version()).toBeTruthy();
   });
 });

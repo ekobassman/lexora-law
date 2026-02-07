@@ -507,8 +507,6 @@
     "modifyButton": "Modifica bozza",
     "send": "Invia",
     "thinking": "Sto pensando...",
-    "outOfScopeRefusal": "Mi dispiace, posso aiutarti solo con questioni legali e amministrative. Posso assisterti con contratti, lettere formali, consulenza legale o pratiche burocratiche. Hai bisogno di aiuto con uno di questi argomenti?",
-    "searchingLegalSources": "Sto cercando normative aggiornate da fonti ufficiali...",
     "error": "Errore nell'invio del messaggio",
     "welcome": "Ciao! Come posso aiutarti con questa lettera?",
     "regenerate": "Rigenera risposta",
@@ -655,27 +653,13 @@
     "deleteCase": "Elimina pratica"
   },
   "footer": {
-    "product": "Prodotto",
-    "howItWorks": "Come funziona",
-    "pricing": "Prezzi",
-    "supportedDocuments": "Documenti supportati",
-    "faq": "FAQ",
-    "company": "Azienda",
-    "aboutUs": "Chi siamo",
-    "contact": "Contatto",
-    "legal": "Legale",
-    "privacy": "Informativa Privacy",
+    "privacy": "Privacy Policy",
     "terms": "Termini di Servizio",
-    "disclaimer": "Esonero responsabilità",
-    "support": "Supporto",
-    "helpCenter": "Centro Assistenza",
+    "disclaimer": "Avvertenza",
+    "legal": "Note Legali",
     "impressum": "Impressum",
-    "disclaimerText": "Lexora è un assistente basato su IA e non fornisce consulenza legale. I contenuti generati sono solo a scopo informativo. Per decisioni legalmente vincolanti, consulta un avvocato qualificato.",
+    "disclaimerText": "Questo servizio non costituisce consulenza legale. Per casi complessi, consulta un avvocato.",
     "copyright": "© {year} LEXORA. Tutti i diritti riservati."
-  },
-  "pullToRefresh": {
-    "pull": "Tira per aggiornare",
-    "release": "Rilascia per aggiornare"
   },
   "pricing": {
     "localCurrencyNote": "Prezzi mostrati nella tua valuta locale.",
@@ -958,17 +942,12 @@
     "saveError": "Errore nel salvataggio"
   },
   "countries": {
-    "US": "Stati Uniti",
     "DE": "Germania",
     "AT": "Austria",
     "CH": "Svizzera",
     "IT": "Italia",
     "FR": "Francia",
     "ES": "Spagna",
-    "UK": "Regno Unito",
-    "UA": "Ucraina",
-    "TR": "Turchia",
-    "LATAM": "America Latina",
     "PL": "Polonia",
     "RO": "Romania",
     "NL": "Paesi Bassi",
@@ -1022,10 +1001,7 @@
       "saving": "Salvataggio documento...",
       "analyzing": "Analisi AI in corso..."
     },
-    "anonymousHint": "Per salvare questa analisi, crea un account gratuito",
-    "uploadedOcrDisabled": "Caricato, OCR non disponibile",
-    "ocrFailed": "OCR non riuscito",
-    "pdfNotSupportedHint": "Converti PDF in immagini (1-3 pagine) e ricarica."
+    "anonymousHint": "Per salvare questa analisi, crea un account gratuito"
   },
   "subscription": {
     "paywall": {
@@ -1101,10 +1077,7 @@
     "logout": "Esci",
     "login": "Accedi",
     "signup": "Registrati",
-    "support": "Supporto",
-    "howItWorks": "Come funziona",
-    "pricing": "Prezzi",
-    "faq": "FAQ"
+    "support": "Supporto"
   },
   "tryChat": {
     "title": "Prova Lexora ora",
@@ -1341,9 +1314,9 @@
       "title": "I tuoi dati sono al sicuro con noi",
       "subtitle": "Sicurezza e privacy sono le nostre massime priorità. Utilizziamo tecnologie all'avanguardia per proteggere i tuoi documenti sensibili.",
       "countriesTitle": "Paesi Supportati",
-      "countriesSubtitle": "Appositamente adattato ai requisiti legali in 11 paesi nel mondo:",
+      "countriesSubtitle": "Appositamente adattato ai requisiti legali in:",
       "certifications": { "gdpr": "GDPR" },
-      "countries": { "us": "Stati Uniti", "de": "Germania", "at": "Austria", "ch": "Svizzera", "it": "Italia", "fr": "Francia", "es": "Spagna", "uk": "Regno Unito", "ua": "Ucraina", "tr": "Turchia", "latam": "America Latina" },
+      "countries": { "de": "Germania", "at": "Austria", "ch": "Svizzera" },
       "features": [
         { "title": "Conforme al GDPR", "description": "Pienamente conforme al regolamento europeo sulla protezione dei dati." },
         { "title": "Crittografia SSL", "description": "Crittografia SSL a 256 bit per tutti i trasferimenti di dati." },
@@ -1351,41 +1324,5 @@
         { "title": "Nessuna Condivisione Dati", "description": "I tuoi documenti non vengono mai condivisi o venduti a terze parti." }
       ]
     }
-  },
-  "pwa": {
-    "installPrompt": "Aggiungi Lexora alla Home per accesso istantaneo",
-    "installButton": "Installa App",
-    "installLater": "Più tardi",
-    "installing": "Installazione in corso...",
-    "installed": "App installata!",
-    "alreadyInstalled": "App già installata",
-    "updateApp": "Aggiorna App",
-    "offlineTitle": "Sei offline",
-    "offlineMessage": "Alcune funzionalità sono limitate. I documenti salvati sono disponibili.",
-    "retry": "Riprova",
-    "online": "Online",
-    "offline": "Offline",
-    "iOSGuide": {
-      "title": "Installa Lexora sul tuo iPhone",
-      "installTitle": "Installa Lexora",
-      "subtitle": "Aggiungi alla Home per accesso istantaneo",
-      "addToHomeButton": "Aggiungi alla Home",
-      "hint": "Tocca Condividi → Aggiungi alla Home",
-      "shareHint": "Tocca il tasto Condividi in Safari",
-      "step1": "Tocca il pulsante Condividi in basso",
-      "step2": "Seleziona \"Aggiungi a Home\"",
-      "step3": "Conferma con \"Aggiungi\"",
-      "gotIt": "Ho capito, non mostrare più"
-    },
-    "updateAvailable": "Nuova versione disponibile. Ricarica per aggiornare."
-  },
-  "mobileInstall": {
-    "bannerText": "Installa Lexora per salvare i tuoi documenti",
-    "installBtn": "Installa",
-    "dismiss": "Chiudi",
-    "saveDocumentTitle": "Documento generato!",
-    "saveDocumentDesc": "Installa l'app per salvarlo e accedervi offline.",
-    "installApp": "Installa App",
-    "continueWeb": "Continua sul web"
   }
 }

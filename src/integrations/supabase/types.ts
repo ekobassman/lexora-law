@@ -596,7 +596,6 @@ export type Database = {
           first_name: string | null
           full_name: string | null
           id: string
-          is_admin: boolean | null
           is_family: boolean | null
           last_billing_email_at: string | null
           last_billing_event_id: string | null
@@ -652,7 +651,6 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id: string
-          is_admin?: boolean | null
           is_family?: boolean | null
           last_billing_email_at?: string | null
           last_billing_event_id?: string | null
@@ -708,7 +706,6 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id?: string
-          is_admin?: boolean | null
           is_family?: boolean | null
           last_billing_email_at?: string | null
           last_billing_event_id?: string | null

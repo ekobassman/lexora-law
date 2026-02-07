@@ -101,22 +101,22 @@ export function SupportedDocumentsSection({ id }: SupportedDocumentsSectionProps
           </p>
         </div>
 
-        {/* Documents Grid - equal-height cards, clamp text for long German, responsive columns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 max-w-6xl mx-auto">
+        {/* Documents Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
           {documentTypes.map((doc, index) => {
             const Icon = doc.icon;
             return (
               <div
                 key={index}
-                className="group flex flex-col h-full min-h-[140px] overflow-hidden p-4 md:p-6 rounded-xl md:rounded-2xl border border-navy/10 bg-white shadow-sm hover:border-gold/30 hover:shadow-md transition-all"
+                className="group p-4 md:p-6 rounded-xl border border-navy/10 bg-white hover:border-gold/30 hover:shadow-lg transition-all"
               >
-                <div className={`w-12 h-12 shrink-0 rounded-xl ${doc.bgColor} flex items-center justify-center mb-3`}>
-                  <Icon className={`w-6 h-6 md:w-7 md:h-7 shrink-0 ${doc.color}`} />
+                <div className={`h-12 w-12 rounded-lg ${doc.bgColor} flex items-center justify-center mb-4`}>
+                  <Icon className={`h-6 w-6 ${doc.color}`} />
                 </div>
-                <h3 className="font-semibold text-navy mb-1.5 group-hover:text-gold transition-colors text-base md:text-lg line-clamp-2 break-words">
+                <h3 className="font-semibold text-navy mb-1 group-hover:text-gold transition-colors">
                   {doc.title}
                 </h3>
-                <p className="text-sm text-navy/60 leading-snug line-clamp-3 break-words hyphens-auto flex-1 min-h-0">
+                <p className="text-sm text-navy/60">
                   {doc.description}
                 </p>
               </div>

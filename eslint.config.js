@@ -21,13 +21,6 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
-      // Downgrade to warn so Vercel build passes; fix and re-enable as error later
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-require-imports": "warn",
-      "no-useless-escape": "warn",
-      "prefer-const": "warn",
-      "no-empty": "warn",
-      "@typescript-eslint/no-empty-object-type": "warn",
     },
   },
 );

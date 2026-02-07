@@ -155,10 +155,7 @@
     text-wrap: balance;
   }
   
-  /* Safe area for notched devices (PWA standalone / iPhone notch) */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
+  /* Safe area for notched devices */
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -399,18 +396,4 @@
 
 .animate-marquee:hover {
   animation-play-state: paused;
-}
-
-/* Slide-up animation (e.g. bottom sheets, modals) */
-@keyframes slide-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
 }

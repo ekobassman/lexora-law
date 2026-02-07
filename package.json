@@ -3,19 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "overrides": {
-    "rimraf": "^5.0.0"
-  },
   "scripts": {
     "dev": "vite",
-    "build": "npx vite build",
-    "generate-icons": "node scripts/generate-pwa-icons.js",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google-cloud/vision": "^5.3.4",
     "@hookform/resolvers": "^3.10.0",
     "@playwright/test": "^1.57.0",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -69,7 +64,6 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "tesseract.js": "^7.0.0",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
   },
@@ -79,7 +73,6 @@
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@vercel/node": "^3.2.0",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
@@ -88,9 +81,6 @@
     "globals": "^15.15.0",
     "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.6",
-    "sharp": "^0.34.5",
-    "sharp-ico": "^0.1.5",
-    "supabase": "^2.75.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",

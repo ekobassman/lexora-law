@@ -59,36 +59,16 @@ export interface EntitlementsDTO {
   messages_per_case?: number;
 }
 
-const DEFAULT_ENTITLEMENTS_FALLBACK: EntitlementsDTO = {
-  role: "user",
-  plan: "free",
-  status: "active",
-  current_period_end: null,
-  limits: { practices: 1, aiCredits: 100, messages: 10, casesMax: 1 },
-  usage: { practicesUsed: 0, aiCreditsUsed: 0, messagesUsed: 0, casesUsed: 0 },
-  plan_key: "free",
-  max_cases: 1,
-  cases_created: 0,
-  can_create_case: true,
-  messages_per_case: 10,
-  features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
-};
-
 export async function getEntitlements(session: Session): Promise<EntitlementsDTO> {
   const { data, error } = await supabase.functions.invoke("entitlements", {
     headers: {
+      // Make the token explicit for clarity / debugging.
       Authorization: `Bearer ${session.access_token}`,
     },
   });
 
   if (error) {
-    console.warn("[getEntitlements] invoke error:", error.message);
-    return DEFAULT_ENTITLEMENTS_FALLBACK;
-  }
-
-  if (data?.ok === false || data?.error) {
-    console.warn("[getEntitlements] API returned error:", data?.error ?? data?.message);
-    return DEFAULT_ENTITLEMENTS_FALLBACK;
+    throw new Error(error.message || "Entitlements fetch failed");
   }
 
   const plan: PlanId = (data?.plan || data?.plan_key || "free").toLowerCase();

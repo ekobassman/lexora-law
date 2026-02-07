@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { getCorsHeaders } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 // Price ID to plan mapping - MUST match Stripe products
 const PRICE_TO_PLAN: Record<string, string> = {
@@ -53,9 +57,8 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
-  const cors = getCorsHeaders(req.headers.get("Origin"));
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: cors, status: 204 });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -66,7 +69,7 @@ serve(async (req) => {
     logStep("ENV_MISSING", { supabaseUrl: !!supabaseUrl, serviceRoleKey: !!serviceRoleKey });
     return new Response(
       JSON.stringify({ ok: false, error: "MISSING_ENV", code: "ENV_MISSING" }),
-      { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 
@@ -74,7 +77,7 @@ serve(async (req) => {
     logStep("STRIPE_KEY_MISSING");
     return new Response(
       JSON.stringify({ ok: false, error: "STRIPE_KEY_MISSING", code: "STRIPE_KEY_MISSING" }),
-      { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 
@@ -91,7 +94,7 @@ serve(async (req) => {
       logStep("No auth header");
       return new Response(
         JSON.stringify({ ok: false, error: "Unauthorized", code: "MISSING_AUTH" }),
-        { headers: { ...cors, "Content-Type": "application/json" }, status: 401 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
 
@@ -102,7 +105,7 @@ serve(async (req) => {
       logStep("Invalid token", { error: userError?.message });
       return new Response(
         JSON.stringify({ ok: false, error: "Invalid token", code: "INVALID_TOKEN" }),
-        { headers: { ...cors, "Content-Type": "application/json" }, status: 401 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
 
@@ -167,7 +170,7 @@ serve(async (req) => {
           synced: true,
           source: "no_stripe_customer",
         }),
-        { headers: { ...cors, "Content-Type": "application/json" }, status: 200 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -330,7 +333,7 @@ serve(async (req) => {
     logStep("Sync complete", response);
 
     return new Response(JSON.stringify(response), {
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
 
@@ -338,7 +341,7 @@ serve(async (req) => {
     logStep("ERROR", { message: error instanceof Error ? error.message : String(error) });
     return new Response(
       JSON.stringify({ ok: false, error: "Internal server error", code: "INTERNAL_ERROR" }),
-      { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

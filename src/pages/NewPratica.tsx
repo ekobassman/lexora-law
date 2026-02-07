@@ -17,9 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/integrations/supabase/client';
-import { runCanonicalPipeline, isHeicFile } from '@/lib/canonicalPipeline';
-import { getProcessDocumentErrorToast } from '@/lib/processDocumentClient';
-import { callEdgeFunction } from '@/lib/edgeFetch';
+import { invokeExtractText } from '@/lib/invokeExtractText';
 import { toast } from 'sonner';
 import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
@@ -35,7 +33,7 @@ const praticaSchema = z.object({
 export default function NewPratica() {
   const { t, isRTL, language } = useLanguage();
   const { user, loading: authLoading, hardReset } = useAuth();
-  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements, isAdmin } = useEntitlements();
+  const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -89,33 +87,22 @@ export default function NewPratica() {
 
     const createBlitzerCase = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) {
-          toast.error('Sessione scaduta. Effettua di nuovo l\'accesso.');
-          return;
-        }
-        const result = await callEdgeFunction('create-case', token, {
-          title: 'Einspruch gegen Blitzer-Bußgeld',
-          authority: 'Bußgeldstelle',
-          status: 'in_progress',
+        // Create the blitzer case via backend
+        const { data, error } = await supabase.functions.invoke('create-case', {
+          body: {
+            title: 'Einspruch gegen Blitzer-Bußgeld',
+            authority: 'Bußgeldstelle',
+            status: 'in_progress',
+          },
         });
-        const data = result.data as { id?: string; error?: string; message?: string } | null;
-        if (!result.ok) {
-          const errCode = data?.error ?? '';
-          const msg = data?.message || data?.error || `Errore ${result.status}`;
-          if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED'].includes(errCode)) {
-            setShowPaywall(true);
-            toast.error(msg || t('subscription.limitReached'));
-            return;
-          }
-          toast.error(msg);
-          return;
-        }
-        if (data?.error === 'LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
+
+        if (error) throw error;
+        
+        if (data?.error === 'LIMIT_REACHED') {
           setShowPaywall(true);
           return;
         }
+        
         if (data?.id) {
           setBlitzerPraticaId(data.id);
           setShowBlitzerWizard(true);
@@ -123,7 +110,7 @@ export default function NewPratica() {
         }
       } catch (err) {
         console.error('Error creating blitzer case:', err);
-        toast.error(err instanceof Error ? err.message : 'Fehler beim Erstellen des Vorgangs');
+        toast.error('Fehler beim Erstellen des Vorgangs');
       }
     };
 
@@ -143,33 +130,22 @@ export default function NewPratica() {
 
     const createAutoveloxCase = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) {
-          toast.error('Sessione scaduta. Effettua di nuovo l\'accesso.');
-          return;
-        }
-        const result = await callEdgeFunction('create-case', token, {
-          title: 'Ricorso Multa Autovelox – Italia',
-          authority: 'Prefettura / Giudice di Pace',
-          status: 'in_progress',
+        // Create the autovelox case via backend
+        const { data, error } = await supabase.functions.invoke('create-case', {
+          body: {
+            title: 'Ricorso Multa Autovelox – Italia',
+            authority: 'Prefettura / Giudice di Pace',
+            status: 'in_progress',
+          },
         });
-        const data = result.data as { id?: string; error?: string; message?: string } | null;
-        if (!result.ok) {
-          const errCode = data?.error ?? '';
-          const msg = data?.message || data?.error || `Errore ${result.status}`;
-          if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED'].includes(errCode)) {
-            setShowPaywall(true);
-            toast.error(msg || t('subscription.limitReached'));
-            return;
-          }
-          toast.error(msg);
-          return;
-        }
-        if (data?.error === 'LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
+
+        if (error) throw error;
+        
+        if (data?.error === 'LIMIT_REACHED') {
           setShowPaywall(true);
           return;
         }
+        
         if (data?.id) {
           setAutoveloxPraticaId(data.id);
           setShowAutoveloxWizard(true);
@@ -204,64 +180,131 @@ export default function NewPratica() {
     });
   };
 
+  const extractTextFromFile = async (file: File): Promise<string | null> => {
+    try {
+      const base64 = await fileToBase64(file);
+
+      // Use centralized invoke wrapper with auth validation
+      const result = await invokeExtractText({
+        base64,
+        mimeType: file.type,
+        userLanguage: language,
+        navigate,
+      });
+
+      // null means auth failed and user was redirected
+      if (result === null) return null;
+
+      if (result.error) {
+        console.error('[extract-text] function error', result.error);
+        return null;
+      }
+
+      return result.text || null;
+    } catch (err) {
+      console.error('[extract-text] unexpected error', err);
+      return null;
+    }
+  };
+
+  const runAnalysis = async (text: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-letter', {
+        body: {
+          letterText: text,
+          userLanguage: language,
+        },
+      });
+
+      if (error) {
+        console.error('Analysis error:', error);
+        return null;
+      }
+
+      if (data?.error) {
+        console.error('AI error:', data.error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('Error running analysis:', err);
+      return null;
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-
-    if (isHeicFile(selectedFile)) {
-      toast.error(t('demoChat.heicNotSupported') || 'HEIC non supportato. Usa JPG/PNG.', { duration: 6000 });
-      return;
-    }
+    
+    // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(selectedFile.type)) {
       toast.error(t('newPratica.error.fileType'));
       return;
     }
+    
+    // Validate file size (max 10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
       toast.error(t('newPratica.error.fileSize'));
       return;
     }
-
+    
     setFile(selectedFile);
     setAnalysisStep('uploading');
     setAnalysisProgress(10);
-
+    
     try {
-      const result = await runCanonicalPipeline(selectedFile, {
-        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
-        onProgress: (step) => {
-          if (step === 'uploading') {
-            setAnalysisStep('uploading');
-            setAnalysisProgress(20);
-          } else if (step === 'ocr') {
-            setAnalysisStep('extracting');
-            setAnalysisProgress(50);
-          } else if (step === 'analyzing') {
-            setAnalysisStep('analyzing');
-            setAnalysisProgress(80);
-          } else {
-            setAnalysisProgress(100);
-          }
-        },
-      });
-      setFileUrl(result.signed_url ?? null);
-      setFormData((prev) => ({ ...prev, letter_text: result.ocr_text || '' }));
-      setAnalysisResult({
-        explanation: result.analysis?.summary,
-        risks: result.analysis?.risks ?? [],
-        draft_response: result.draft_text,
-      });
-      setAnalysisStep('completed');
-      setAnalysisProgress(100);
+      // Upload file first
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('pratiche-files')
+        .upload(fileName, selectedFile);
+      
+      if (uploadError) throw uploadError;
+      
+      setFileUrl(fileName);
+      setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
-      toast.success(t('detail.analyzeSuccess'));
-    } catch (error: unknown) {
+
+      // Run OCR for both images AND PDFs
+      setAnalysisStep('extracting');
+      setAnalysisProgress(50);
+      
+      const extractedText = await extractTextFromFile(selectedFile);
+      
+      if (extractedText && extractedText.trim().length > 0) {
+        setFormData(prev => ({ ...prev, letter_text: extractedText }));
+        setAnalysisProgress(70);
+        
+        // Now run AI analysis
+        setAnalysisStep('analyzing');
+        setAnalysisProgress(80);
+        
+        const result = await runAnalysis(extractedText);
+        
+        if (result) {
+          setAnalysisResult(result);
+          // Auto-fill authority if detected
+          if (result.authority) {
+            setFormData(prev => ({ ...prev, authority: result.authority }));
+          }
+          setAnalysisStep('completed');
+          setAnalysisProgress(100);
+          toast.success(t('detail.analyzeSuccess'));
+        } else {
+          setAnalysisStep('error');
+          toast.error(t('detail.analyzeError'));
+        }
+      } else {
+        setAnalysisStep('error');
+        toast.error(t('analysis.ocrError'));
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
-      const msg = error instanceof Error ? error.message : String(error);
-      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
-      toast.error(message || msg || t('newPratica.error.upload'), {
-        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
-      });
+      toast.error(error.message || t('newPratica.error.upload'));
       setFile(null);
       setAnalysisStep('error');
     }
@@ -275,51 +318,62 @@ export default function NewPratica() {
     setAnalysisResult(null);
   };
 
+  // Handle camera scan - reuse file handling logic
   const handleCameraScan = async (capturedFile: File) => {
-    if (isHeicFile(capturedFile)) {
-      toast.error(t('demoChat.heicNotSupported') || 'HEIC non supportato. Usa JPG/PNG.', { duration: 6000 });
-      return;
-    }
     setFile(capturedFile);
     setAnalysisStep('uploading');
     setAnalysisProgress(10);
+    
     try {
-      const result = await runCanonicalPipeline(capturedFile, {
-        source: 'camera',
-        userLanguage: language?.toUpperCase().slice(0, 2) || 'DE',
-        onProgress: (step) => {
-          if (step === 'uploading') {
-            setAnalysisStep('uploading');
-            setAnalysisProgress(20);
-          } else if (step === 'ocr') {
-            setAnalysisStep('extracting');
-            setAnalysisProgress(50);
-          } else if (step === 'analyzing') {
-            setAnalysisStep('analyzing');
-            setAnalysisProgress(80);
-          } else {
-            setAnalysisProgress(100);
-          }
-        },
-      });
-      setFileUrl(result.signed_url ?? null);
-      setFormData((prev) => ({ ...prev, letter_text: result.ocr_text || '' }));
-      setAnalysisResult({
-        explanation: result.analysis?.summary,
-        risks: result.analysis?.risks ?? [],
-        draft_response: result.draft_text,
-      });
-      setAnalysisStep('completed');
-      setAnalysisProgress(100);
+      // Upload file
+      const fileExt = 'jpg';
+      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('pratiche-files')
+        .upload(fileName, capturedFile);
+      
+      if (uploadError) throw uploadError;
+      
+      setFileUrl(fileName);
+      setAnalysisProgress(30);
       toast.success(t('newPratica.fileUploaded'));
-      toast.success(t('detail.analyzeSuccess'));
-    } catch (error: unknown) {
+
+      // Run OCR
+      setAnalysisStep('extracting');
+      setAnalysisProgress(50);
+      
+      const extractedText = await extractTextFromFile(capturedFile);
+      
+      if (extractedText && extractedText.trim().length > 0) {
+        setFormData(prev => ({ ...prev, letter_text: extractedText }));
+        setAnalysisProgress(70);
+        
+        // Now run AI analysis
+        setAnalysisStep('analyzing');
+        setAnalysisProgress(80);
+        
+        const result = await runAnalysis(extractedText);
+        
+        if (result) {
+          setAnalysisResult(result);
+          if (result.authority) {
+            setFormData(prev => ({ ...prev, authority: result.authority }));
+          }
+          setAnalysisStep('completed');
+          setAnalysisProgress(100);
+          toast.success(t('detail.analyzeSuccess'));
+        } else {
+          setAnalysisStep('error');
+          toast.error(t('detail.analyzeError'));
+        }
+      } else {
+        setAnalysisStep('error');
+        toast.error(t('analysis.ocrError'));
+      }
+    } catch (error: any) {
       console.error('Camera scan error:', error);
-      const msg = error instanceof Error ? error.message : String(error);
-      const { message, runId, actionLabel } = getProcessDocumentErrorToast(error as import('@/lib/processDocumentClient').ProcessDocumentErrorLike, { isAdmin: isAdmin ?? false });
-      toast.error(message || msg || t('newPratica.error.upload'), {
-        ...(actionLabel && runId && { action: { label: actionLabel, onClick: () => navigate(`/admin/pipeline-runs?run_id=${runId}`) } }),
-      });
+      toast.error(error.message || t('newPratica.error.upload'));
       setFile(null);
       setAnalysisStep('error');
     }
@@ -362,45 +416,35 @@ export default function NewPratica() {
     setIsLoading(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Sessione scaduta. Effettua di nuovo l\'accesso.');
-
-      const result = await callEdgeFunction('create-case', token, {
-        title: formData.title.trim(),
-        authority: formData.authority.trim() || null,
-        aktenzeichen: formData.aktenzeichen.trim() || null,
-        deadline: formData.deadline || null,
-        letter_text: formData.letter_text.trim() || null,
-        file_url: fileUrl,
-        status: analysisResult ? 'in_progress' : 'new',
-        explanation: analysisResult?.explanation || null,
-        risks: analysisResult?.risks || null,
-        draft_response: analysisResult?.draft_response || null,
+      // Use backend edge function for case creation (enforces limits server-side)
+      const { data, error } = await supabase.functions.invoke('create-case', {
+        body: {
+          title: formData.title.trim(),
+          authority: formData.authority.trim() || null,
+          aktenzeichen: formData.aktenzeichen.trim() || null,
+          deadline: formData.deadline || null,
+          letter_text: formData.letter_text.trim() || null,
+          file_url: fileUrl,
+          status: analysisResult ? 'in_progress' : 'new',
+          explanation: analysisResult?.explanation || null,
+          risks: analysisResult?.risks || null,
+          draft_response: analysisResult?.draft_response || null,
+        },
       });
-
-      const data = result.data as { error?: string; message?: string } | null;
-      if (!result.ok) {
-        const errCode = data?.error ?? '';
-        const msg = data?.message || data?.error || `Errore server (${result.status})`;
-        if (result.status === 402 || ['LIMIT_UPLOADS', 'LIMIT_OCR', 'LIMIT_CHAT', 'LIMIT_REACHED', 'PRACTICE_LIMIT_REACHED'].includes(errCode)) {
-          setShowPaywall(true);
-          toast.error(msg || t('subscription.limitReached'), { duration: 6000 });
-          return;
-        }
-        if (result.status === 503 && errCode === 'USAGE_SYSTEM_UNAVAILABLE') {
-          toast.error(msg || t('newPratica.error.upload'), { duration: 6000 });
-          return;
-        }
-        throw new Error(msg);
-      }
-      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED' || data?.error === 'LIMIT_UPLOADS') {
+      
+      if (error) throw error;
+      
+      // Check for LIMIT_REACHED error from backend
+      if (data?.error === 'LIMIT_REACHED') {
         setShowPaywall(true);
         toast.error(data.message || t('subscription.limitReached'));
         return;
       }
-      if (data?.error) throw new Error(data.message || data.error);
-
+      
+      if (data?.error) {
+        throw new Error(data.message || data.error);
+      }
+      
       await refreshEntitlements();
       toast.success(t('newPratica.success'));
       navigate('/dashboard');
