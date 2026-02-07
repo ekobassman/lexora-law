@@ -746,6 +746,7 @@ export function DemoChatSection() {
 
   const exportText = draftText.trim();
   // Chat contains a formal letter if any assistant message looks like one (so buttons stay on after navigate back / preview)
+  // Strict: only treat as "letter ready" when content is a real formal letter (prevents summaries/recaps from enabling buttons)
   const looksLikeFormalLetter = useCallback((content: string) => {
     if (!content || content.length < 200) return false;
     const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(content);
@@ -757,10 +758,12 @@ export function DemoChatSection() {
     messages.some(m => m.role === 'assistant' && looksLikeFormalLetter(m.content)),
     [messages, looksLikeFormalLetter]
   );
-  // Buttons on when we have draft text AND (generated this session OR chat still shows the letter)
+  // Buttons ONLY when we have a real formal letter (not a summary/recap) – strict check
   const hasLetterDraft = useMemo(() =>
-    exportText.length >= 50 && (generatedInSession || chatContainsLetter),
-    [exportText, generatedInSession, chatContainsLetter]
+    exportText.length >= 200 &&
+    looksLikeFormalLetter(exportText) &&
+    (generatedInSession || chatContainsLetter),
+    [exportText, generatedInSession, chatContainsLetter, looksLikeFormalLetter]
   );
 
   const shouldBypassLimits = Boolean(user) && (isAdmin || isUnlimited || isPaid);
@@ -992,18 +995,15 @@ export function DemoChatSection() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Check if we got a valid letter draft from backend
-      // IMPORTANT: Only trust the backend's draftText - do NOT do client-side extraction
-      // The backend uses strict [LETTER] markers and filters out conversation summaries
+      // Check if we got a valid letter draft from backend – only accept real formal letters
+      // Reject summaries/recaps so we never enable preview/print/email/copy until a real letter exists
       let newDraft: string | null = null;
-      if (data.draftText && typeof data.draftText === 'string' && data.draftText.trim().length >= 50) {
-        // Additional validation: ensure this is a formal letter, not a summary
-        // Reject if it looks like a conversation summary (bullet points listing user data)
+      if (data.draftText && typeof data.draftText === 'string' && data.draftText.trim().length >= 200) {
         const draftContent = data.draftText.trim();
         const isSummaryPattern = /^(thank you|grazie|danke|merci).*:\s*\n.*- (sender|mittente|absender|expéditeur):/i.test(draftContent) ||
           (draftContent.split(/\n\s*-\s+/).length > 3 && draftContent.length < 800);
-        
-        if (!isSummaryPattern) {
+        const isFormalLetter = looksLikeFormalLetter(draftContent);
+        if (!isSummaryPattern && isFormalLetter) {
           newDraft = draftContent;
         }
       }

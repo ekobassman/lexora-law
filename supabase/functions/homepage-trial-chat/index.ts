@@ -345,6 +345,15 @@ function extractFormalLetterFallback(text: string): string | null {
   return cleaned.length >= 100 ? cleaned : null;
 }
 
+// Only treat as a real letter when it has formal structure (prevents summaries/recaps from being returned as draft)
+function looksLikeFormalLetter(text: string): boolean {
+  if (!text || text.length < 200) return false;
+  const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(text);
+  const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(text);
+  const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+  return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+}
+
 // Replace signature placeholders with line (client signs on printed document only – never ask for signature)
 function replaceSignaturePlaceholders(text: string): string {
   if (!text) return text;
@@ -631,14 +640,19 @@ DO NOT mention or correct any typos in the user's confirmation. DO NOT comment o
       if (draftText) draftText = replaceSignaturePlaceholders(draftText);
     }
 
+    // Only return draftText when it is a real formal letter (not a summary/recap) – keeps buttons disabled until letter is ready
+    if (draftText && !looksLikeFormalLetter(draftText.trim())) {
+      draftText = null;
+    }
+
     // WEB ASSIST: Append sources section if web search was performed
     if (webSearchResults.length > 0 && !placeholderBlocked) {
       const sourcesSection = formatSourcesSection(webSearchResults, lang);
       finalReply = finalReply + sourcesSection;
     }
 
-    // Increment global documents counter when we return a letter (so social proof counter always updates)
-    if (draftText && draftText.trim().length >= 50) {
+    // Increment global documents counter only when we return a real letter
+    if (draftText && draftText.trim().length >= 200) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       if (supabaseUrl && serviceKey) {

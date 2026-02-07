@@ -322,6 +322,15 @@ const SIGNATURE_RE = /^\s*(firma|unterschrift|signature)\b/im;
 // CHAT JUNK detector: phrases that indicate the AI is still analyzing / not providing a letter
 const CHAT_JUNK_RE = /\b(per\s+ora\s+sto\s+analizzando|quando\s+avrò\s+il\s+testo\s+completo|apri\s+un\s+fascicolo|usa\s+il\s+pulsante|i'm\s+still\s+analyzing|once\s+the\s+full\s+letter\s+is\s+ready)\b/i;
 
+// Only treat as a real letter when it has formal structure (prevents summaries/recaps from enabling buttons)
+function looksLikeFormalLetter(text: string): boolean {
+  if (!text || text.length < 200) return false;
+  const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen)/i.test(text);
+  const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen\s+grüßen|sincerely|best\s+regards|kind\s+regards|hochachtungsvoll|con\s+osservanza)/i.test(text);
+  const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+  return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+}
+
 // Extract the subject line value for auto-titling
 function extractSubjectTitle(text: string): string | null {
   const subjectMatch = text.match(/^\s*(betreff|oggetto|subject|objet|asunto)\s*:\s*(.+)$/im);
@@ -993,6 +1002,14 @@ User has confirmed document generation. You may now generate the final letter wi
 
     // Signature: never ask user. Replace [Signature]/[Firma] with line for signing after print.
     if (draftResponse) draftResponse = replaceSignaturePlaceholders(draftResponse);
+
+    // Only treat as letter when it has formal structure (prevents summaries/recaps from enabling preview/print/email)
+    if (draftResponse && !looksLikeFormalLetter(draftResponse.trim())) {
+      draftReady = false;
+      draftResponse = null;
+      extractedTitle = null;
+    }
+
     let assistantMessage = normalizeAssistantCopy(responseLanguage, replaceSignaturePlaceholders(rawAssistant));
 
     // HARD-STOP: Never allow drafts with placeholders.
