@@ -884,8 +884,6 @@ export function DemoChatSection() {
       return;
     }
 
-    const isFirstMessage = messages.length === 0;
-
     const userMessage: ChatMessage = {
       role: 'user',
       content: messageContent.trim(),
@@ -893,42 +891,53 @@ export function DemoChatSection() {
       attachmentType,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
+    let isFirstMessage: boolean;
+    let startingNewFascicolo = false;
+
+    // When a document was already generated, the next message starts a new case (nuovo fascicolo).
+    if (conversationStatus === 'document_generated') {
+      startingNewFascicolo = true;
+      setMessages([userMessage]);
+      setDraftText('');
+      draftTextRef.current = '';
+      setConversationStatus('collecting');
+      setAiContextStart(0);
+      setGeneratedInSession(false);
+      writeAiContextStart(0);
+      const singleMsg = [{ role: userMessage.role, content: userMessage.content, timestamp: userMessage.timestamp.toISOString(), attachmentType: userMessage.attachmentType ?? null }];
+      writeDemoChatBuffer({ updatedAt: Date.now(), input: '', draftText: '', messages: singleMsg });
+      saveMessages([userMessage]);
+      saveDraft('');
+      conversationHistory = [{ role: 'user', content: cleanLetterTags(userMessage.content) }];
+      isFirstMessage = true;
+    } else {
+      setMessages(prev => [...prev, userMessage]);
+      const sliced = [...messages.slice(aiContextStart), userMessage];
+      conversationHistory = sliced
+        .filter((m) => {
+          const c = (m.content || '').trim();
+          if (!c) return false;
+          if (Object.values(letterGeneratedByLang).includes(c)) return false;
+          return true;
+        })
+        .map((m) => ({ role: m.role, content: cleanLetterTags(m.content) }));
+      if (draftText && draftText.trim().length > 0) {
+        const draftInHistory = conversationHistory.some(
+          (m) => m.role === 'assistant' && m.content.includes(draftText.trim().slice(0, 100))
+        );
+        if (!draftInHistory) {
+          conversationHistory.push({
+            role: 'assistant',
+            content: `[Previously generated letter/document]:\n${draftText.trim()}`,
+          });
+        }
+      }
+      isFirstMessage = messages.length === 0;
+    }
+
     setInput('');
     setIsLoading(true);
-
-    // Build AI context from a "fresh" point onward.
-    // Include conversation history AND the current draft so AI can remember it for follow-up requests.
-    const sliced = [...messages.slice(aiContextStart), userMessage];
-    
-    // Clean the [LETTER] tags but KEEP the content so AI remembers what was generated
-    const conversationHistory = sliced
-      .filter((m) => {
-        const c = (m.content || '').trim();
-        if (!c) return false;
-        // Exclude our synthetic confirmation text in any language (these are UI-only).
-        if (Object.values(letterGeneratedByLang).includes(c)) return false;
-        return true;
-      })
-      .map((m) => ({ 
-        role: m.role, 
-        // Clean [LETTER] tags for cleaner context but keep the content
-        content: cleanLetterTags(m.content) 
-      }));
-    
-    // If we have a draft, add it as context so AI remembers what was generated
-    if (draftText && draftText.trim().length > 0) {
-      // Check if the draft is already in the history (to avoid duplication)
-      const draftInHistory = conversationHistory.some(
-        (m) => m.role === 'assistant' && m.content.includes(draftText.trim().slice(0, 100))
-      );
-      if (!draftInHistory) {
-        conversationHistory.push({
-          role: 'assistant',
-          content: `[Previously generated letter/document]:\n${draftText.trim()}`,
-        });
-      }
-    }
 
     // So the AI always has the scanned letter: pass it explicitly when the message (or last user msg) is the document
     const looksLikeLetter = (text: string) => {
@@ -949,8 +958,8 @@ export function DemoChatSection() {
           : undefined;
 
     const looksLikeConfirmation = /^(ok|okay|sì|si|yes|ja|oui|va bene|questo è tutto|questo e tutto|confermo|genera|procedi|niente|no,? niente|that'?s all|nothing else|reicht|passt|das ist alles|c\'est tout|eso es todo|bene così|è tutto|e tutto)[\s.,!?]*$/i.test(currentTrimmed);
-    const statusToSend = conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus;
-    setConversationStatus(statusToSend);
+    const statusToSend = startingNewFascicolo ? 'collecting' : (conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus);
+    if (!startingNewFascicolo) setConversationStatus(statusToSend);
 
     try {
       const response = await fetch(
@@ -1042,6 +1051,7 @@ export function DemoChatSection() {
     messages,
     aiContextStart,
     draftText,
+    conversationStatus,
     language,
     t,
     txt.errorToast,

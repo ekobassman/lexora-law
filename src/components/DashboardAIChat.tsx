@@ -713,6 +713,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 if (migrationData.draftText && migrationData.draftText.trim().length > 0) {
                   setLastDraftText(migrationData.draftText);
                   setDraftReady(true);
+                  setConversationStatus('document_generated');
                 }
                 
                 toast.success(
