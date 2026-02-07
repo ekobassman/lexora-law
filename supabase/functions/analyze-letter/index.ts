@@ -308,6 +308,8 @@ function runAllValidators(
 }
 
 serve(async (req) => {
+  // CORS preflight: MUST return 200 with Allow-Origin, Allow-Methods, Allow-Headers.
+  // Deploy from repo that contains THIS file (e.g. amt-helper-de-main), not another clone.
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       status: 200,
