@@ -205,9 +205,11 @@ export default function ScanDocument() {
         data: { session },
       } = await supabase.auth.getSession();
       
+      if (!session?.access_token) throw new Error('Sessione scaduta, effettua il login');
+      
       const { data: caseResponse, error: caseError } = await supabase.functions.invoke('create-case', {
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: { 
         title: name.trim(), 

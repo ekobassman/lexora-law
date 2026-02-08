@@ -1347,18 +1347,16 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
             title: titleToSave,
             draft_response: draftToSave,
             letter_text: letterTextForCase?.trim() || null,
-            status: 'in_progress',
+            source: 'chat', // Aggiunto source per tracciamento
+            locale: 'it', // Aggiunto locale
+            status: 'new'
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.code === 'CASE_LIMIT_REACHED') {
-          toast.error(t('credits.outOfMonthlyCases', 'You have used all your monthly cases.'));
-          return;
-        }
-        throw new Error(errorData.message || 'Failed to create case');
+      const errorData = await response.json();
+      if (errorData.code === 'CASE_LIMIT_REACHED') {
+        toast.error(t('credits.outOfMonthlyCases', 'You have used all your monthly cases.'));
       }
 
       const data = await response.json();

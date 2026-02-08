@@ -428,28 +428,25 @@ export default function NewPratica() {
     
     try {
       // Get session for JWT token
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      // Use backend edge function for case creation (enforces limits server-side)
+      const { data: { session } } = await supabase.auth.getSession();
+        
+      if (!session?.access_token) throw new Error('Sessione scaduta, effettua il login');
+        
+      // Use backend edge function for case creation// Create the autovelox case via backend
       const { data, error } = await supabase.functions.invoke('create-case', {
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: {
-          title: formData.title.trim(),
+          title: `Autovelox - ${formData.licensePlate}`,
           authority: formData.authority.trim() || null,
-          aktenzeichen: formData.aktenzeichen.trim() || null,
+          aktenzeichen: formData.licensePlate?.trim() || null,
           deadline: formData.deadline || null,
           letter_text: formData.letter_text.trim() || null,
           file_url: fileUrl,
-          status: analysisResult ? 'in_progress' : 'new',
-          explanation: analysisResult?.explanation || null,
-          risks: analysisResult?.risks || null,
-          draft_response: analysisResult?.draft_response || null,
+          status: 'new',
           locale: geoLanguage?.toLowerCase() || language?.toLowerCase() || 'it', // Usa locale dinamico da geolocalizzazione
-          source: 'web', // Aggiunto source per tracciamento
+          source: 'autovelox', // Aggiunto source per tracciamento
         },
       });
       
