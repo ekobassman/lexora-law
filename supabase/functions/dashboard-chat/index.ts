@@ -1187,6 +1187,20 @@ DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiunger
       assistantMessage = assistantMessage + sourcesSection;
     }
 
+    // Increment global documents counter (homepage) when a real letter was generated
+    if (draftReady && draftResponse && draftResponse.trim().length >= 200) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (supabaseUrl && serviceKey) {
+        try {
+          const supabaseAdmin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+          await supabaseAdmin.rpc("increment_documents_processed");
+        } catch (e) {
+          console.warn("[dashboard-chat] increment_documents_processed failed (non-critical):", (e as Error)?.message);
+        }
+      }
+    }
+
     // Save chat messages to history (store assistantMessage shown in UI)
     await supabaseClient.from('dashboard_chat_history').insert([
       { user_id: user.id, role: 'user', content: message },

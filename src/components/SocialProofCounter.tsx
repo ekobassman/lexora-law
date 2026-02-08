@@ -80,15 +80,20 @@ export function SocialProofCounter() {
   const hasAnimated = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  const totalCount = dbCount + BASE_COUNT;
+  // Total = base (pre-migration) + count from DB (global_stats.documents_processed)
+  const totalCount = BASE_COUNT + dbCount;
   const text = translations[language] || translations.EN;
 
   // Coerce to number (PostgREST can return bigint as string)
-  const toCount = (v: unknown): number => {
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
-    if (typeof v === 'string') return parseInt(v, 10) || 0;
+  function toCount(value: number | string | null | undefined): number {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') {
+      const parsed = parseInt(value, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
     return 0;
-  };
+  }
 
   // Fetch count from DB (retries, then periodic refetch; also refetch when tab becomes visible)
   useEffect(() => {
