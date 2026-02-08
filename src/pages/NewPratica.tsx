@@ -87,8 +87,16 @@ export default function NewPratica() {
 
     const createBlitzerCase = async () => {
       try {
+        // Get session for JWT token
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
         // Create the blitzer case via backend
         const { data, error } = await supabase.functions.invoke('create-case', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
           body: {
             title: 'Einspruch gegen Blitzer-Bußgeld',
             authority: 'Bußgeldstelle',
@@ -130,8 +138,16 @@ export default function NewPratica() {
 
     const createAutoveloxCase = async () => {
       try {
+        // Get session for JWT token
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
         // Create the autovelox case via backend
         const { data, error } = await supabase.functions.invoke('create-case', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
           body: {
             title: 'Ricorso Multa Autovelox – Italia',
             authority: 'Prefettura / Giudice di Pace',
@@ -416,8 +432,16 @@ export default function NewPratica() {
     setIsLoading(true);
     
     try {
+      // Get session for JWT token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
       // Use backend edge function for case creation (enforces limits server-side)
       const { data, error } = await supabase.functions.invoke('create-case', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
         body: {
           title: formData.title.trim(),
           authority: formData.authority.trim() || null,

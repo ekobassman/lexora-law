@@ -198,7 +198,15 @@ export default function ScanDocument() {
     setProcessingStep(t('scan.step.creating'));
     
     try {
+      // Get session for JWT token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
       const { data: caseResponse, error: caseError } = await supabase.functions.invoke('create-case', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
         body: { title: name.trim(), status: 'new' },
       });
 
