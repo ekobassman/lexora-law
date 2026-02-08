@@ -7,6 +7,7 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
+import { LEXORA_CONTEXT_FIRST_RULES } from "../_shared/lexoraSystemPrompt.ts";
 import {
   buildStrictMessages,
   expectDocumentGuardrail,
@@ -383,7 +384,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], letterText, documentText, conversationStatus } = await req.json() as {
+    const { message, language = "EN", isFirstMessage = false, conversationHistory = [], letterText, documentText, conversationStatus, contextSummary } = await req.json() as {
       message: string;
       language?: string;
       isFirstMessage?: boolean;
@@ -391,6 +392,7 @@ serve(async (req) => {
       letterText?: string;
       documentText?: string;
       conversationStatus?: 'collecting' | 'confirmed' | 'document_generated';
+      contextSummary?: string;
     };
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
@@ -488,6 +490,11 @@ REGOLA OBBLIGATORIA (tutte le lingue):
 - Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
     }
+
+    const contextBlock = typeof contextSummary === "string" && contextSummary.trim().length > 0
+      ? `CONTEXT ALREADY AVAILABLE (do not ask for these):\n${contextSummary.trim()}\n\n`
+      : "";
+    systemPrompt = contextBlock + LEXORA_CONTEXT_FIRST_RULES + systemPrompt;
     
     // REGOLA ASSOLUTA: primo messaggio = SEMPRE presentazione Lexora per prima; VIETATO dire "non ho trovato"
     const greetingInstruction = isFirstMessage 

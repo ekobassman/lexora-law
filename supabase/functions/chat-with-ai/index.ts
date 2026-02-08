@@ -7,6 +7,7 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
 import { POLICY_EDIT_MODIFY, POLICY_DOCUMENT_CHAT } from "../_shared/lexoraChatPolicy.ts";
+import { LEXORA_CONTEXT_FIRST_RULES } from "../_shared/lexoraSystemPrompt.ts";
 import {
   buildStrictMessages,
   expectDocumentGuardrail,
@@ -137,7 +138,7 @@ serve(async (req) => {
       );
     }
 
-    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId } = await req.json();
+    const { userMessage, letterText, draftResponse, praticaData, chatHistory, userLanguage, mode = "chat", praticaId, legalSearchContext = [], contextSummary } = await req.json();
 
     if (!userMessage || userMessage.trim().length === 0) {
       return new Response(
@@ -180,6 +181,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const clientContextBlock = typeof contextSummary === "string" && contextSummary.trim().length > 0
+      ? `CONTEXT ALREADY AVAILABLE (do not ask for these):\n${contextSummary.trim()}\n\n`
+      : "";
 
     // WEB SEARCH (Perplexity): se c'è contesto lettera, cerca normativa/sentenze 2026 prima della risposta
     let webData = "";
@@ -240,7 +245,7 @@ BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}
 ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nUsa questi dati per citare articoli e sentenze.` : ""}`;
 
-    let systemPrompt = policyBlock + modeInstruction + "\n\n" + systemPromptBase + contextBlock;
+    let systemPrompt = clientContextBlock + LEXORA_CONTEXT_FIRST_RULES + policyBlock + modeInstruction + "\n\n" + systemPromptBase + contextBlock;
     const isFirstMessage = mode !== "modify" && (!chatHistory || chatHistory.length === 0);
     if (isFirstMessage) {
       const greeting = LEXORA_FIRST_GREETING[langCode] || LEXORA_FIRST_GREETING.EN;

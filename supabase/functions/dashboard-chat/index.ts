@@ -8,6 +8,7 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
+import { LEXORA_CONTEXT_FIRST_RULES } from "../_shared/lexoraSystemPrompt.ts";
 import {
   buildStrictMessages,
   expectDocumentGuardrail,
@@ -494,6 +495,8 @@ serve(async (req) => {
       userProfile,
       caseContext,
       conversationStatus,
+      legalSearchContext = [],
+      contextSummary,
     } = await req.json() as {
       message: string;
       userLanguage?: string;
@@ -504,6 +507,8 @@ serve(async (req) => {
       userProfile?: UserProfileContext;
       caseContext?: CaseContext;
       conversationStatus?: 'collecting' | 'confirmed' | 'document_generated';
+      legalSearchContext?: Array<{ title?: string; snippet?: string; link?: string; url?: string; date?: string }>;
+      contextSummary?: string;
     };
 
     if (!message || message.trim().length === 0) {
@@ -513,7 +518,7 @@ serve(async (req) => {
       );
     }
 
-    // Get user's plan from entitlements edge function
+// Get user's plan from entitlements edge function
     const entitlementsResponse = await fetch(
       `${Deno.env.get('SUPABASE_URL')}/functions/v1/entitlements`,
       {
@@ -578,8 +583,11 @@ serve(async (req) => {
 
     // LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT + GLOBAL POLICY
     const intakeModeRules = getIntakeModeRules(responseLanguage);
+    const contextBlock = typeof contextSummary === "string" && contextSummary.trim().length > 0
+      ? `CONTEXT ALREADY AVAILABLE (do not ask for these):\n${contextSummary.trim()}\n\n`
+      : "";
     
-    let systemPrompt = `${POLICY_DEMO_DASHBOARD}
+    let systemPrompt = `${contextBlock}${LEXORA_CONTEXT_FIRST_RULES}${POLICY_DEMO_DASHBOARD}
 
 LEXORA MASTER PROMPT v5 - UNIFIED INTELLIGENT CHAT
 

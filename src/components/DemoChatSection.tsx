@@ -43,6 +43,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { useDemoChatInactivityReset } from '@/hooks/useDemoChatInactivityReset';
 import { RegistrationGate } from '@/components/RegistrationGate';
 import { playLetterReadySound } from '@/utils/letterReadySound';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileDocumentPrompt } from '@/components/MobilePWAPrompt';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { buildSystemPrompt, assertNoRedundantAsk, type ChatContext } from '@/lib/chat/policy';
+import { runCanonicalPipeline, isHeicFile, HEIC_NOT_SUPPORTED_MSG, type AnalysisItem } from '@/lib/canonicalPipeline';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -967,6 +973,15 @@ export function DemoChatSection() {
     const statusToSend = startingNewFascicolo ? 'collecting' : (conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus);
     if (!startingNewFascicolo) setConversationStatus(statusToSend);
 
+    const chatCtx: ChatContext = {
+      surface: 'demo',
+      draftText: draftText?.trim() || undefined,
+      ocrText: documentTextToSend || undefined,
+      hasPriorMessages: conversationHistory.length > 1,
+      priorMessageCount: conversationHistory.length,
+    };
+    const contextSummary = buildSystemPrompt(chatCtx);
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/homepage-trial-chat`,
@@ -983,6 +998,7 @@ export function DemoChatSection() {
             conversationHistory,
             conversationStatus: statusToSend,
             ...(documentTextToSend ? { documentText: documentTextToSend } : {}),
+            ...(contextSummary ? { contextSummary } : {}),
           }),
         }
       );
@@ -1001,6 +1017,7 @@ export function DemoChatSection() {
         timestamp: new Date(),
       };
 
+      if (data.reply) assertNoRedundantAsk(data.reply, chatCtx);
       setMessages(prev => [...prev, assistantMessage]);
 
       // Only set draft when the AI has generated the letter (backend sends draftText only after user confirmed). We trust the backend.

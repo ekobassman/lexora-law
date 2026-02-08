@@ -20,6 +20,10 @@ import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 // InAppCamera removed - now using /scan page for document capture
 import { containsPlaceholders, getPlaceholderErrorMessage } from '@/utils/documentSanitizer';
 import { playLetterReadySound } from '@/utils/letterReadySound';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { buildSystemPrompt, assertNoRedundantAsk, type ChatContext } from '@/lib/chat/policy';
+import { ocrFromFile } from '@/lib/ocrClient';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 import { DEMO_PENDING_MIGRATION_KEY } from '@/components/DemoChatSection';
 import {
   AlertDialog,
@@ -957,6 +961,28 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       const statusToSend = conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus;
       setConversationStatus(statusToSend);
 
+      const chatCtx: ChatContext = {
+        surface: 'dashboard',
+        caseTitle: caseContext?.title,
+        caseAuthority: caseContext?.authority,
+        caseDeadline: caseContext?.deadline,
+        letterText: caseContext?.letterText,
+        draftText: caseContext?.draftResponse,
+        ocrText: caseContext?.documents?.filter(d => d.rawText).map(d => d.rawText!).join('\n\n').slice(0, 4000) || undefined,
+        documentSummaries: caseContext?.documents?.map(d => d.fileName || d.id).filter(Boolean),
+        profile: effectiveUserProfile ? {
+          fullName: effectiveUserProfile.fullName || [effectiveUserProfile.firstName, effectiveUserProfile.lastName].filter(Boolean).join(' '),
+          senderFullName: effectiveUserProfile.senderFullName,
+          senderAddress: effectiveUserProfile.senderAddress,
+          senderCity: effectiveUserProfile.senderCity,
+          senderPostalCode: effectiveUserProfile.senderPostalCode,
+          senderCountry: effectiveUserProfile.senderCountry,
+        } : undefined,
+        hasPriorMessages: nextHistory.length > 1,
+        priorMessageCount: nextHistory.length,
+      };
+      const contextSummary = buildSystemPrompt(chatCtx);
+
       const payload = {
         message: userMessage.content,
         userLanguage: language?.toUpperCase() || 'DE',
@@ -966,6 +992,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         userProfile: effectiveUserProfile || undefined,
         caseContext: caseContext || undefined,
         conversationStatus: statusToSend,
+        legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+        ...(contextSummary ? { contextSummary } : {}),
       };
 
       const response = await fetch(
@@ -1028,8 +1056,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         timestamp: new Date(),
       };
 
-       // OPTIMISTIC UI: show assistant immediately (no waiting on DB)
-       setMessages(prev => [...prev, assistantMessage]);
+      assertNoRedundantAsk(data.response, chatCtx);
+      setMessages(prev => [...prev, assistantMessage]);
 
        // Persist only when a case is selected
        if (selectedCaseId) {

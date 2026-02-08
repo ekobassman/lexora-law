@@ -12,6 +12,9 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { playLetterReadySound } from '@/utils/letterReadySound';
 import { PaymentBlockedPopup } from '@/components/PaymentBlockedPopup';
 import { useCaseChatMessages } from '@/hooks/useCaseChatMessages';
+import { isLegalAdministrativeQuery } from '@/lib/aiGuardrail';
+import { buildSystemPrompt, assertNoRedundantAsk, type ChatContext } from '@/lib/chat/policy';
+import { shouldSearchLegalInfo, searchLegalInfoWithTimeout, buildLegalSearchQuery, type LegalSearchResult } from '@/services/webSearch';
 // ═══════════════════════════════════════════════════════════════════════════
 // LETTER EXTRACTION UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -593,6 +596,18 @@ export function ChatWithAI({
     }
 
     try {
+      const chatCtx: ChatContext = {
+        surface: 'edit',
+        caseTitle: praticaData?.title,
+        caseAuthority: praticaData?.authority,
+        caseDeadline: praticaData?.deadline,
+        letterText: letterText || undefined,
+        draftText: draftResponse || undefined,
+        hasPriorMessages: newHistory.length > 1,
+        priorMessageCount: newHistory.length,
+      };
+      const contextSummary = buildSystemPrompt(chatCtx);
+
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController();
       
@@ -613,6 +628,8 @@ export function ChatWithAI({
             userLanguage: language,
             mode,
             praticaId, // Pass pratica ID for context isolation
+            legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+            ...(contextSummary ? { contextSummary } : {}),
           }),
           signal: abortControllerRef.current.signal,
         }
@@ -645,6 +662,7 @@ export function ChatWithAI({
         created_at: new Date().toISOString(),
       };
 
+      assertNoRedundantAsk(data.response, chatCtx);
       // Save assistant response to unified case_chat_messages
       addCaseChatMessage('assistant', data.response);
 
