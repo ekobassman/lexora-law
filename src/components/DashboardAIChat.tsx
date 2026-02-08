@@ -437,6 +437,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Last OCR/document text sent to the AI; kept so follow-up messages still have document context (same as DemoChatSection). */
+  const lastDocumentTextRef = useRef<string | null>(null);
 
   // Localized texts
   const placeholderByLang: Record<string, string> = {
@@ -717,6 +719,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
                 if (migrationData.draftText && migrationData.draftText.trim().length > 0) {
                   setLastDraftText(migrationData.draftText);
                   setDraftReady(true);
+                  lastDocumentTextRef.current = null;
                   setConversationStatus('document_generated');
                 }
                 
@@ -961,6 +964,33 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       const statusToSend = conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus;
       setConversationStatus(statusToSend);
 
+      const currentTrimmed = (userMessage.content || '').trim();
+      const lastUserInHistory = nextHistory.filter((m) => m.role === 'user').pop();
+      const lastUserContent = lastUserInHistory?.content?.trim() ?? '';
+      const isUploadedOrCapturedDoc = (t: string) =>
+        t.startsWith('[Document uploaded]') || t.startsWith('[PDF uploaded]') || /^\[\d+\s+documents uploaded\]/.test(t) ||
+        t.startsWith('[Photo captured]') || /^\[\d+\s+photos captured\]/.test(t);
+      const looksLikeLetter = (text: string) => {
+        if (!text || text.length < 350) return false;
+        const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
+        const hasClosing = /\b(cordiali\s+saluti|distinti\s+saluti|mit\s+freundlichen|sincerely|best\s+regards|hochachtungsvoll|con\s+osservanza)\b/i.test(text);
+        const hasSubject = /\b(oggetto|betreff|subject|objet|asunto)\s*:/i.test(text);
+        return [hasOpening, hasClosing, hasSubject].filter(Boolean).length >= 2;
+      };
+      const documentTextToSend =
+        isUploadedOrCapturedDoc(currentTrimmed)
+          ? currentTrimmed.slice(0, 12000)
+          : currentTrimmed.length >= 350 && looksLikeLetter(currentTrimmed)
+            ? currentTrimmed.slice(0, 12000)
+            : isUploadedOrCapturedDoc(lastUserContent)
+              ? lastUserContent.slice(0, 12000)
+              : lastUserContent.length >= 350 && looksLikeLetter(lastUserContent)
+                ? lastUserContent.slice(0, 12000)
+                : lastDocumentTextRef.current
+                  ? lastDocumentTextRef.current.slice(0, 12000)
+                  : undefined;
+      if (documentTextToSend) lastDocumentTextRef.current = documentTextToSend;
+
       const chatCtx: ChatContext = {
         surface: 'dashboard',
         caseTitle: caseContext?.title,
@@ -968,7 +998,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         caseDeadline: caseContext?.deadline,
         letterText: caseContext?.letterText,
         draftText: caseContext?.draftResponse,
-        ocrText: caseContext?.documents?.filter(d => d.rawText).map(d => d.rawText!).join('\n\n').slice(0, 4000) || undefined,
+        ocrText: documentTextToSend ?? caseContext?.documents?.filter(d => d.rawText).map(d => d.rawText!).join('\n\n').slice(0, 4000) || undefined,
         documentSummaries: caseContext?.documents?.map(d => d.fileName || d.id).filter(Boolean),
         profile: effectiveUserProfile ? {
           fullName: effectiveUserProfile.fullName || [effectiveUserProfile.firstName, effectiveUserProfile.lastName].filter(Boolean).join(' '),
@@ -993,6 +1023,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         caseContext: caseContext || undefined,
         conversationStatus: statusToSend,
         legalSearchContext: legalSearchContext.length > 0 ? legalSearchContext : undefined,
+        ...(documentTextToSend ? { letterText: documentTextToSend, documentText: documentTextToSend } : {}),
         ...(contextSummary ? { contextSummary } : {}),
       };
 
@@ -1079,7 +1110,10 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
 
       setLastDraftText(backendDraftReady ? backendDraft : null);
       setDraftReady(backendDraftReady);
-      if (backendDraftReady) setConversationStatus('document_generated');
+      if (backendDraftReady) {
+        lastDocumentTextRef.current = null;
+        setConversationStatus('document_generated');
+      }
 
       if (backendDraftReady && backendDraft && !hasPromptedForName) {
         setHasPromptedForName(true);
@@ -1168,6 +1202,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         const hasImage = extractedParts.some(p => !p.isPDF);
         const attachmentType: 'pdf' | 'image' = hasPDF && !hasImage ? 'pdf' : 'image';
 
+        lastDocumentTextRef.current = combinedMessage.slice(0, 12000);
         await sendMessage(combinedMessage, attachmentType);
         toast.success(`${extractedParts.length} document(s) processed`);
       }
@@ -1244,7 +1279,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   // Clear chat - use unified case_chat_messages
   const clearChatAfterCaseCreation = async () => {
     if (!user || !selectedCaseId) return;
-    
+    lastDocumentTextRef.current = null;
     try {
       await clearCaseChatMessages();
       setSuggestedAction(null);
@@ -1364,6 +1399,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const handleClearChat = async () => {
     if (!user) return;
     letterReadyPlayedRef.current = false;
+    lastDocumentTextRef.current = null;
     try {
       await supabase.from('dashboard_chat_history').delete().eq('user_id', user.id);
       setMessages([]);

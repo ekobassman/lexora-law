@@ -497,6 +497,8 @@ serve(async (req) => {
       conversationStatus,
       legalSearchContext = [],
       contextSummary,
+      letterText: bodyLetterText,
+      documentText: bodyDocumentText,
     } = await req.json() as {
       message: string;
       userLanguage?: string;
@@ -509,6 +511,8 @@ serve(async (req) => {
       conversationStatus?: 'collecting' | 'confirmed' | 'document_generated';
       legalSearchContext?: Array<{ title?: string; snippet?: string; link?: string; url?: string; date?: string }>;
       contextSummary?: string;
+      letterText?: string;
+      documentText?: string;
     };
 
     if (!message || message.trim().length === 0) {
@@ -721,7 +725,7 @@ Usa questi dati automaticamente quando generi lettere.
     const isUploadedDoc = (t: string): boolean =>
       t.startsWith("[Document uploaded]") || t.startsWith("[PDF uploaded]") || /^\[\d+\s+documents uploaded\]/.test(t);
 
-    let resolvedLetterText = (caseContext?.letterText ?? "").trim();
+    let resolvedLetterText = (bodyLetterText ?? bodyDocumentText ?? caseContext?.letterText ?? "").trim();
     if (caseId && !resolvedLetterText) {
       const { data } = await supabaseClient
         .from("pratiche")
