@@ -69,17 +69,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Se login successo, crea automaticamente il profilo se non esiste
+    if (!error && data.user) {
+      try {
+        // Verifica se il profilo esiste già
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        // Se non esiste, crealo
+        if (!existingProfile) {
+          console.log('[AuthContext] Creating profile for new user:', data.user.id);
+          
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || email,
+              created_at: new Date().toISOString(),
+              last_seen_at: new Date().toISOString(),
+              plan: 'free',
+              age_confirmed: true, // Default per nuovi utenti
+              privacy_version: '1.0',
+              terms_version: '1.0',
+            })
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error('[AuthContext] Error creating profile:', profileError);
+          } else {
+            console.log('[AuthContext] Profile created successfully for user:', data.user.id);
+          }
+        } else {
+          console.log('[AuthContext] Profile already exists for user:', data.user.id);
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error checking/creating profile:', err);
+      }
+    }
+
     return { error: error as Error | null };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -89,6 +132,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
+
+    // Se signup successo, crea automaticamente il profilo
+    if (!error && data.user) {
+      try {
+        console.log('[AuthContext] Creating profile for new user after signup:', data.user.id);
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email || email,
+            created_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+            plan: 'free',
+            age_confirmed: true, // Default per nuovi utenti
+            privacy_version: '1.0',
+            terms_version: '1.0',
+          })
+          .select()
+          .single();
+
+        if (profileError) {
+          console.error('[AuthContext] Error creating profile after signup:', profileError);
+        } else {
+          console.log('[AuthContext] Profile created successfully after signup for user:', data.user.id);
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error creating profile after signup:', err);
+      }
+    }
     
     return { error: error as Error | null };
   };
