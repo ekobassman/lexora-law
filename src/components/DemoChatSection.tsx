@@ -414,7 +414,9 @@ export function DemoChatSection() {
   const [draftCopied, setDraftCopied] = useState(false);
   const [draftText, setDraftText] = useState<string>(() => getSavedDraft());
   const draftTextRef = useRef(draftText);
-  
+  /** Last OCR/document text sent to the AI; kept so follow-up messages still have document context. */
+  const lastDocumentTextRef = useRef<string | null>(null);
+
   const [generatedInSession, setGeneratedInSession] = useState<boolean>(false);
   // Conversation state: collecting | confirmed | document_generated (buttons only when document_generated)
   const [conversationStatus, setConversationStatus] = useState<'collecting' | 'confirmed' | 'document_generated'>(() => {
@@ -907,6 +909,7 @@ export function DemoChatSection() {
       setMessages([userMessage]);
       setDraftText('');
       draftTextRef.current = '';
+      lastDocumentTextRef.current = null;
       setConversationStatus('collecting');
       setAiContextStart(0);
       setGeneratedInSession(false);
@@ -956,18 +959,23 @@ export function DemoChatSection() {
     const currentTrimmed = messageContent.trim();
     const lastUserMsg = conversationHistory.filter((m) => m.role === 'user').pop();
     const lastUserContent = lastUserMsg?.content?.trim() ?? '';
-    // Rule: when user uploads/scans a document, AI must receive it immediately (don't wait for user to say where to find it)
-    const isUploadedDoc = (t: string) => t.startsWith('[Document uploaded]') || t.startsWith('[PDF uploaded]') || /^\[\d+\s+documents uploaded\]/.test(t);
+    // Rule: when user uploads/scans a document (or photo), AI must receive it; also keep last doc for follow-up messages
+    const isUploadedOrCapturedDoc = (t: string) =>
+      t.startsWith('[Document uploaded]') || t.startsWith('[PDF uploaded]') || /^\[\d+\s+documents uploaded\]/.test(t) ||
+      t.startsWith('[Photo captured]') || /^\[\d+\s+photos captured\]/.test(t);
     const documentTextToSend =
-      isUploadedDoc(currentTrimmed)
+      isUploadedOrCapturedDoc(currentTrimmed)
         ? currentTrimmed.slice(0, 12000)
         : currentTrimmed.length >= 350 && looksLikeLetter(currentTrimmed)
           ? currentTrimmed.slice(0, 12000)
-          : isUploadedDoc(lastUserContent)
+          : isUploadedOrCapturedDoc(lastUserContent)
             ? lastUserContent.slice(0, 12000)
             : lastUserContent.length >= 350 && looksLikeLetter(lastUserContent)
               ? lastUserContent.slice(0, 12000)
-              : undefined;
+              : lastDocumentTextRef.current
+                ? lastDocumentTextRef.current.slice(0, 12000)
+                : undefined;
+    if (documentTextToSend) lastDocumentTextRef.current = documentTextToSend;
 
     const looksLikeConfirmation = /^(ok|okay|sì|si|yes|ja|oui|va bene|questo è tutto|questo e tutto|confermo|genera|procedi|niente|no,? niente|that'?s all|nothing else|reicht|passt|das ist alles|c\'est tout|eso es todo|bene così|è tutto|e tutto)[\s.,!?]*$/i.test(currentTrimmed);
     const statusToSend = startingNewFascicolo ? 'collecting' : (conversationStatus === 'document_generated' ? 'document_generated' : looksLikeConfirmation ? 'confirmed' : conversationStatus);
@@ -991,13 +999,13 @@ export function DemoChatSection() {
             'Content-Type': 'application/json',
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ 
-            message: messageContent.trim(), 
+          body: JSON.stringify({
+            message: messageContent.trim(),
             language,
             isFirstMessage,
             conversationHistory,
             conversationStatus: statusToSend,
-            ...(documentTextToSend ? { documentText: documentTextToSend } : {}),
+            ...(documentTextToSend ? { letterText: documentTextToSend, documentText: documentTextToSend } : {}),
             ...(contextSummary ? { contextSummary } : {}),
           }),
         }

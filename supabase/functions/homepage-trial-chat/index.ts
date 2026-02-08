@@ -395,6 +395,8 @@ serve(async (req) => {
       contextSummary?: string;
     };
 
+    console.log("[homepage-trial-chat] letterText length:", letterText?.length ?? 0, "documentText length:", documentText?.length ?? 0);
+
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return json(400, {
         ok: false,
