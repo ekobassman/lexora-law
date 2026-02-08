@@ -453,13 +453,15 @@ export default function NewPratica() {
           explanation: analysisResult?.explanation || null,
           risks: analysisResult?.risks || null,
           draft_response: analysisResult?.draft_response || null,
+          locale: 'it', // Aggiunto locale richiesto dal backend
+          source: 'web', // Aggiunto source per tracciamento
         },
       });
       
       if (error) throw error;
       
       // Check for LIMIT_REACHED error from backend
-      if (data?.error === 'LIMIT_REACHED') {
+      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowPaywall(true);
         toast.error(data.message || t('subscription.limitReached'));
         return;
@@ -474,7 +476,18 @@ export default function NewPratica() {
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Save error:', error);
-      toast.error(error.message || t('newPratica.error.save'));
+      
+      // Gestione errori specifici dal backend
+      if (error.message?.includes('VALIDATION_ERROR')) {
+        toast.error('Dati non validi. Controlla tutti i campi obbligatori.');
+      } else if (error.message?.includes('PERMISSION_DENIED')) {
+        toast.error('Non hai i permessi per creare questa pratica.');
+      } else if (error.message?.includes('PRACTICE_LIMIT_REACHED')) {
+        setShowPaywall(true);
+        toast.error(error.message || t('subscription.limitReached'));
+      } else {
+        toast.error(error.message || t('newPratica.error.save'));
+      }
     } finally {
       setIsLoading(false);
     }

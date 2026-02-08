@@ -207,11 +207,16 @@ export default function ScanDocument() {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: { title: name.trim(), status: 'new' },
+        body: { 
+        title: name.trim(), 
+        status: 'new',
+        locale: 'it', // Aggiunto locale richiesto dal backend
+        source: 'scan', // Aggiunto source per tracciamento
+      },
       });
 
       if (caseError) throw caseError;
-      if (caseResponse?.error === 'LIMIT_REACHED') {
+      if (caseResponse?.error === 'LIMIT_REACHED' || caseResponse?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowLimitPopup(true);
         toast.error(caseResponse.message || t('subscription.limitReached'));
         return;
