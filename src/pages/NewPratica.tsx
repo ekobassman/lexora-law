@@ -1,26 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { z } from 'zod';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Header } from '@/components/Header';
-import { FilePreview } from '@/components/FilePreview';
-import { AnalysisStatus, AnalysisStep } from '@/components/AnalysisStatus';
-import { CameraScan } from '@/components/CameraScan';
-import { PlanLimitPopup } from '@/components/PlanLimitPopup';
-import { BlitzerWizard } from '@/components/BlitzerWizard';
-import { AutoveloxWizard } from '@/components/AutoveloxWizard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements } from '@/hooks/useEntitlements';
+import { useEntitlements, refreshEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/lib/supabaseClient';
-import { invokeExtractText } from '@/lib/invokeExtractText';
-import { toast } from 'sonner';
-import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
+import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { analyzeLetter } from '@/lib/canonicalPipeline';
+import { useGeoLocale } from '@/hooks/useGeoLocale';
 
 const praticaSchema = z.object({
   title: z.string().min(1, 'required').max(200),
@@ -36,6 +30,7 @@ export default function NewPratica() {
   const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { country, language: geoLanguage } = useGeoLocale(); // Aggiunto hook geo locale
   
   // Check for blitzer/autovelox template
   const template = searchParams.get('template');
@@ -453,7 +448,7 @@ export default function NewPratica() {
           explanation: analysisResult?.explanation || null,
           risks: analysisResult?.risks || null,
           draft_response: analysisResult?.draft_response || null,
-          locale: 'it', // Aggiunto locale richiesto dal backend
+          locale: geoLanguage?.toLowerCase() || language?.toLowerCase() || 'it', // Usa locale dinamico da geolocalizzazione
           source: 'web', // Aggiunto source per tracciamento
         },
       });
