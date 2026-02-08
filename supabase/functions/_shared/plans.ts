@@ -1,15 +1,17 @@
-// Lexora subscription plans - STATIC DECLARATIVE CONFIG ONLY
-// NO side effects, NO Stripe checks, NO user state
+// Lexora subscription plans - SINGLE SOURCE OF TRUTH
+// This file defines the canonical plan configuration used across the entire system
+// NO side effects, NO Stripe checks, NO user state - pure configuration only
 
 export type PlanType = 'free' | 'starter' | 'plus' | 'pro';
 
 export interface PlanConfig {
   id: PlanType;
   name: string;
-  price: number;
+  price: number; // Monthly price in EUR
   priceDisplay: string;
   maxCasesPerMonth: number | null; // null = unlimited
   maxChatMessagesPerDay: number | null; // null = unlimited
+  stripePriceId?: string; // For paid plans only
   features: {
     scan_letter: boolean;
     ai_draft: boolean;
@@ -53,6 +55,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     priceDisplay: '€3.99',
     maxCasesPerMonth: 5,
     maxChatMessagesPerDay: null, // unlimited
+    stripePriceId: 'price_1SivfMKG0eqN9CTOVXhLdPo7',
     features: {
       scan_letter: true,
       ai_draft: true,
@@ -78,6 +81,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     priceDisplay: '€9.99',
     maxCasesPerMonth: 20,
     maxChatMessagesPerDay: null, // unlimited
+    stripePriceId: 'price_1SivfjKG0eqN9CTOXzYLuH7v',
     highlighted: true,
     features: {
       scan_letter: true,
@@ -100,6 +104,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
     priceDisplay: '€19.99',
     maxCasesPerMonth: null, // unlimited
     maxChatMessagesPerDay: null, // unlimited
+    stripePriceId: 'price_1Sivg3KG0eqN9CTORmNvZX1Z',
     features: {
       scan_letter: true,
       ai_draft: true,
@@ -145,3 +150,21 @@ export function getChatMessageLimit(planKey: string): number | null {
   const config = getPlanConfig(planKey);
   return config.maxChatMessagesPerDay;
 }
+
+export function getStripePriceId(planKey: string): string | null {
+  const config = getPlanConfig(planKey);
+  return config.stripePriceId || null;
+}
+
+// Plan validation
+export function isValidPlan(planKey: string): boolean {
+  const normalized = normalizePlanKey(planKey);
+  return Object.values(PLANS).some(plan => plan.id === normalized);
+}
+
+// Export for Stripe integration
+export const STRIPE_PRICE_TO_PLAN: Record<string, PlanType> = {
+  'price_1SivfMKG0eqN9CTOVXhLdPo7': 'starter',
+  'price_1SivfjKG0eqN9CTOXzYLuH7v': 'plus',
+  'price_1Sivg3KG0eqN9CTORmNvZX1Z': 'pro',
+};

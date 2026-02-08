@@ -116,6 +116,14 @@ serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
+    // Plan-specific defaults for monthly_case_limit (single source of truth)
+    const PLAN_DEFAULTS: Record<string, number | null> = {
+      free: 1,
+      starter: 5,
+      plus: 20,
+      pro: null, // unlimited
+    };
+
     // Ensure subscription state exists (defaults)
     if (!subStateRaw) {
       await supabaseAdmin
@@ -136,9 +144,9 @@ serve(async (req) => {
     const plan = subStateRaw?.plan ?? "free";
     
     // ADMIN BYPASS: Admins get null limit (truly unlimited)
-    // Also handle unlimited plan with null limit
-    const monthlyCaseLimitRaw = subStateRaw?.monthly_case_limit ?? 1;
-    const monthlyCaseLimit = isAdmin ? null : (plan === "unlimited" ? null : monthlyCaseLimitRaw);
+    // Also handle pro plan with null limit
+    const monthlyCaseLimitRaw = subStateRaw?.monthly_case_limit ?? PLAN_DEFAULTS[plan] ?? 1;
+    const monthlyCaseLimit = isAdmin ? null : (plan === "pro" ? null : monthlyCaseLimitRaw);
 
     // Ensure usage row exists for current month
     await supabaseAdmin

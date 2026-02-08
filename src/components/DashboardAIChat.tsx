@@ -133,12 +133,12 @@ function normalizeDraftDate(draft: string): string {
   return result;
 }
 
-// Per-case AI message limits
-const PLAN_MESSAGE_LIMITS: Record<string, number> = {
-  free: 10,
-  starter: 15,
-  pro: 30,
-  unlimited: 999999,
+// Daily AI message limits (only for free plan)
+const PLAN_MESSAGE_LIMITS: Record<string, number | null> = {
+  free: 15,
+  starter: null, // unlimited
+  plus: null, // unlimited
+  pro: null, // unlimited
 };
 
 function getSafeText(t: (key: string, options?: any) => string, key: string, fallback: string): string {
@@ -690,7 +690,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         
         if (usageData) setMessagesUsed(usageData.messages_count);
         
-        setMessagesLimit(planState.messages_per_case || PLAN_MESSAGE_LIMITS[plan] || 10);
+        setMessagesLimit(planState.messages_per_case || PLAN_MESSAGE_LIMITS[plan] || 15);
         
         // Check for pending demo chat migration
         let migratedMessages: ChatMessage[] = [];

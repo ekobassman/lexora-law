@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { PLANS, normalizePlanKey, getStripePriceId } from "../_shared/plans.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,16 +10,6 @@ const corsHeaders = {
 
 const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
-};
-
-// Plan configuration with Stripe price IDs
-const PLAN_CONFIG: Record<string, { priceId: string; name: string }> = {
-  starter: { priceId: "price_1SivfMKG0eqN9CTOVXhLdPo7", name: "Starter" },
-  pro: { priceId: "price_1SivfjKG0eqN9CTOXzYLuH7v", name: "Pro" },
-  unlimited: { priceId: "price_1Sivg3KG0eqN9CTORmNvZX1Z", name: "Unlimited" },
-  // Legacy mappings
-  basic: { priceId: "price_1SivfMKG0eqN9CTOVXhLdPo7", name: "Starter" },
-  plus: { priceId: "price_1SivfjKG0eqN9CTOXzYLuH7v", name: "Pro" },
 };
 
 serve(async (req) => {
@@ -49,14 +40,19 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const { plan } = await req.json();
-    const normalizedPlan = (plan || "").toLowerCase();
-    const planConfig = PLAN_CONFIG[normalizedPlan];
-
-    if (!planConfig) {
+    const normalizedPlan = normalizePlanKey(plan || "");
+    
+    // Validate plan and get Stripe price ID
+    if (!PLANS[normalizedPlan]) {
       throw new Error(`Invalid plan: ${plan}`);
     }
+    
+    const stripePriceId = getStripePriceId(normalizedPlan);
+    if (!stripePriceId) {
+      throw new Error(`No Stripe price ID configured for plan: ${normalizedPlan}`);
+    }
 
-    logStep("Plan selected", { plan: normalizedPlan, priceId: planConfig.priceId });
+    logStep("Plan selected", { plan: normalizedPlan, stripePriceId });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -78,7 +74,7 @@ serve(async (req) => {
       client_reference_id: user.id, // CRITICAL: Binds session to user
       line_items: [
         {
-          price: planConfig.priceId,
+          price: stripePriceId,
           quantity: 1,
         },
       ],
