@@ -897,14 +897,13 @@ export default function AdminPanel() {
                               <Select
                                 value={recentUser.override?.is_active ? (recentUser.override.plan_code || recentUser.override.plan) : 'none'}
                                 onValueChange={async (value) => {
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  if (!session?.access_token) {
+                                    toast.error('Session expired');
+                                    return;
+                                  }
                                   if (value === 'none') {
-                                    // Disable override
-                                    const { data: { session } } = await supabase.auth.getSession();
-                                    if (!session?.access_token) {
-                                      toast.error('Session expired');
-                                      return;
-                                    }
-                                    await supabase.functions.invoke('admin-save-override', {
+                                    const { data, error } = await supabase.functions.invoke('admin-save-override', {
                                       headers: { Authorization: `Bearer ${session.access_token}` },
                                       body: {
                                         target_user_id: recentUser.id,
@@ -914,16 +913,14 @@ export default function AdminPanel() {
                                         reason: 'Disabled from admin monitor',
                                       },
                                     });
-                                    toast.success('Override disabled');
-                                    fetchUserMetrics(true);
-                                  } else {
-                                    // Set/update override
-                                    const { data: { session } } = await supabase.auth.getSession();
-                                    if (!session?.access_token) {
-                                      toast.error('Session expired');
+                                    if (error || data?.error) {
+                                      toast.error(data?.error || error?.message || 'Save failed');
                                       return;
                                     }
-                                    await supabase.functions.invoke('admin-save-override', {
+                                    toast.success('Override disabled');
+                                    await fetchUserMetrics(true);
+                                  } else {
+                                    const { data, error } = await supabase.functions.invoke('admin-save-override', {
                                       headers: { Authorization: `Bearer ${session.access_token}` },
                                       body: {
                                         target_user_id: recentUser.id,
@@ -933,8 +930,12 @@ export default function AdminPanel() {
                                         reason: 'Set from admin monitor',
                                       },
                                     });
+                                    if (error || data?.error) {
+                                      toast.error(data?.error || data?.message || error?.message || 'Save failed');
+                                      return;
+                                    }
                                     toast.success(`Override set to ${value}`);
-                                    fetchUserMetrics(true);
+                                    await fetchUserMetrics(true);
                                   }
                                 }}
                               >

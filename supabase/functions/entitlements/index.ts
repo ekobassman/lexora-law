@@ -347,6 +347,12 @@ serve(async (req) => {
       );
     }
 
+    // Admins (including imbimbo.bassman@gmail.com) always display as "unlimited" in UI (hamburger menu)
+    if (isAdmin) {
+      effectivePlan = "unlimited";
+      planSource = "override";
+    }
+
     const planConfig = PLANS[effectivePlan] || PLANS.free;
 
     // ADMIN BYPASS: Admins get null limits (truly unlimited)

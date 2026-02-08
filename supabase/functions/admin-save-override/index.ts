@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    const { error: upsertError } = await svc.from("plan_overrides").upsert(
+    const { data: upserted, error: upsertError } = await svc.from("plan_overrides").upsert(
       {
         user_id: target_user_id,
         plan_code: plan_code,
@@ -129,10 +129,11 @@ Deno.serve(async (req: Request) => {
         reason: reason ?? null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" },
-    );
+      { onConflict: "user_id", ignoreDuplicates: false },
+    ).select("id, user_id, plan, plan_code, is_active, expires_at, reason, updated_at").single();
 
     if (upsertError) {
+      console.error("[admin-save-override] upsert error:", upsertError.message);
       return jsonResponse(500, {
         error: "INTERNAL_ERROR",
         message: upsertError.message,
@@ -140,7 +141,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- SUCCESS ---
-    return jsonResponse(200, { success: true });
+    return jsonResponse(200, { success: true, override: upserted ?? null });
   } catch (err: any) {
     return jsonResponse(500, {
       error: "INTERNAL_ERROR",

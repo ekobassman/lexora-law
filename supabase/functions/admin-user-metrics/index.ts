@@ -148,26 +148,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get override stats
+    // Get override stats: only active overrides, include plan_code for by_plan key
     const { data: overrides, error: overrideError } = await adminClient
       .from("plan_overrides")
-      .select("plan, is_active");
+      .select("plan, plan_code, is_active")
+      .eq("is_active", true);
 
     if (overrideError) {
       console.error("Overrides query error:", overrideError);
     }
+    const activeOverridesCount = Array.isArray(overrides) ? overrides.length : 0;
+    console.log("[admin-user-metrics] plan_overrides (is_active=true) count:", activeOverridesCount);
 
     const overrideStats = {
-      total_active: 0,
+      total_active: activeOverridesCount,
       by_plan: {} as Record<string, number>,
     };
 
-    if (overrides) {
+    if (overrides && overrides.length > 0) {
       for (const ov of overrides) {
-        if (ov.is_active) {
-          overrideStats.total_active++;
-          overrideStats.by_plan[ov.plan] = (overrideStats.by_plan[ov.plan] || 0) + 1;
-        }
+        const planKey = (ov as { plan?: string; plan_code?: string }).plan_code
+          || (ov as { plan?: string }).plan
+          || "free";
+        overrideStats.by_plan[planKey] = (overrideStats.by_plan[planKey] || 0) + 1;
       }
     }
 
