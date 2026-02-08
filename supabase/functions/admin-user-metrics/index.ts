@@ -48,25 +48,21 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is admin
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "UNAUTHORIZED", message: "Invalid token" }), {
+    // Verify caller is admin using SERVICE_ROLE_KEY (for admin operations)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    
+    // Verify user has admin role via auth.getUser() (check app_metadata.role)
+    const { data: { user }, error: userError } = await adminClient.auth.getUser();
+    
+    if (userError || !user || user.app_metadata?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: "UNAUTHORIZED", message: "Admin access required" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (user.email !== ADMIN_EMAIL) {
-      return new Response(JSON.stringify({ error: "FORBIDDEN", message: "Admin only" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // User is verified admin - proceed with metrics queries
+    console.log('[admin-user-metrics] Verified admin user:', user.email, 'role:', user.app_metadata?.role);
 
     // Parse request body
     let windowMinutes = 10;
@@ -82,14 +78,17 @@ Deno.serve(async (req) => {
     // Use service role for aggregate queries
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get total users - count ALL registered users
+    // Get total users - count ALL registered users from user_profiles table
     const { count: totalUsers, error: totalError } = await adminClient
-      .from("profiles")
+      .from("user_profiles")
       .select("id", { count: "exact", head: true });
 
     if (totalError) {
       console.error("Total users query error:", totalError);
     }
+
+    // Log the actual totalUsers count for debugging
+    console.log('ADMIN METRICS totalUsers count =', totalUsers);
 
     // Get live users (last X minutes)
     const liveThreshold = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
