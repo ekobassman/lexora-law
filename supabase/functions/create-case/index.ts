@@ -102,6 +102,7 @@ serve(async (req) => {
     let caseData;
     try {
       caseData = await req.json();
+      logStep("Body parsed successfully", { requestId, bodyKeys: Object.keys(caseData), bodyData: caseData });
     } catch (parseError) {
       logStep("JSON parse error", { requestId, error: (parseError as Error)?.message });
       return new Response(
@@ -109,6 +110,20 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log completo del payload ricevuto
+    logStep("Complete payload received", { 
+      requestId, 
+      payload: caseData,
+      hasTitle: !!caseData.title,
+      titleType: typeof caseData.title,
+      titleValue: caseData.title,
+      hasLocale: !!caseData.locale,
+      localeType: typeof caseData.locale,
+      localeValue: caseData.locale,
+      hasSource: !!caseData.source,
+      sourceValue: caseData.source
+    });
 
     // Validate required fields
     if (!caseData.title || typeof caseData.title !== "string" || caseData.title.trim().length === 0) {
@@ -121,7 +136,12 @@ serve(async (req) => {
 
     // Validate locale
     if (!caseData.locale || typeof caseData.locale !== "string") {
-      logStep("Validation error: missing locale", { requestId });
+      logStep("Validation error: missing locale", { 
+        requestId, 
+        locale: caseData.locale,
+        localeType: typeof caseData.locale,
+        fullPayload: caseData 
+      });
       return new Response(
         JSON.stringify({ error: "VALIDATION_ERROR", message: "Locale is required" }), 
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
