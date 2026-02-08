@@ -439,6 +439,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
   const inputRef = useRef<HTMLInputElement>(null);
   /** Last OCR/document text sent to the AI; kept so follow-up messages still have document context (same as DemoChatSection). */
   const lastDocumentTextRef = useRef<string | null>(null);
+  /** Preserved letter text for create-case + auto analyze (not cleared when draft becomes ready). */
+  const letterTextForCaseRef = useRef<string | null>(null);
 
   // Localized texts
   const placeholderByLang: Record<string, string> = {
@@ -1111,6 +1113,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       setLastDraftText(backendDraftReady ? backendDraft : null);
       setDraftReady(backendDraftReady);
       if (backendDraftReady) {
+        // Preserve letter text for create-case and auto analyze-letter workflow
+        if (lastDocumentTextRef.current) letterTextForCaseRef.current = lastDocumentTextRef.current;
         lastDocumentTextRef.current = null;
         setConversationStatus('document_generated');
       }
@@ -1278,17 +1282,20 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
 
   // Clear chat - use unified case_chat_messages
   const clearChatAfterCaseCreation = async () => {
-    if (!user || !selectedCaseId) return;
+    if (!user) return;
     lastDocumentTextRef.current = null;
-    try {
-      await clearCaseChatMessages();
-      setSuggestedAction(null);
-      setLastDraftText(null);
-      setChatTopic(null);
-      setDraftReady(false);
-      setConversationStatus('collecting');
-    } catch (error) {
-      console.error('Error clearing chat:', error);
+    letterTextForCaseRef.current = null;
+    setSuggestedAction(null);
+    setLastDraftText(null);
+    setChatTopic(null);
+    setDraftReady(false);
+    setConversationStatus('collecting');
+    if (selectedCaseId) {
+      try {
+        await clearCaseChatMessages();
+      } catch (error) {
+        console.error('Error clearing chat:', error);
+      }
     }
   };
 
@@ -1320,7 +1327,8 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     
     draftToSave = normalizeDraftDate(draftToSave);
     setIsCreatingCase(true);
-    
+    const letterTextForCase = letterTextForCaseRef.current || lastDocumentTextRef.current || null;
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -1337,6 +1345,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
           body: JSON.stringify({
             title: titleToSave,
             draft_response: draftToSave,
+            letter_text: letterTextForCase?.trim() || null,
             status: 'in_progress',
           }),
         }
@@ -1357,6 +1366,37 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
       if (!praticaId) {
         toast.error(t('dashboardChat.createCaseError', 'Error creating case.'));
         return;
+      }
+
+      // Auto-run analyze-letter (OCR analysis, risks, deadlines, draft) when we have letter text
+      if (letterTextForCase?.trim()) {
+        try {
+          const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-letter', {
+            body: {
+              letterText: letterTextForCase.trim(),
+              userLanguage: language?.toUpperCase() || 'DE',
+            },
+          });
+          if (!analysisError && analysisData && !analysisData.error) {
+            const explanation = analysisData.explanation ?? '';
+            const risks = Array.isArray(analysisData.risks) ? analysisData.risks : [];
+            const draftFromAnalysis = analysisData.draft_response ?? null;
+            await supabase
+              .from('pratiche')
+              .update({
+                explanation: explanation || null,
+                risks: risks.length > 0 ? risks : null,
+                ...(draftFromAnalysis ? { draft_response: draftFromAnalysis } : {}),
+                status: 'in_progress',
+              })
+              .eq('id', praticaId);
+            console.log('[DashboardAIChat] Auto analyze-letter completed for case', praticaId);
+          } else if (analysisError || analysisData?.error) {
+            console.warn('[DashboardAIChat] Auto analyze-letter failed (non-blocking)', analysisError || analysisData?.error);
+          }
+        } catch (analyzeErr) {
+          console.warn('[DashboardAIChat] Auto analyze-letter error (non-blocking)', analyzeErr);
+        }
       }
 
       toast.success(t('dashboardChat.createCaseSuccess', 'Case created successfully!'));
@@ -1395,6 +1435,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
     if (!user) return;
     letterReadyPlayedRef.current = false;
     lastDocumentTextRef.current = null;
+    letterTextForCaseRef.current = null;
     try {
       await supabase.from('dashboard_chat_history').delete().eq('user_id', user.id);
       setMessages([]);
