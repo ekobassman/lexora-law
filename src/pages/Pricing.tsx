@@ -67,8 +67,8 @@ export default function Pricing() {
   const getPlanIcon = (planId: PlanType) => {
     switch (planId) {
       case 'starter': return <Zap className="h-6 w-6" />;
-      case 'pro': return <Sparkles className="h-6 w-6" />;
-      case 'unlimited': return <Crown className="h-6 w-6" />;
+      case 'plus': return <Sparkles className="h-6 w-6" />;
+      case 'pro': return <Crown className="h-6 w-6" />;
       default: return null;
     }
   };
@@ -76,13 +76,13 @@ export default function Pricing() {
   const getPlanColor = (planId: PlanType) => {
     switch (planId) {
       case 'starter': return 'text-blue-500 bg-blue-500/10';
-      case 'pro': return 'text-gold bg-gold/10';
-      case 'unlimited': return 'text-purple-500 bg-purple-500/10';
+      case 'plus': return 'text-gold bg-gold/10';
+      case 'pro': return 'text-purple-500 bg-purple-500/10';
       default: return 'text-muted-foreground bg-muted';
     }
   };
 
-  const paidPlans: PaidPlanKey[] = ['starter', 'pro', 'unlimited'];
+  const paidPlans: PaidPlanKey[] = ['starter', 'plus', 'pro'];
 
   const features = [
     'pricing.features.freeCase',

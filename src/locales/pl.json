@@ -1143,10 +1143,11 @@
       "popular": "Popularny",
       "trustNote": "Karta kredytowa nie jest wymagana dla planu darmowego. Anuluj w dowolnym momencie.",
       "plans": {
-        "free": { "name": "Darmowy", "description": "Idealny do wypróbowania", "cta": "Zacznij za darmo", "features": ["1 sprawa w pakiecie", "Analiza dokumentów AI", "Automatyczne generowanie odpowiedzi", "Przechowywanie 30 dni"] },
-        "starter": { "name": "Starter", "description": "Do okazjonalnego użytku", "cta": "Wybierz Starter", "features": ["3 sprawy miesięcznie", "15 wiadomości AI na sprawę", "Eksport PDF", "Wysyłanie email", "Śledzenie terminów"] },
-        "pro": { "name": "Pro", "description": "Dla regularnych użytkowników", "cta": "Wybierz Pro", "features": ["10 spraw miesięcznie", "30 wiadomości AI na sprawę", "Wszystko ze Starter", "Wsparcie rodzinne", "Priorytetowe wsparcie"] },
-        "unlimited": { "name": "Unlimited", "description": "Dla profesjonalistów", "cta": "Wybierz Unlimited", "features": ["Nieograniczone sprawy", "Nieograniczone wiadomości AI", "Nieograniczone dokumenty", "Wszystko z Pro", "Wsparcie profesjonalne"] }
+        "free": { "name": "Darmowy", "description": "Idealny do wypróbowania", "cta": "Zacznij za darmo", "features": ["1 sprawa miesięcznie", "15 wiadomości chat dziennie", "Analiza dokumentów AI", "Przechowywanie 30 dni"] },
+        "starter": { "name": "Starter", "description": "Do okazjonalnego użytku", "cta": "Wybierz Starter", "features": ["5 spraw miesięcznie", "Nieograniczone wiadomości chat", "Eksport PDF", "Wysyłanie email", "Śledzenie terminów"] },
+        "plus": { "name": "Plus", "description": "Dla regularnych użytkowników", "cta": "Wybierz Plus", "features": ["20 spraw miesięcznie", "Nieograniczone wiadomości chat", "Wszystko ze Starter", "Wsparcie rodzinne", "Priorytetowe wsparcie"] },
+        "pro": { "name": "Pro", "description": "Dla profesjonalistów", "cta": "Wybierz Pro", "features": ["Nieograniczone sprawy", "Nieograniczone wiadomości chat", "Nieograniczone dokumenty", "Wszystko z Plus", "Wsparcie profesjonalne"] },
+        "unlimited": { "name": "Pro", "description": "Dla profesjonalistów", "cta": "Wybierz Pro", "features": ["Nieograniczone sprawy", "Nieograniczone wiadomości chat", "Nieograniczone dokumenty", "Wszystko z Plus", "Wsparcie profesjonalne"] }
       }
     },
     "testimonials": {

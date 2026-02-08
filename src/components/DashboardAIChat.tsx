@@ -133,11 +133,12 @@ function normalizeDraftDate(draft: string): string {
   return result;
 }
 
-// Per-case AI message limits
+// Per-plan message limits (backend enforces 15/day for free; others unlimited)
 const PLAN_MESSAGE_LIMITS: Record<string, number> = {
-  free: 10,
-  starter: 15,
-  pro: 30,
+  free: 15,
+  starter: 999999,
+  plus: 999999,
+  pro: 999999,
   unlimited: 999999,
 };
 

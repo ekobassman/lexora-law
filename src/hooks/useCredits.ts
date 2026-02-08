@@ -192,7 +192,7 @@ export function useCredits() {
 
   const canCreateCase = !status.at_case_limit;
   const hasCredits = status.credits_balance > 0;
-  const isUnlimited = status.plan === 'unlimited';
+  const isUnlimited = status.plan === 'unlimited' || status.plan === 'pro';
   const canUseAI = isUnlimited || hasCredits;
 
   return {

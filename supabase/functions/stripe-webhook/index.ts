@@ -2,25 +2,23 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getPriceToPlanMap, getMonthlyCaseLimitForDb, normalizePlanKey, type PlanKey } from "../_shared/plans.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-// Price ID to plan mapping - MUST match Stripe products
-const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
-  "price_1SivfjKG0eqN9CTOXzYLuH7v": "pro",
-  "price_1Sivg3KG0eqN9CTORmNvZX1Z": "unlimited",
-};
-
-const PLAN_LIMITS: Record<string, { max_cases: number }> = {
-  free: { max_cases: 1 },
-  starter: { max_cases: 10 },
-  pro: { max_cases: 50 },
-  unlimited: { max_cases: 999999 },
-};
+// Price ID → plan (env STRIPE_PRICE_STARTER, STRIPE_PRICE_PLUS, STRIPE_PRICE_PRO; fallback legacy IDs)
+function getPriceToPlan(): Record<string, PlanKey> {
+  const fromEnv = getPriceToPlanMap(Deno.env);
+  if (Object.keys(fromEnv).length > 0) return fromEnv;
+  return {
+    "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
+    "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus",
+    "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
+  };
+}
 
 const logStep = (correlationId: string, step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK][${correlationId}] ${step}`, details ? JSON.stringify(details) : "");
@@ -246,7 +244,8 @@ async function handleCheckoutComplete(
     return; // Do not modify protected users
   }
 
-  const planKey = session.metadata?.plan_key || "starter";
+  const rawPlan = session.metadata?.plan_key || "starter";
+  const planKey = normalizePlanKey(rawPlan);
   logStep(correlationId, "User and plan resolved", { userId, planKey });
 
   // Get subscription details if this was a subscription checkout
@@ -293,12 +292,10 @@ async function handleSubscriptionUpdate(
     return; // Do not modify protected users
   }
 
-  const planKey = subscription.metadata?.plan_key || getPlanFromPriceId(subscription);
-  
-  // Check if subscription status requires blocking
+  const rawPlan = subscription.metadata?.plan_key || getPlanFromPriceId(subscription);
+  const planKey = normalizePlanKey(rawPlan);
   const blockingStatuses = ['unpaid', 'canceled', 'past_due'];
   const shouldBlock = blockingStatuses.includes(subscription.status);
-  
   await updateUserSubscription(supabase, userId, subscription, planKey, subscription.customer as string, correlationId, shouldBlock);
 }
 
@@ -331,8 +328,7 @@ async function handleSubscriptionCanceled(
     return; // Do not modify protected users
   }
 
-  // Downgrade to free and BLOCK access
-  await upsertSubscription(supabase, userId, "free", "canceled", subscription.customer as string, subscription.id, null, correlationId, true);
+  await upsertSubscription(supabase, userId, "free" as PlanKey, "canceled", subscription.customer as string, subscription.id, null, correlationId, true);
   logStep(correlationId, "User downgraded to free and blocked", { userId });
 }
 
@@ -584,7 +580,7 @@ async function updateUserSubscription(
   supabase: any,
   userId: string,
   subscription: Stripe.Subscription,
-  planKey: string,
+  planKey: PlanKey,
   customerId: string,
   correlationId: string,
   forceBlock: boolean = false
@@ -611,7 +607,7 @@ async function updateUserSubscription(
 async function upsertSubscription(
   supabase: any,
   userId: string,
-  planKey: string,
+  planKey: PlanKey,
   status: string,
   customerId: string | null,
   subscriptionId: string | null,
@@ -619,11 +615,10 @@ async function upsertSubscription(
   correlationId: string,
   blockAccess: boolean = false
 ) {
-  const planLimits = PLAN_LIMITS[planKey] || PLAN_LIMITS.free;
+  const monthlyCaseLimit = getMonthlyCaseLimitForDb(planKey);
   const accessState = blockAccess ? "blocked" : "active";
   const stripeStatus = status === "active" ? "active" : status;
 
-  // Upsert user_subscriptions
   const { error: subError } = await supabase.from("user_subscriptions").upsert({
     user_id: userId,
     plan_key: planKey,
@@ -640,14 +635,13 @@ async function upsertSubscription(
     logStep(correlationId, "user_subscriptions updated", { userId, planKey, status });
   }
 
-  // Also update profiles table for backwards compatibility + access control
   const { error: profileError } = await supabase.from("profiles").update({
     plan: planKey,
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
     stripe_status: stripeStatus,
     access_state: accessState,
-    cases_limit: planLimits.max_cases,
+    cases_limit: monthlyCaseLimit,
     updated_at: new Date().toISOString(),
   }).eq("id", userId);
 
@@ -656,9 +650,23 @@ async function upsertSubscription(
   } else {
     logStep(correlationId, "profiles updated", { userId, planKey, accessState });
   }
+
+  const { error: stateError } = await supabase.from("subscriptions_state").upsert({
+    user_id: userId,
+    plan: planKey,
+    monthly_case_limit: monthlyCaseLimit,
+    is_active: accessState === "active",
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id" });
+
+  if (stateError) {
+    logStep(correlationId, "Warning: subscriptions_state update failed", { error: stateError.message });
+  } else {
+    logStep(correlationId, "subscriptions_state updated", { userId, planKey, monthlyCaseLimit });
+  }
 }
 
-function getPlanFromPriceId(subscription: Stripe.Subscription): string {
+function getPlanFromPriceId(subscription: Stripe.Subscription): PlanKey {
   const priceId = subscription.items.data[0]?.price?.id;
-  return PRICE_TO_PLAN[priceId] || "starter";
+  return getPriceToPlan()[priceId] ?? "starter";
 }

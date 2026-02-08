@@ -82,64 +82,41 @@ async function checkGeoBlock(req: Request): Promise<{ blocked: boolean; countryC
   return { blocked: false, countryCode, reason: 'OK' };
 }
 
-// Plan definitions - single source of truth (backend)  
-// null = unlimited (for admin bypass and unlimited plan)
+// Plan definitions - aligned with _shared/plans.ts (free, starter, plus, pro)
+// max_cases = practices/month; messages_per_case legacy; free has 15 msg/day (see dashboard-chat)
 const PLANS: Record<
   string,
-  {
-    max_cases: number | null;
-    messages_per_case: number | null;
-    ai_credits: number | null;
-    features: Record<string, boolean>;
-  }
+  { max_cases: number | null; messages_per_case: number | null; ai_credits: number | null; features: Record<string, boolean> }
 > = {
   free: {
     max_cases: 1,
-    messages_per_case: 10,
+    messages_per_case: 15,
     ai_credits: 100,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: false,
-      urgent_reply: false,
-    },
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
   },
   starter: {
-    max_cases: 3,
-    messages_per_case: 15,
+    max_cases: 5,
+    messages_per_case: null,
     ai_credits: 500,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: false,
-    },
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: false },
+  },
+  plus: {
+    max_cases: 20,
+    messages_per_case: null,
+    ai_credits: 2000,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
   },
   pro: {
-    max_cases: 10,
-    messages_per_case: 30,
-    ai_credits: 2000,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: true,
-    },
+    max_cases: null,
+    messages_per_case: null,
+    ai_credits: null,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
   },
   unlimited: {
-    max_cases: null,  // null = truly unlimited
-    messages_per_case: null,  // null = truly unlimited
-    ai_credits: null,  // null = truly unlimited
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: true,
-    },
+    max_cases: null,
+    messages_per_case: null,
+    ai_credits: null,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
   },
 };
 
@@ -347,13 +324,12 @@ serve(async (req) => {
       );
     }
 
-    // Admins (including imbimbo.bassman@gmail.com) always display as "unlimited" in UI (hamburger menu)
     if (isAdmin) {
-      effectivePlan = "unlimited";
+      effectivePlan = "pro";
       planSource = "override";
     }
-
-    const planConfig = PLANS[effectivePlan] || PLANS.free;
+    const normalizedPlan = effectivePlan === "unlimited" ? "pro" : effectivePlan;
+    const planConfig = PLANS[normalizedPlan] ?? PLANS[effectivePlan] ?? PLANS.free;
 
     // ADMIN BYPASS: Admins get null limits (truly unlimited)
     const casesMaxRaw = isAdmin ? null : planConfig.max_cases;
@@ -373,10 +349,10 @@ serve(async (req) => {
 
     const currentPeriodEnd = subscription?.current_period_end || null;
 
-    // NEW response shape (required by UX)
+    // NEW response shape (required by UX). Normalize plan to free|starter|plus|pro only.
     const normalized = {
       role: isAdmin ? "admin" : "user",
-      plan: effectivePlan,
+      plan: normalizedPlan,
       plan_source: planSource,
       status: subscription?.status || "active",
       current_period_end: currentPeriodEnd,
@@ -412,7 +388,7 @@ serve(async (req) => {
 
     // Backwards-compatible fields (keep existing UI working while we migrate)
     const legacy = {
-      plan_key: effectivePlan,
+      plan_key: normalizedPlan,
       max_cases: casesMax === null ? 999999 : casesMax,  // Legacy format expected number
       cases_created: casesUsed,
       can_create_case: casesMax === null || casesUsed < casesMax,

@@ -1143,10 +1143,11 @@
       "popular": "Popular",
       "trustNote": "Nu este necesară carte de credit pentru planul gratuit. Anulează oricând.",
       "plans": {
-        "free": { "name": "Gratuit", "description": "Perfect pentru a încerca", "cta": "Începe Gratuit", "features": ["1 dosar inclus", "Analiză documente AI", "Generare automată răspuns", "Stocare 30 zile"] },
-        "starter": { "name": "Starter", "description": "Pentru utilizare ocazională", "cta": "Alege Starter", "features": ["3 dosare pe lună", "15 mesaje AI per dosar", "Export PDF", "Trimitere email", "Urmărire termene"] },
-        "pro": { "name": "Pro", "description": "Pentru utilizatori regulari", "cta": "Alege Pro", "features": ["10 dosare pe lună", "30 mesaje AI per dosar", "Tot din Starter", "Suport familie", "Suport prioritar"] },
-        "unlimited": { "name": "Unlimited", "description": "Pentru profesioniști", "cta": "Alege Unlimited", "features": ["Dosare nelimitate", "Mesaje AI nelimitate", "Documente nelimitate", "Tot din Pro", "Suport profesional"] }
+        "free": { "name": "Gratuit", "description": "Perfect pentru a încerca", "cta": "Începe Gratuit", "features": ["1 dosar pe lună", "15 mesaje chat pe zi", "Analiză documente AI", "Stocare 30 zile"] },
+        "starter": { "name": "Starter", "description": "Pentru utilizare ocazională", "cta": "Alege Starter", "features": ["5 dosare pe lună", "Mesaje chat nelimitate", "Export PDF", "Trimitere email", "Urmărire termene"] },
+        "plus": { "name": "Plus", "description": "Pentru utilizatori regulari", "cta": "Alege Plus", "features": ["20 dosare pe lună", "Mesaje chat nelimitate", "Tot din Starter", "Suport familie", "Suport prioritar"] },
+        "pro": { "name": "Pro", "description": "Pentru profesioniști", "cta": "Alege Pro", "features": ["Dosare nelimitate", "Mesaje chat nelimitate", "Documente nelimitate", "Tot din Plus", "Suport profesional"] },
+        "unlimited": { "name": "Pro", "description": "Pentru profesioniști", "cta": "Alege Pro", "features": ["Dosare nelimitate", "Mesaje chat nelimitate", "Documente nelimitate", "Tot din Plus", "Suport profesional"] }
       }
     },
     "testimonials": {

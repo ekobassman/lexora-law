@@ -1132,10 +1132,11 @@
       "popular": "Populaire",
       "trustNote": "Aucune carte de crédit requise pour le plan gratuit. Annulez à tout moment.",
       "plans": {
-        "free": { "name": "Gratuit", "description": "Parfait pour essayer", "cta": "Commencer Gratuit", "features": ["1 dossier inclus", "Analyse de documents IA", "Génération automatique de réponse", "Stockage 30 jours"] },
-        "starter": { "name": "Starter", "description": "Pour usage occasionnel", "cta": "Choisir Starter", "features": ["3 dossiers par mois", "15 messages IA par dossier", "Export PDF", "Envoi email", "Suivi des échéances"] },
-        "pro": { "name": "Pro", "description": "Pour utilisateurs réguliers", "cta": "Choisir Pro", "features": ["10 dossiers par mois", "30 messages IA par dossier", "Tout de Starter", "Support famille", "Support prioritaire"] },
-        "unlimited": { "name": "Unlimited", "description": "Pour professionnels", "cta": "Choisir Unlimited", "features": ["Dossiers illimités", "Messages IA illimités", "Documents illimités", "Tout de Pro", "Support professionnel"] }
+        "free": { "name": "Gratuit", "description": "Parfait pour essayer", "cta": "Commencer Gratuit", "features": ["1 dossier par mois", "15 messages chat par jour", "Analyse de documents IA", "Stockage 30 jours"] },
+        "starter": { "name": "Starter", "description": "Pour usage occasionnel", "cta": "Choisir Starter", "features": ["5 dossiers par mois", "Messages chat illimités", "Export PDF", "Envoi email", "Suivi des échéances"] },
+        "plus": { "name": "Plus", "description": "Pour utilisateurs réguliers", "cta": "Choisir Plus", "features": ["20 dossiers par mois", "Messages chat illimités", "Tout de Starter", "Support famille", "Support prioritaire"] },
+        "pro": { "name": "Pro", "description": "Pour professionnels", "cta": "Choisir Pro", "features": ["Dossiers illimités", "Messages chat illimités", "Documents illimités", "Tout de Plus", "Support professionnel"] },
+        "unlimited": { "name": "Pro", "description": "Pour professionnels", "cta": "Choisir Pro", "features": ["Dossiers illimités", "Messages chat illimités", "Documents illimités", "Tout de Plus", "Support professionnel"] }
       }
     },
     "testimonials": {

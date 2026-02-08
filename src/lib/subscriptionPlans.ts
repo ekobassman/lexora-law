@@ -1,14 +1,17 @@
-// Lexora subscription plans - STATIC DECLARATIVE CONFIG ONLY
-// NO side effects, NO Stripe checks, NO user state
+// Lexora subscription plans - display config (aligned with src/lib/plans.ts)
+// free, starter, plus, pro. NO side effects, NO Stripe checks.
 
-export type PlanType = 'free' | 'starter' | 'pro' | 'unlimited';
+export type PlanType = 'free' | 'starter' | 'plus' | 'pro';
 
 export interface PlanConfig {
   id: PlanType;
   name: string;
   price: number;
   priceDisplay: string;
-  maxCases: number;
+  /** Max practices per month; null = unlimited */
+  maxCases: number | null;
+  /** Max chat messages per day (Free only); null = unlimited */
+  maxChatMessagesPerDay: number | null;
   features: {
     scan_letter: boolean;
     ai_draft: boolean;
@@ -17,114 +20,67 @@ export interface PlanConfig {
     urgent_reply: boolean;
   };
   highlighted?: boolean;
-  featureKeys: string[]; // For display in pricing UI
+  featureKeys: string[];
 }
 
 export const PLANS: Record<PlanType, PlanConfig> = {
   free: {
     id: 'free',
-    name: 'FREE',
+    name: 'Free',
     price: 0,
     priceDisplay: '€0',
-    maxCases: 1, // 1 case total trial, not monthly
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: false,
-      urgent_reply: false,
-    },
-    featureKeys: [
-      'subscription.features.oneCase',
-      'subscription.features.upload',
-      'subscription.features.ocr',
-      'subscription.features.aiAnalysis',
-      'subscription.features.aiDraft',
-      'subscription.features.aiChat',
-    ],
+    maxCases: 1,
+    maxChatMessagesPerDay: 15,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
+    featureKeys: ['subscription.features.oneCase', 'subscription.features.upload', 'subscription.features.ocr', 'subscription.features.aiAnalysis', 'subscription.features.aiDraft', 'subscription.features.aiChat'],
   },
   starter: {
     id: 'starter',
-    name: 'STARTER',
+    name: 'Starter',
     price: 3.99,
-    priceDisplay: '€3.99',
-    maxCases: 3, // 3 cases/month, each case includes 15 AI messages
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: false,
-    },
-    featureKeys: [
-      'subscription.features.threeCases',
-      'subscription.features.multipleDocuments',
-      'subscription.features.unlimitedOcr',
-      'subscription.features.fifteenMessagesPerCase',
-      'subscription.features.pdfExport',
-      'subscription.features.print',
-      'subscription.features.email',
-      'subscription.features.caseStatus',
-    ],
+    priceDisplay: '€3,99',
+    maxCases: 5,
+    maxChatMessagesPerDay: null,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: false },
+    featureKeys: ['subscription.features.fiveCases', 'subscription.features.unlimitedChat', 'subscription.features.pdfExport', 'subscription.features.print', 'subscription.features.email', 'subscription.features.caseStatus'],
+  },
+  plus: {
+    id: 'plus',
+    name: 'Plus',
+    price: 9.99,
+    priceDisplay: '€9,99',
+    maxCases: 20,
+    maxChatMessagesPerDay: null,
+    highlighted: true,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
+    featureKeys: ['subscription.features.twentyCases', 'subscription.features.unlimitedChat', 'subscription.features.allStarter', 'subscription.features.families'],
   },
   pro: {
     id: 'pro',
-    name: 'PRO',
-    price: 9.99,
-    priceDisplay: '€9.99',
-    maxCases: 10, // 10 cases/month, each case includes 30 AI messages
-    highlighted: true,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: true,
-    },
-    featureKeys: [
-      'subscription.features.tenCases',
-      'subscription.features.allBasic',
-      'subscription.features.thirtyMessagesPerCase',
-      'subscription.features.families',
-    ],
-  },
-  unlimited: {
-    id: 'unlimited',
-    name: 'UNLIMITED',
+    name: 'Pro',
     price: 19.99,
-    priceDisplay: '€19.99',
+    priceDisplay: '€19,99',
     maxCases: 999999,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: true,
-    },
-    featureKeys: [
-      'subscription.features.unlimitedCases',
-      'subscription.features.allPlus',
-      'subscription.features.unlimitedDocuments',
-      'subscription.features.unlimitedMessages',
-      'subscription.features.professional',
-    ],
+    maxChatMessagesPerDay: null,
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
+    featureKeys: ['subscription.features.unlimitedCases', 'subscription.features.unlimitedChat', 'subscription.features.unlimitedDocuments', 'subscription.features.allPlus', 'subscription.features.professional'],
   },
 };
 
-export const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'unlimited'];
+export const PLAN_ORDER: PlanType[] = ['free', 'starter', 'plus', 'pro'];
 
-// Legacy mapping for backwards compatibility
 export const LEGACY_PLAN_MAP: Record<string, PlanType> = {
   basic: 'starter',
-  plus: 'pro',
+  unlimited: 'pro',
+  professional: 'plus',
 };
 
 export function normalizePlanKey(planKey: string): PlanType {
-  const lower = planKey.toLowerCase();
-  return LEGACY_PLAN_MAP[lower] || (lower as PlanType) || 'free';
+  const lower = (planKey || '').toLowerCase().trim();
+  return LEGACY_PLAN_MAP[lower] ?? (PLAN_ORDER.includes(lower as PlanType) ? (lower as PlanType) : 'free');
 }
 
 export function getPlanConfig(planKey: string): PlanConfig {
   const normalized = normalizePlanKey(planKey);
-  return PLANS[normalized] || PLANS.free;
+  return PLANS[normalized] ?? PLANS.free;
 }

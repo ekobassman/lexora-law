@@ -683,14 +683,14 @@
       "clearPricing": "Clear pricing, no surprises"
     },
     "plans": {
-      "basic": {
-        "description": "Up to 10 cases"
+      "starter": {
+        "description": "5 cases per month, unlimited chat"
       },
       "plus": {
-        "description": "10 to 50 cases"
+        "description": "20 cases per month, unlimited chat"
       },
       "pro": {
-        "description": "Unlimited cases"
+        "description": "Unlimited cases and chat"
       }
     },
     "thumbnails": {
@@ -1374,10 +1374,11 @@
       "popular": "Popular",
       "trustNote": "No credit card required for the free plan. Cancel anytime.",
       "plans": {
-        "free": { "name": "Free", "description": "Perfect for trying out", "cta": "Start Free", "features": ["1 case included", "AI document analysis", "Automatic response generation", "30-day storage"] },
-        "starter": { "name": "Starter", "description": "For occasional use", "cta": "Choose Starter", "features": ["3 cases per month", "15 AI messages per case", "PDF export", "Email sending", "Deadline tracking"] },
-        "pro": { "name": "Pro", "description": "For regular users", "cta": "Choose Pro", "features": ["10 cases per month", "30 AI messages per case", "Everything in Starter", "Family support", "Priority support"] },
-        "unlimited": { "name": "Unlimited", "description": "For professionals & power users", "cta": "Choose Unlimited", "features": ["Unlimited cases", "Unlimited AI messages", "Unlimited documents", "Everything in Pro", "Professional support"] }
+        "free": { "name": "Free", "description": "Perfect for trying out", "cta": "Start Free", "features": ["1 case per month", "15 chat messages per day", "AI document analysis", "30-day storage"] },
+        "starter": { "name": "Starter", "description": "For occasional use", "cta": "Choose Starter", "features": ["5 cases per month", "Unlimited chat messages", "PDF export", "Email sending", "Deadline tracking"] },
+        "plus": { "name": "Plus", "description": "For regular users", "cta": "Choose Plus", "features": ["20 cases per month", "Unlimited chat messages", "Everything in Starter", "Family support", "Priority support"] },
+        "pro": { "name": "Pro", "description": "For professionals & power users", "cta": "Choose Pro", "features": ["Unlimited cases", "Unlimited chat messages", "Unlimited documents", "Everything in Plus", "Professional support"] },
+        "unlimited": { "name": "Pro", "description": "For professionals & power users", "cta": "Choose Pro", "features": ["Unlimited cases", "Unlimited chat messages", "Unlimited documents", "Everything in Plus", "Professional support"] }
       }
     },
     "testimonials": {

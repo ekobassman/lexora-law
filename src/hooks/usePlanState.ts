@@ -16,7 +16,7 @@ import { useEntitlements } from './useEntitlements';
 import { useSyncSubscription } from './useSyncSubscription';
 
 export interface PlanState {
-  plan: 'free' | 'starter' | 'pro' | 'unlimited';
+  plan: 'free' | 'starter' | 'plus' | 'pro' | 'unlimited';
   is_active: boolean;
   monthly_case_limit: number;
   cases_remaining: number;
@@ -39,11 +39,12 @@ export interface UsePlanStateReturn {
   triggerSync: () => Promise<void>;
 }
 
-// Plan-specific defaults (must match edge functions)
+// Plan-specific defaults (must match _shared/plans.ts: free 1/15, starter 5, plus 20, pro unlimited)
 const PLAN_DEFAULTS: Record<string, { maxCases: number; messagesPerCase: number }> = {
-  free: { maxCases: 1, messagesPerCase: 10 },
-  starter: { maxCases: 3, messagesPerCase: 15 },
-  pro: { maxCases: 10, messagesPerCase: 30 },
+  free: { maxCases: 1, messagesPerCase: 15 },
+  starter: { maxCases: 5, messagesPerCase: 999999 },
+  plus: { maxCases: 20, messagesPerCase: 999999 },
+  pro: { maxCases: 999999, messagesPerCase: 999999 },
   unlimited: { maxCases: 999999, messagesPerCase: 999999 },
 };
 
@@ -150,7 +151,7 @@ export function usePlanState(): UsePlanStateReturn {
     
     const casesUsed = creditsStatus.cases_used_this_month;
     const casesRemaining = Math.max(0, monthlyCaseLimit - casesUsed);
-    const atCaseLimit = canonicalPlan !== 'unlimited' && casesRemaining <= 0;
+    const atCaseLimit = canonicalPlan !== 'unlimited' && canonicalPlan !== 'pro' && casesRemaining <= 0;
     
     return {
       plan: canonicalPlan,

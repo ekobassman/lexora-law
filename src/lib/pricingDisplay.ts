@@ -2,7 +2,7 @@
 
 import { Currency } from './currency';
 
-export type PaidPlanKey = 'starter' | 'pro' | 'unlimited';
+export type PaidPlanKey = 'starter' | 'plus' | 'pro';
 
 /**
  * Display prices per plan per currency (monthly)
@@ -11,18 +11,18 @@ export type PaidPlanKey = 'starter' | 'pro' | 'unlimited';
 export const PRICING_DISPLAY: Record<Currency, Record<PaidPlanKey, number>> = {
   EUR: {
     starter: 3.99,
-    pro: 9.99,
-    unlimited: 19.99,
+    plus: 9.99,
+    pro: 19.99,
   },
   USD: {
     starter: 4.49,
-    pro: 10.99,
-    unlimited: 21.99,
+    plus: 10.99,
+    pro: 21.99,
   },
   GBP: {
     starter: 3.49,
-    pro: 8.99,
-    unlimited: 17.99,
+    plus: 8.99,
+    pro: 17.99,
   },
 } as const;
 

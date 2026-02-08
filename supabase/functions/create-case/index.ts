@@ -133,12 +133,10 @@ serve(async (req) => {
         );
     }
 
-    const plan = subStateRaw?.plan ?? "free";
-    
-    // ADMIN BYPASS: Admins get null limit (truly unlimited)
-    // Also handle unlimited plan with null limit
+    const plan = (subStateRaw?.plan ?? "free").toLowerCase();
     const monthlyCaseLimitRaw = subStateRaw?.monthly_case_limit ?? 1;
-    const monthlyCaseLimit = isAdmin ? null : (plan === "unlimited" ? null : monthlyCaseLimitRaw);
+    // Admin bypass; pro/unlimited = unlimited (999999 in DB, treat as no cap)
+    const monthlyCaseLimit = isAdmin ? null : (plan === "pro" || plan === "unlimited" ? null : monthlyCaseLimitRaw);
 
     // Ensure usage row exists for current month
     await supabaseAdmin

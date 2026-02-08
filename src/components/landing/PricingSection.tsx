@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Check, Sparkles, Zap, Building2, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCheckout } from '@/hooks/useCheckout';
 
 interface PricingSectionProps {
   id?: string;
@@ -14,9 +16,13 @@ interface PricingSectionProps {
 export function PricingSection({ id }: PricingSectionProps) {
   const [isYearly, setIsYearly] = useState(false);
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { createCheckoutSession, isLoading: checkoutLoading } = useCheckout();
 
+  // 4 plans: Free, Starter (3,99 €), Plus (9,99 €), Pro (19,99 €)
   const plans = [
     {
+      planKey: 'free' as const,
       name: t('landingSections.pricing.plans.free.name'),
       description: t('landingSections.pricing.plans.free.description'),
       monthlyPrice: 0,
@@ -34,6 +40,7 @@ export function PricingSection({ id }: PricingSectionProps) {
       variant: 'outline' as const,
     },
     {
+      planKey: 'starter' as const,
       name: t('landingSections.pricing.plans.starter.name'),
       description: t('landingSections.pricing.plans.starter.description'),
       monthlyPrice: 3.99,
@@ -52,11 +59,31 @@ export function PricingSection({ id }: PricingSectionProps) {
       variant: 'outline' as const,
     },
     {
-      name: t('landingSections.pricing.plans.pro.name'),
-      description: t('landingSections.pricing.plans.pro.description'),
+      planKey: 'plus' as const,
+      name: t('landingSections.pricing.plans.plus.name'),
+      description: t('landingSections.pricing.plans.plus.description'),
       monthlyPrice: 9.99,
       yearlyPrice: 99.90,
       icon: Building2,
+      features: [
+        t('landingSections.pricing.plans.plus.features.0'),
+        t('landingSections.pricing.plans.plus.features.1'),
+        t('landingSections.pricing.plans.plus.features.2'),
+        t('landingSections.pricing.plans.plus.features.3'),
+        t('landingSections.pricing.plans.plus.features.4'),
+      ],
+      cta: t('landingSections.pricing.plans.plus.cta'),
+      ctaLink: '/auth?mode=signup&plan=plus',
+      popular: true,
+      variant: 'premium' as const,
+    },
+    {
+      planKey: 'pro' as const,
+      name: t('landingSections.pricing.plans.pro.name'),
+      description: t('landingSections.pricing.plans.pro.description'),
+      monthlyPrice: 19.99,
+      yearlyPrice: 199.90,
+      icon: Crown,
       features: [
         t('landingSections.pricing.plans.pro.features.0'),
         t('landingSections.pricing.plans.pro.features.1'),
@@ -66,24 +93,6 @@ export function PricingSection({ id }: PricingSectionProps) {
       ],
       cta: t('landingSections.pricing.plans.pro.cta'),
       ctaLink: '/auth?mode=signup&plan=pro',
-      popular: true,
-      variant: 'premium' as const,
-    },
-    {
-      name: t('landingSections.pricing.plans.unlimited.name'),
-      description: t('landingSections.pricing.plans.unlimited.description'),
-      monthlyPrice: 19.99,
-      yearlyPrice: 199.90,
-      icon: Crown,
-      features: [
-        t('landingSections.pricing.plans.unlimited.features.0'),
-        t('landingSections.pricing.plans.unlimited.features.1'),
-        t('landingSections.pricing.plans.unlimited.features.2'),
-        t('landingSections.pricing.plans.unlimited.features.3'),
-        t('landingSections.pricing.plans.unlimited.features.4'),
-      ],
-      cta: t('landingSections.pricing.plans.unlimited.cta'),
-      ctaLink: '/auth?mode=signup&plan=unlimited',
       popular: false,
       variant: 'outline' as const,
     },
@@ -180,13 +189,27 @@ export function PricingSection({ id }: PricingSectionProps) {
                 </CardContent>
                 
                 <CardFooter>
-                  <Button
-                    variant={plan.variant}
-                    className="w-full"
-                    asChild
-                  >
-                    <Link to={plan.ctaLink}>{plan.cta}</Link>
-                  </Button>
+                  {plan.planKey !== 'free' && user ? (
+                    <Button
+                      variant={plan.variant}
+                      className="w-full"
+                      disabled={checkoutLoading}
+                      onClick={async () => {
+                        try {
+                          const { url } = await createCheckoutSession(plan.planKey);
+                          if (url) window.location.href = url;
+                        } catch {
+                          // useCheckout sets error; user sees toast or retry
+                        }
+                      }}
+                    >
+                      {plan.cta}
+                    </Button>
+                  ) : (
+                    <Button variant={plan.variant} className="w-full" asChild>
+                      <Link to={plan.ctaLink}>{plan.cta}</Link>
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );

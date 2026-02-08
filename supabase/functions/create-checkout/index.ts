@@ -11,15 +11,22 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
-// Plan configuration with Stripe price IDs
-const PLAN_CONFIG: Record<string, { priceId: string; name: string }> = {
-  starter: { priceId: "price_1SivfMKG0eqN9CTOVXhLdPo7", name: "Starter" },
-  pro: { priceId: "price_1SivfjKG0eqN9CTOXzYLuH7v", name: "Pro" },
-  unlimited: { priceId: "price_1Sivg3KG0eqN9CTORmNvZX1Z", name: "Unlimited" },
-  // Legacy mappings
-  basic: { priceId: "price_1SivfMKG0eqN9CTOVXhLdPo7", name: "Starter" },
-  plus: { priceId: "price_1SivfjKG0eqN9CTOXzYLuH7v", name: "Pro" },
-};
+// Plan configuration: Stripe price IDs from env (STRIPE_PRICE_STARTER, STRIPE_PRICE_PLUS, STRIPE_PRICE_PRO)
+// Fallback to legacy IDs if env not set
+function getPlanConfig(): Record<string, { priceId: string; name: string }> {
+  const env = (k: string) => Deno.env.get(k);
+  const starter = env("STRIPE_PRICE_STARTER") || "price_1SivfMKG0eqN9CTOVXhLdPo7";
+  const plus = env("STRIPE_PRICE_PLUS") || "price_1SivfjKG0eqN9CTOXzYLuH7v";
+  const pro = env("STRIPE_PRICE_PRO") || "price_1Sivg3KG0eqN9CTORmNvZX1Z";
+  return {
+    starter: { priceId: starter, name: "Starter" },
+    plus: { priceId: plus, name: "Plus" },
+    pro: { priceId: pro, name: "Pro" },
+    basic: { priceId: starter, name: "Starter" },
+    professional: { priceId: plus, name: "Plus" },
+    unlimited: { priceId: pro, name: "Pro" },
+  };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,10 +57,14 @@ serve(async (req) => {
 
     const { plan } = await req.json();
     const normalizedPlan = (plan || "").toLowerCase();
+    if (normalizedPlan === "free") {
+      throw new Error("Free plan does not require checkout.");
+    }
+    const PLAN_CONFIG = getPlanConfig();
     const planConfig = PLAN_CONFIG[normalizedPlan];
 
     if (!planConfig) {
-      throw new Error(`Invalid plan: ${plan}`);
+      throw new Error(`Invalid plan: ${plan}. Use starter, plus, or pro.`);
     }
 
     logStep("Plan selected", { plan: normalizedPlan, priceId: planConfig.priceId });

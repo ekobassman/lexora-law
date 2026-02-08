@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getPriceToPlanMap, getMonthlyCaseLimitForDb, normalizePlanKey, type PlanKey } from "../_shared/plans.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://lexora-law.com",
@@ -8,49 +9,21 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Price ID to plan mapping - MUST match Stripe products
-const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
-  "price_1SivfjKG0eqN9CTOXzYLuH7v": "pro",
-  "price_1Sivg3KG0eqN9CTORmNvZX1Z": "unlimited",
-};
+function getPriceToPlan(): Record<string, PlanKey> {
+  const fromEnv = getPriceToPlanMap(Deno.env);
+  if (Object.keys(fromEnv).length > 0) return fromEnv;
+  return {
+    "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
+    "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus",
+    "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
+  };
+}
 
-const PLAN_LIMITS: Record<string, { max_cases: number; messages_per_case: number }> = {
-  free: { max_cases: 1, messages_per_case: 10 },
-  starter: { max_cases: 3, messages_per_case: 15 }, // 3 monthly cases, 15 AI messages per case
-  pro: { max_cases: 10, messages_per_case: 30 }, // 10 monthly cases, 30 AI messages per case
-  unlimited: { max_cases: 999999, messages_per_case: 999999 },
-};
-
-const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
-  free: {
-    scan_letter: true,
-    ai_draft: true,
-    ai_chat: true,
-    export_pdf: false,
-    urgent_reply: false,
-  },
-  starter: {
-    scan_letter: true,
-    ai_draft: true,
-    ai_chat: true,
-    export_pdf: true,
-    urgent_reply: false,
-  },
-  pro: {
-    scan_letter: true,
-    ai_draft: true,
-    ai_chat: true,
-    export_pdf: true,
-    urgent_reply: true,
-  },
-  unlimited: {
-    scan_letter: true,
-    ai_draft: true,
-    ai_chat: true,
-    export_pdf: true,
-    urgent_reply: true,
-  },
+const PLAN_FEATURES: Record<PlanKey, Record<string, boolean>> = {
+  free: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
+  starter: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: false },
+  plus: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
+  pro: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -193,7 +166,8 @@ serve(async (req) => {
       (sub: Stripe.Subscription) => sub.status === "past_due" || sub.status === "unpaid"
     );
 
-    let planKey = "free";
+    const PRICE_TO_PLAN = getPriceToPlan();
+    let planKey: PlanKey = "free";
     let status = "active";
     let currentPeriodEnd: string | null = null;
     let stripeSubscriptionId: string | null = null;
@@ -203,49 +177,27 @@ serve(async (req) => {
       stripeSubscriptionId = activeSubscription.id;
       status = activeSubscription.status;
       currentPeriodEnd = new Date(activeSubscription.current_period_end * 1000).toISOString();
-      
-      // Get price_id from subscription items
       const subscriptionItem = activeSubscription.items.data[0];
       if (subscriptionItem?.price?.id) {
         priceId = subscriptionItem.price.id;
-        planKey = priceId ? (PRICE_TO_PLAN[priceId] || "starter") : (activeSubscription.metadata?.plan_key as string) || "starter";
+        planKey = PRICE_TO_PLAN[priceId] ?? normalizePlanKey(activeSubscription.metadata?.plan_key) ?? "starter";
       }
-
-      logStep("Found active Stripe subscription", {
-        subscriptionId: stripeSubscriptionId,
-        status,
-        priceId,
-        planKey,
-        currentPeriodEnd,
-      });
+      logStep("Found active Stripe subscription", { subscriptionId: stripeSubscriptionId, status, priceId, planKey, currentPeriodEnd });
     } else if (pastDueSubscription) {
       stripeSubscriptionId = pastDueSubscription.id;
       status = pastDueSubscription.status;
       currentPeriodEnd = new Date(pastDueSubscription.current_period_end * 1000).toISOString();
-
       const subscriptionItem = pastDueSubscription.items.data[0];
       if (subscriptionItem?.price?.id) {
         priceId = subscriptionItem.price.id;
-        planKey = priceId
-          ? (PRICE_TO_PLAN[priceId] || "starter")
-          : (pastDueSubscription.metadata?.plan_key as string) || "starter";
+        planKey = PRICE_TO_PLAN[priceId] ?? normalizePlanKey(pastDueSubscription.metadata?.plan_key) ?? "starter";
       }
-
-      logStep("Found past_due Stripe subscription", {
-        subscriptionId: stripeSubscriptionId,
-        status,
-        priceId,
-        planKey,
-        currentPeriodEnd,
-      });
+      logStep("Found past_due Stripe subscription", { subscriptionId: stripeSubscriptionId, status, priceId, planKey, currentPeriodEnd });
     } else {
-      // Check for canceled subscription that hasn't expired yet
       const canceledButValid = subscriptions.data.find((sub: Stripe.Subscription) => {
         if (sub.status !== "canceled") return false;
-        const periodEnd = new Date(sub.current_period_end * 1000);
-        return periodEnd > new Date();
+        return new Date(sub.current_period_end * 1000) > new Date();
       });
-
       if (canceledButValid) {
         stripeSubscriptionId = canceledButValid.id;
         status = "canceled";
@@ -253,7 +205,7 @@ serve(async (req) => {
         const subscriptionItem = canceledButValid.items.data[0];
         if (subscriptionItem?.price?.id) {
           priceId = subscriptionItem.price.id;
-          planKey = priceId ? (PRICE_TO_PLAN[priceId] || "starter") : (canceledButValid.metadata?.plan_key as string) || "starter";
+          planKey = PRICE_TO_PLAN[priceId] ?? normalizePlanKey(canceledButValid.metadata?.plan_key) ?? "starter";
         }
         logStep("Found canceled but still valid subscription", { subscriptionId: stripeSubscriptionId, planKey, currentPeriodEnd });
       } else {
@@ -263,9 +215,8 @@ serve(async (req) => {
       }
     }
 
-    // D) Upsert to user_subscriptions
-    const planLimits = PLAN_LIMITS[planKey] || PLAN_LIMITS.free;
-    const planFeatures = PLAN_FEATURES[planKey] || PLAN_FEATURES.free;
+    const monthlyCaseLimit = getMonthlyCaseLimitForDb(planKey);
+    const planFeatures = PLAN_FEATURES[planKey] ?? PLAN_FEATURES.free;
 
     // Persist granular status (active | trialing | past_due | unpaid | canceled | inactive)
     const normalizedStatus =
@@ -293,8 +244,6 @@ serve(async (req) => {
       logStep("user_subscriptions upserted successfully", { userId, planKey, status });
     }
 
-    // Also update profiles table for backwards compatibility
-    // If payment is past_due/unpaid => block access (enforcement happens both frontend + backend)
     const shouldBlock = normalizedStatus === "past_due";
     const { error: profileError } = await supabase
       .from("profiles")
@@ -306,16 +255,22 @@ serve(async (req) => {
         access_state: shouldBlock ? "blocked" : "active",
         payment_status: shouldBlock ? "past_due" : "active",
         payment_failed_at: shouldBlock ? new Date().toISOString() : null,
-        cases_limit: planLimits.max_cases,
+        cases_limit: monthlyCaseLimit,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
 
-    if (profileError) {
-      logStep("Warning: profiles update failed", { error: profileError.message });
-    }
+    if (profileError) logStep("Warning: profiles update failed", { error: profileError.message });
 
-    // Return success with full entitlements
+    const { error: stateError } = await supabase.from("subscriptions_state").upsert({
+      user_id: userId,
+      plan: planKey,
+      monthly_case_limit: monthlyCaseLimit,
+      is_active: !shouldBlock,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+    if (stateError) logStep("Warning: subscriptions_state update failed", { error: stateError.message });
+
     const response = {
       ok: true,
       plan_key: planKey,
@@ -323,7 +278,7 @@ serve(async (req) => {
       current_period_end: currentPeriodEnd,
       entitlements: {
         plan: planKey,
-        max_cases: planLimits.max_cases,
+        max_cases: monthlyCaseLimit,
         features: planFeatures,
       },
       synced: true,
