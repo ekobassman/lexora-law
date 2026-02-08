@@ -998,7 +998,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         caseDeadline: caseContext?.deadline,
         letterText: caseContext?.letterText,
         draftText: caseContext?.draftResponse,
-        ocrText: documentTextToSend ?? caseContext?.documents?.filter(d => d.rawText).map(d => d.rawText!).join('\n\n').slice(0, 4000) || undefined,
+        ocrText: documentTextToSend ?? (caseContext?.documents?.filter(d => d.rawText).map(d => d.rawText!).join('\n\n').slice(0, 4000) || undefined),
         documentSummaries: caseContext?.documents?.map(d => d.fileName || d.id).filter(Boolean),
         profile: effectiveUserProfile ? {
           fullName: effectiveUserProfile.fullName || [effectiveUserProfile.firstName, effectiveUserProfile.lastName].filter(Boolean).join(' '),
