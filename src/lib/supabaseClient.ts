@@ -1,14 +1,28 @@
-// Single Supabase client for the app. Reads from .env (Vite: VITE_*).
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/integrations/supabase/types';
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const key =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
 
-export const supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
+if (import.meta.env.DEV) {
+  console.log("[Supabase]", {
+    url,
+    hasKey: Boolean(key),
+    keyPrefix: (key || "").slice(0, 18),
+  });
+}
+
+if (!url || !key) {
+  console.error(
+    "Missing Supabase config: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) in .env"
+  );
+}
+
+export const supabase = createClient<Database>(url || "", key || "", {
   auth: {
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
   },

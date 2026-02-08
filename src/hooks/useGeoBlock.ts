@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface GeoBlockResult {
   loading: boolean;
@@ -12,7 +13,7 @@ const BLOCKED_COUNTRIES = ['RU', 'CN'];
 
 /**
  * Hook to check if the user is accessing from a blocked country
- * Uses geo-check edge function with fallback client-side detection
+ * Uses geo-check edge function (via shared Supabase client) with fallback client-side detection
  */
 export function useGeoBlock(): GeoBlockResult {
   const [loading, setLoading] = useState(true);
@@ -50,87 +51,41 @@ export function useGeoBlock(): GeoBlockResult {
           }
         }
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        if (!supabaseUrl || !supabaseKey) {
-          console.error('[useGeoBlock] Missing Supabase config');
-          // Fail-open if config missing
-          if (!cancelled) {
-            setIsBlocked(false);
-            setLoading(false);
-          }
-          return;
-        }
-
-        // Call edge function with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-        let response: Response;
+        // Call edge function using shared Supabase client (no direct env reads), 10s timeout
+        let timeoutId: ReturnType<typeof setTimeout>;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('AbortError')), 10000);
+        });
+        let data: any;
+        let fnError: any;
         try {
-          response = await fetch(`${supabaseUrl}/functions/v1/geo-check`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseKey,
-            },
-            signal: controller.signal,
-          });
+          const result = await Promise.race([
+            supabase.functions.invoke('geo-check', { method: 'POST' }),
+            timeoutPromise,
+          ]) as { data: any; error: any };
+          data = result.data;
+          fnError = result.error;
+        } catch (err: any) {
+          if (err?.message === 'AbortError' || err?.name === 'AbortError') throw err;
+          data = null;
+          fnError = err;
         } finally {
-          clearTimeout(timeoutId);
+          clearTimeout(timeoutId!);
         }
 
         if (cancelled) return;
 
-        // Parse response - handle both JSON and non-JSON responses
-        let data: any;
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          data = await response.json();
-        } else {
-          const text = await response.text();
-          console.error('[useGeoBlock] Non-JSON response:', text);
-          // Try client-side fallback
-          await tryClientSideFallback();
-          return;
-        }
-
-        console.log('[useGeoBlock] Edge function response:', { status: response.status, data });
-
-        // Handle 451 Unavailable For Legal Reasons
-        if (response.status === 451 || data.code === 'JURISDICTION_BLOCKED' || data.code === 'JURISDICTION_UNKNOWN') {
-          console.log('[useGeoBlock] Jurisdiction blocked:', data);
-
-          const detectedCountry = data.countryCode || 'unknown';
-          
-          // Cache the blocked result
-          localStorage.setItem('lexora_geo_check', JSON.stringify({
-            countryCode: detectedCountry,
-            isBlocked: true,
-            timestamp: Date.now()
-          }));
-
-          if (!cancelled) {
-            setCountryCode(detectedCountry);
-            setIsBlocked(true);
-            setLoading(false);
-          }
-          return;
-        }
-
-        // Handle successful response
-        if (response.ok && data) {
-          const detectedCountry = data.countryCode || 'unknown';
+        // Success (2xx): edge returned { countryCode, isBlocked }
+        if (!fnError && data) {
+          const detectedCountry = data.countryCode ?? 'unknown';
           const blocked = data.isBlocked === true;
+          console.log('[useGeoBlock] Edge function response:', { countryCode: detectedCountry, isBlocked: blocked });
 
-          // Cache result
           localStorage.setItem('lexora_geo_check', JSON.stringify({
             countryCode: detectedCountry,
             isBlocked: blocked,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }));
-
           if (!cancelled) {
             setCountryCode(detectedCountry);
             setIsBlocked(blocked);
@@ -139,8 +94,28 @@ export function useGeoBlock(): GeoBlockResult {
           return;
         }
 
-        // Unexpected response - try fallback
-        console.error('[useGeoBlock] Unexpected response:', response.status);
+        // 451 or other error: try to read body from error context (edge returns 451 with JSON body)
+        const errBody = fnError?.context?.body ?? fnError?.body ?? fnError;
+        const status = fnError?.context?.status ?? fnError?.status;
+        const code = errBody?.code ?? fnError?.code;
+        if (status === 451 || code === 'JURISDICTION_BLOCKED' || code === 'JURISDICTION_UNKNOWN') {
+          const detectedCountry = errBody?.countryCode ?? 'unknown';
+          console.log('[useGeoBlock] Jurisdiction blocked:', { countryCode: detectedCountry });
+          localStorage.setItem('lexora_geo_check', JSON.stringify({
+            countryCode: detectedCountry,
+            isBlocked: true,
+            timestamp: Date.now(),
+          }));
+          if (!cancelled) {
+            setCountryCode(detectedCountry);
+            setIsBlocked(true);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Other error (e.g. network, no config): try client-side fallback
+        console.log('[useGeoBlock] Edge function error, trying fallback:', fnError?.message ?? fnError);
         await tryClientSideFallback();
 
       } catch (err: any) {
