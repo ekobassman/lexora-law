@@ -139,6 +139,7 @@ const PLAN_MESSAGE_LIMITS: Record<string, number | null> = {
   starter: null, // unlimited
   plus: null, // unlimited
   pro: null, // unlimited
+  unlimited: null, // unlimited
 };
 
 function getSafeText(t: (key: string, options?: any) => string, key: string, fallback: string): string {

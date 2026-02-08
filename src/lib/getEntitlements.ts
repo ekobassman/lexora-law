@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import type { Session } from "@supabase/supabase-js";
 
-export type PlanId = "free" | "starter" | "pro" | "unlimited";
+export type PlanId = "free" | "starter" | "plus" | "pro" | "unlimited";
 export type BillingStatus = "active" | "past_due" | "canceled" | "trialing" | string;
 
 export interface EntitlementsDebug {

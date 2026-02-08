@@ -19,11 +19,12 @@ function checkGeoBlock(req: Request): { blocked: boolean; countryCode: string | 
   return { blocked: BLOCKED_COUNTRIES.includes(normalized), countryCode: normalized };
 }
 
-const PLANS: Record<string, { max_cases: number }> = {
+const PLANS: Record<string, { max_cases: number | null }> = {
   free: { max_cases: 1 },
-  starter: { max_cases: 10 },
-  pro: { max_cases: 50 },
-  unlimited: { max_cases: 999999 },
+  starter: { max_cases: 5 },
+  plus: { max_cases: 20 },
+  pro: { max_cases: null }, // unlimited
+  unlimited: { max_cases: null }, // unlimited
 };
 
 serve(async (req) => {

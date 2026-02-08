@@ -11,15 +11,16 @@ const corsHeaders = {
 // Price ID to plan mapping - MUST match Stripe products
 const PRICE_TO_PLAN: Record<string, string> = {
   "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
-  "price_1SivfjKG0eqN9CTOXzYLuH7v": "pro",
-  "price_1Sivg3KG0eqN9CTORmNvZX1Z": "unlimited",
+  "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus", // Updated to plus
+  "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
 };
 
-const PLAN_LIMITS: Record<string, { max_cases: number; messages_per_case: number }> = {
-  free: { max_cases: 1, messages_per_case: 10 },
-  starter: { max_cases: 3, messages_per_case: 15 }, // 3 monthly cases, 15 AI messages per case
-  pro: { max_cases: 10, messages_per_case: 30 }, // 10 monthly cases, 30 AI messages per case
-  unlimited: { max_cases: 999999, messages_per_case: 999999 },
+const PLAN_LIMITS: Record<string, { max_cases: number | null; messages_per_case: number | null }> = {
+  free: { max_cases: 1, messages_per_case: 15 }, // 15 messages per day, not per case
+  starter: { max_cases: 5, messages_per_case: null }, // unlimited messages
+  plus: { max_cases: 20, messages_per_case: null }, // unlimited messages
+  pro: { max_cases: null, messages_per_case: null }, // unlimited
+  unlimited: { max_cases: null, messages_per_case: null }, // unlimited
 };
 
 const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
