@@ -8,6 +8,11 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
+import {
+  buildStrictMessages,
+  expectDocumentGuardrail,
+  validateOutputForbiddenPhrases,
+} from "../_shared/documentChatGuardrails.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -697,7 +702,7 @@ Usa questi dati automaticamente quando generi lettere.
       }
     }
 
-    // When no case or no letter in case: derive document from current/last user message (OCR / upload in chat)
+    // Single source of truth for OCR: request (caseContext.letterText) → DB when caseId → current/last user message
     const looksLikeLetter = (text: string): boolean => {
       if (!text || text.length < 350) return false;
       const hasOpening = /\b(egregio|gentile|spett\.?\s*(le|li|mo)|sehr\s+geehrte|dear\s+(sir|madam|mr|ms)|to\s+whom|alla\s+cortese|geehrte\s+damen|betreff|oggetto|subject)\b/i.test(text);
@@ -707,31 +712,58 @@ Usa questi dati automaticamente quando generi lettere.
     };
     const isUploadedDoc = (t: string): boolean =>
       t.startsWith("[Document uploaded]") || t.startsWith("[PDF uploaded]") || /^\[\d+\s+documents uploaded\]/.test(t);
-    if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
+
+    let resolvedLetterText = (caseContext?.letterText ?? "").trim();
+    if (caseId && !resolvedLetterText) {
+      const { data } = await supabaseClient
+        .from("pratiche")
+        .select("letter_text")
+        .eq("id", caseId)
+        .eq("user_id", user.id)
+        .single();
+      if (data?.letter_text) resolvedLetterText = String(data.letter_text).trim();
+    }
+    if (!resolvedLetterText && message?.trim()) {
       const msg = message.trim();
       const history = Array.isArray(chatHistory) ? chatHistory : [];
-      let docText = "";
       if (isUploadedDoc(msg) || (msg.length >= 350 && looksLikeLetter(msg))) {
-        docText = msg.slice(0, 12000);
+        resolvedLetterText = msg.slice(0, 12000);
       } else {
         const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
         const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
-        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent))) docText = lastContent.slice(0, 12000);
+        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent)))
+          resolvedLetterText = lastContent.slice(0, 12000);
       }
-      if (docText.length > 0) {
-        const snippet = docText.length > 8000 ? docText.slice(0, 8000) + "...[troncato]" : docText;
-        systemPrompt += `
+    }
+    if (resolvedLetterText.length > 0) {
+      const snippet = resolvedLetterText.length > 8000 ? resolvedLetterText.slice(0, 8000) + "...[troncato]" : resolvedLetterText;
+      systemPrompt += `
 
 === DOCUMENTO GIÀ RICEVUTO E LETTO – USA QUESTO PER RISPONDERE ===
-L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è QUI SOTTO. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti). Rispondi SEMPRE basandoti su queste informazioni.
-TESTO DELLA LETTERA/DOCUMENTO:
-"""
-${snippet}
-"""
-
-REGOLA OBBLIGATORIA: Hai già il documento sopra. Non dire mai "non ho trovato" o "indicami l'indirizzo". NON chiedere MAI dati che compaiono nel documento. NON chiedere la firma. Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+Il testo completo è nel blocco DOCUMENT_TEXT (authoritative) iniettato dal sistema. Rispondi SEMPRE basandoti su quelle informazioni (destinatario, indirizzi, date, riferimenti).
+REGOLA OBBLIGATORIA: Hai già il documento. Non dire mai "non ho trovato" o "indicami l'indirizzo". NON chiedere MAI dati che compaiono nel documento. NON chiedere la firma. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 `;
-      }
+    }
+
+    // HARD GUARDRAIL: case/document expected but no OCR text → fail closed
+    const guardrail = expectDocumentGuardrail({
+      caseId: caseId ?? null,
+      documentText: resolvedLetterText || null,
+    });
+    if (!guardrail.ok) {
+      console.error(
+        "[DASHBOARD-CHAT] DOCUMENT_TEXT_MISSING",
+        guardrail.caseId,
+        guardrail.documentId,
+        guardrail.documentTextLength
+      );
+      return new Response(
+        JSON.stringify({
+          error: guardrail.error,
+          hint: guardrail.hint,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // If case context is provided, inject it so AI has full case awareness
@@ -744,17 +776,10 @@ ${caseContext.aktenzeichen ? `Numero riferimento: ${caseContext.aktenzeichen}` :
 ${caseContext.deadline ? `Scadenza: ${caseContext.deadline}` : ''}
 `;
 
-      // Add main letter text (OCR) when present – CRITICAL: AI must use it as primary source, no asking user where to find info
-      if (caseContext.letterText && caseContext.letterText.trim().length > 0) {
-        const letterSnippet = caseContext.letterText.trim().length > 6000
-          ? caseContext.letterText.trim().slice(0, 6000) + '...[troncato]'
-          : caseContext.letterText.trim();
+      // Main letter (OCR) is injected via DOCUMENT_TEXT system message; brief note here for redundancy
+      if (resolvedLetterText.length > 0) {
         systemPrompt += `
-=== LETTERA PRINCIPALE (OCR) – GIÀ IN TUO POSSESSO, USA COME FONTE PRIMARIA ===
-Le informazioni stanno in questo documento. Non chiedere all'utente dove trovarle.
-${letterSnippet}
-
-NON chiedere MAI la firma (signature/firma/Unterschrift). Il cliente firma su carta dopo la stampa.
+=== LETTERA PRINCIPALE (OCR) – vedi blocco DOCUMENT_TEXT (authoritative) iniettato dal sistema. USA COME FONTE PRIMARIA. NON chiedere MAI la firma (signature/firma/Unterschrift). Il cliente firma su carta dopo la stampa. ===
 
 `;
       }
@@ -813,39 +838,21 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
 `;
     }
 
-    // Collect OCR/letter text for explicit user message (so AI always has it in messages)
-    let letterTextForMessages = '';
-    if (caseContext?.letterText?.trim()) {
-      letterTextForMessages = caseContext.letterText.trim().length > 8000
-        ? caseContext.letterText.trim().slice(0, 8000) + '\n...[troncato]'
-        : caseContext.letterText.trim();
-    } else if ((!caseContext || !caseContext.letterText?.trim()) && message?.trim()) {
-      const msg = message.trim();
-      const history = Array.isArray(chatHistory) ? chatHistory : [];
-      if (isUploadedDoc(msg) || (msg.length >= 350 && looksLikeLetter(msg))) letterTextForMessages = msg.slice(0, 8000);
-      else {
-        const lastUser = [...history].reverse().find((m: { role: string }) => m.role === "user");
-        const lastContent = lastUser && typeof (lastUser as any).content === "string" ? (lastUser as any).content : "";
-        if (isUploadedDoc(lastContent) || (lastContent.length >= 350 && looksLikeLetter(lastContent))) letterTextForMessages = lastContent.slice(0, 8000);
-      }
-    }
+    const letterTextForMessages =
+      resolvedLetterText.length > 8000
+        ? resolvedLetterText.slice(0, 8000) + "\n...[troncato]"
+        : resolvedLetterText;
 
-    const messages: Array<{ role: string; content: string }> = [
-      { role: "system", content: systemPrompt },
-    ];
-    if (letterTextForMessages.length > 0) {
-      messages.push({
-        role: "user",
-        content: `TESTO LETTERA (OCR):\n"""\n${letterTextForMessages}\n"""`,
-      });
-    }
+    // Strict message structure: system rules, DOCUMENT_TEXT (authoritative) when present, history, current user message
     const recentHistory = (chatHistory || []).slice(-8);
-    for (const msg of recentHistory) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        messages.push({ role: msg.role, content: msg.content });
-      }
-    }
-    messages.push({ role: "user", content: message });
+    const messages: Array<{ role: string; content: string }> = buildStrictMessages({
+      systemRules: systemPrompt,
+      documentText: letterTextForMessages.length > 0 ? letterTextForMessages : null,
+      documentTextMaxLen: 8000,
+      history: recentHistory,
+      userMessage: message,
+      userMessageInHistory: false,
+    });
 
     if (conversationStatus === 'document_generated') {
       const closureMsg = "Il documento è già stato generato. Puoi usare Anteprima, Stampa, Email o Copia.";
@@ -919,7 +926,7 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     // INTELLIGENT AUTO-SEARCH (REAL LOGIC - NOT JUST PROMPT)
     // =====================
     // When user has uploaded a document or we have case letter: skip search ENTIRELY – doc text would trigger "indirizzo" and return "non ho trovato informazioni"
-    const hasDocumentInContext = (caseContext?.letterText?.trim().length ?? 0) > 0 || isUploadedDoc(message.trim());
+    const hasDocumentInContext = resolvedLetterText.length > 0 || isUploadedDoc(message.trim());
     const userWantsSearch = detectSearchIntent(message);
     const needsExternalInfo = detectInfoRequest(message);
     
@@ -1098,6 +1105,16 @@ DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiunger
       draftResponse = null;
       extractedTitle = null;
       assistantMessage = buildPlaceholderQuestion(responseLanguage, rawAssistant);
+    }
+
+    // Output validation: if document was provided but model says it didn't receive it → replace with safe fallback
+    const outputCheck = validateOutputForbiddenPhrases(
+      letterTextForMessages.length,
+      assistantMessage,
+      { endpoint: "dashboard-chat", caseId: caseId ?? undefined }
+    );
+    if (!outputCheck.ok) {
+      assistantMessage = outputCheck.response;
     }
 
     // REGOLA PRIMO MESSAGGIO: risposta deve sempre iniziare con presentazione Lexora; VIETATO "non ho trovato"

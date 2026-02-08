@@ -7,6 +7,11 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
 import { POLICY_EDIT_MODIFY, POLICY_DOCUMENT_CHAT } from "../_shared/lexoraChatPolicy.ts";
+import {
+  buildStrictMessages,
+  expectDocumentGuardrail,
+  validateOutputForbiddenPhrases,
+} from "../_shared/documentChatGuardrails.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,6 +161,26 @@ serve(async (req) => {
     const letterSnippet = (letterText || "").trim().slice(0, 8000);
     const hasLetterContext = letterSnippet.length > 0;
 
+    // HARD GUARDRAIL: pratica/case chat expects document text
+    const guardrail = expectDocumentGuardrail({
+      praticaId: praticaId ?? null,
+      documentText: letterSnippet || null,
+    });
+    if (!guardrail.ok) {
+      console.error(
+        "[CHAT-AI] DOCUMENT_TEXT_MISSING praticaId=",
+        praticaId,
+        "document_text_length=0"
+      );
+      return new Response(
+        JSON.stringify({
+          error: guardrail.error,
+          hint: guardrail.hint,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // WEB SEARCH (Perplexity): se c'è contesto lettera, cerca normativa/sentenze 2026 prima della risposta
     let webData = "";
     const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
@@ -227,30 +252,22 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
 3. VIETATO ASSOLUTO – MAI scrivere: "non ho trovato", "I didn't find", "nessuna informazione", "indicami l'indirizzo", "please provide the address". Se non hai un dato, usa il documento o cerca sul web; non dire mai che non hai trovato informazioni.`;
     }
 
-    // Build messages array
-    const openaiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt },
-    ];
-    if (letterSnippet.length > 0) {
-      openaiMessages.push({
-        role: "user",
-        content: `TESTO LETTERA (OCR):\n"""\n${letterSnippet}\n"""`,
-      });
-    }
-    const recentHistory = (chatHistory || []).slice(-8);
-    for (const msg of recentHistory) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        // Clean any system markers from history
-        const cleanContent = msg.content
-          .replace(/\[LETTER\]/gi, '')
-          .replace(/\[\/LETTER\]/gi, '')
-          .trim();
-        openaiMessages.push({ role: msg.role, content: cleanContent });
-      }
-    }
-
-    // Add current user message
-    openaiMessages.push({ role: "user", content: userMessage });
+    // Strict message structure: system rules, DOCUMENT_TEXT (authoritative) when present, history, current user message
+    const recentHistory = (chatHistory || []).slice(-8).map((msg) => {
+      const cleanContent = (msg.content || "")
+        .replace(/\[LETTER\]/gi, "")
+        .replace(/\[\/LETTER\]/gi, "")
+        .trim();
+      return { role: msg.role, content: cleanContent };
+    });
+    const openaiMessages = buildStrictMessages({
+      systemRules: systemPrompt,
+      documentText: letterSnippet.length > 0 ? letterSnippet : null,
+      documentTextMaxLen: 8000,
+      history: recentHistory,
+      userMessage,
+      userMessageInHistory: false,
+    });
 
     console.log(`[CHAT-AI] Sending ${openaiMessages.length} messages for user: ${user.id}, pratica: ${praticaId}`);
 
@@ -319,6 +336,15 @@ ${webData ? `\n\n📌 DATI WEB AGGIORNATI (normativa/sentenze):\n${webData}\n\nU
 
     if (!content) {
       throw new Error("No response from AI");
+    }
+
+    // Output validation: if document was provided but model says it didn't receive it → replace with safe fallback
+    const outputCheck = validateOutputForbiddenPhrases(letterSnippet.length, content, {
+      endpoint: "chat-with-ai",
+      documentId: praticaId ?? undefined,
+    });
+    if (!outputCheck.ok) {
+      content = outputCheck.response;
     }
 
     // WEB ASSIST: Append sources section if web search was performed

@@ -7,6 +7,11 @@ import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/w
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
 import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
+import {
+  buildStrictMessages,
+  expectDocumentGuardrail,
+  validateOutputForbiddenPhrases,
+} from "../_shared/documentChatGuardrails.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -447,16 +452,33 @@ serve(async (req) => {
         }
       }
     }
+    // HARD GUARDRAIL: upload marker but no OCR text → fail closed
+    const isUploadWithoutText =
+      (isUploadedDoc(trimmedMessage) || isUploadedDoc(message.trim())) &&
+      letterOrDocText.length === 0;
+    const guardrail = expectDocumentGuardrail({
+      documentText: letterOrDocText || null,
+      isUploadWithoutText,
+    });
+    if (!guardrail.ok) {
+      console.error(
+        "[homepage-trial-chat] DOCUMENT_TEXT_MISSING document_text_length=0 isUploadWithoutText=true"
+      );
+      return json(400, {
+        ok: false,
+        error: {
+          code: guardrail.error,
+          message: guardrail.hint,
+        },
+      });
+    }
+
     if (letterOrDocText.length > 0) {
       const snippet = letterOrDocText.length > 8000 ? letterOrDocText.slice(0, 8000) + "...[troncato]" : letterOrDocText;
       systemPrompt += `
 
 === DOCUMENTO GIÀ RICEVUTO E LETTO – USA QUESTO PER RISPONDERE ===
-L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è QUI SOTTO. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti, oggetto, contenuto). Rispondi SEMPRE basandoti su queste informazioni.
-TESTO DELLA LETTERA/DOCUMENTO:
-"""
-${snippet}
-"""
+L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è nel blocco DOCUMENT_TEXT (authoritative) iniettato dal sistema. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti, oggetto, contenuto). Rispondi SEMPRE basandoti su queste informazioni.
 
 REGOLA OBBLIGATORIA (tutte le lingue):
 - Hai già il documento sopra: usalo come unica fonte per rispondere. Non dire mai "non ho trovato" o "non ho ricevuto" o "indicami l'indirizzo" – le informazioni sono nel testo sopra.
@@ -561,30 +583,16 @@ DO NOT mention or correct typos in the user's confirmation. Just generate the do
       console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
     }
 
-    // Build messages array: system, then EXPLICIT OCR user message when present, then history
-    const aiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-       { role: "system", content: systemPrompt + greetingInstruction + gateInstruction + webSearchContext },
-    ];
-
-    if (letterOrDocText.length > 0) {
-      const ocrForMessages = letterOrDocText.length > 8000 ? letterOrDocText.slice(0, 8000) + "\n...[troncato]" : letterOrDocText;
-      aiMessages.push({
-        role: "user",
-        content: `TESTO LETTERA (OCR):\n"""\n${ocrForMessages}\n"""`,
-      });
-    }
-
-    const historyToUse = Array.isArray(conversationHistory) 
-      ? conversationHistory.slice(-20) 
-      : [];
-    for (const msg of historyToUse) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        aiMessages.push({
-          role: msg.role as "user" | "assistant",
-          content: String(msg.content || '').slice(0, 4000),
-        });
-      }
-    }
+    // Strict message structure: system rules, DOCUMENT_TEXT (authoritative) when present, history, current user message
+    const historyToUse = Array.isArray(conversationHistory) ? conversationHistory.slice(-20) : [];
+    const aiMessages = buildStrictMessages({
+      systemRules: systemPrompt + greetingInstruction + gateInstruction + webSearchContext,
+      documentText: letterOrDocText.length > 0 ? letterOrDocText : null,
+      documentTextMaxLen: 8000,
+      history: historyToUse,
+      userMessage: trimmedMessage,
+      userMessageInHistory: false,
+    });
 
     if (conversationStatus === 'document_generated') {
       return json(200, {
@@ -686,6 +694,14 @@ DO NOT mention or correct typos in the user's confirmation. Just generate the do
     // Only return draftText when it is a real formal letter (not a summary/recap) – keeps buttons disabled until letter is ready
     if (draftText && !looksLikeFormalLetter(draftText.trim())) {
       draftText = null;
+    }
+
+    // Output validation: if document was provided but model says it didn't receive it → replace with safe fallback
+    const outputCheck = validateOutputForbiddenPhrases(letterOrDocText.length, finalReply, {
+      endpoint: "homepage-trial-chat",
+    });
+    if (!outputCheck.ok) {
+      finalReply = outputCheck.response;
     }
 
     // REGOLA PRIMO MESSAGGIO: risposta deve sempre iniziare con presentazione Lexora; VIETATO "non ho trovato"
