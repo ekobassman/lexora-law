@@ -20,6 +20,10 @@ export function playLetterReadySound(): void {
   const ctx = getAudioContext();
   if (!ctx) return;
   try {
+    // Desktop browsers often keep AudioContext suspended until user gesture; resume so sound plays
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
     const playTone = (frequency: number, startTime: number, duration: number) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();

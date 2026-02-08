@@ -127,6 +127,8 @@ export function SocialProofCounter() {
       });
     };
     tryFetch();
+    // Refetch after 2s to catch updates that happened right after load (e.g. user just generated a document)
+    const delayedRefetch = setTimeout(fetchCount, 2000);
 
     const interval = setInterval(fetchCount, 30_000);
 
@@ -138,6 +140,7 @@ export function SocialProofCounter() {
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
+      clearTimeout(delayedRefetch);
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
@@ -225,6 +228,16 @@ export function SocialProofCounter() {
       setDisplayCount(totalCount);
     }
   }, [totalCount, isAnimating]);
+
+  // If section never became visible (e.g. user didn't scroll), still show total after we have it (avoid showing 0 forever)
+  useEffect(() => {
+    if (totalCount <= 0 || hasAnimated.current) return;
+    const fallback = setTimeout(() => {
+      hasAnimated.current = true;
+      setDisplayCount(totalCount);
+    }, 3000);
+    return () => clearTimeout(fallback);
+  }, [totalCount]);
 
   const formattedCount = formatNumber(displayCount, language);
   const titleText = text.title.replace('{count}', formattedCount);

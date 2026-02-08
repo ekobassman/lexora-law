@@ -1044,6 +1044,13 @@ export function DemoChatSection() {
         draftTextRef.current = newDraft;
         setGeneratedInSession(true);
         setConversationStatus('document_generated');
+        // Green frame + sound on desktop and mobile: trigger after state is committed (fixes desktop where effect can run before paint)
+        setTimeout(() => {
+          if (!letterReadyPlayedRef.current) {
+            letterReadyPlayedRef.current = true;
+            playLetterReadySound();
+          }
+        }, 150);
         // IMPORTANT: Do NOT reset AI context after document generation.
         // Keep full context so user can ask follow-up questions like "translate to German".
         // The AI needs to remember the conversation and the generated draft.
