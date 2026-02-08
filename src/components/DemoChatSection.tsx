@@ -57,8 +57,8 @@ interface ChatMessage {
   attachmentType?: 'image' | 'pdf' | null;
 }
 
-// Demo chat: 15 messages per 24h, renew at 1:00 each day (anonymous users)
-const MESSAGE_LIMIT = 15;
+// Demo chat: 20 messages per day, renew at 1:00 local time each day (anonymous users)
+const MESSAGE_LIMIT = 20;
 const DISCLAIMER_TRIGGER = 1;
 
 const DEMO_SESSION_KEY = 'lexora_demo_chat_session_v2';
@@ -525,7 +525,7 @@ export function DemoChatSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Auto-reset chat after 15 minutes of inactivity for privacy (chat becomes usable again)
+  // Auto-reset chat after 15 minutes of inactivity for privacy only (clears messages/draft; does NOT reset daily message limit)
   const resetChatForPrivacy = useCallback(() => {
     // Absolute rule: NEVER reset while recording.
     if (isRecordingRef.current || isListening) {
@@ -535,13 +535,12 @@ export function DemoChatSection() {
     setDraftText('');
     setInput('');
     setAiContextStart(0);
-    setSessionCount(0);
     localStorage.removeItem(DEMO_MESSAGES_KEY);
     localStorage.removeItem(DEMO_DRAFT_KEY);
     localStorage.removeItem(DEMO_BUFFER_KEY);
     localStorage.removeItem(DEMO_AI_CONTEXT_KEY);
-    localStorage.removeItem(DEMO_SESSION_KEY);
-    console.log('[DemoChat] Chat reset for privacy after inactivity');
+    // Do NOT touch sessionCount nor DEMO_SESSION_KEY: limit stays active until new day
+    console.log('[DemoChat] Chat reset for privacy after inactivity (limit unchanged)');
   }, [isListening]);
 
   const hasChatData = messages.length > 0 || draftText.length > 0;
