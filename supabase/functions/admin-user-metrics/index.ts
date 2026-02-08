@@ -82,10 +82,10 @@ Deno.serve(async (req) => {
     // Use service role for aggregate queries
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get total users
+    // Get total users - count ALL registered users
     const { count: totalUsers, error: totalError } = await adminClient
       .from("profiles")
-      .select("*", { count: "exact", head: true });
+      .select("id", { count: "exact", head: true });
 
     if (totalError) {
       console.error("Total users query error:", totalError);
