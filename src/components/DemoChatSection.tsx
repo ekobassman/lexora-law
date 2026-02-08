@@ -525,7 +525,7 @@ export function DemoChatSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Auto-reset chat after 15 minutes of inactivity for privacy
+  // Auto-reset chat after 15 minutes of inactivity for privacy (chat becomes usable again)
   const resetChatForPrivacy = useCallback(() => {
     // Absolute rule: NEVER reset while recording.
     if (isRecordingRef.current || isListening) {
@@ -535,10 +535,12 @@ export function DemoChatSection() {
     setDraftText('');
     setInput('');
     setAiContextStart(0);
+    setSessionCount(0);
     localStorage.removeItem(DEMO_MESSAGES_KEY);
     localStorage.removeItem(DEMO_DRAFT_KEY);
     localStorage.removeItem(DEMO_BUFFER_KEY);
     localStorage.removeItem(DEMO_AI_CONTEXT_KEY);
+    localStorage.removeItem(DEMO_SESSION_KEY);
     console.log('[DemoChat] Chat reset for privacy after inactivity');
   }, [isListening]);
 
@@ -770,8 +772,9 @@ export function DemoChatSection() {
     letterReadyPlayedRef.current = true;
     playLetterReadySound();
   }, [hasLetterDraft]);
-  const isLimitReached = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT && hasLetterDraft;
+  // Block chat (input/send/mic/camera/upload) when message limit reached; document buttons (preview, email, print, copy) stay active only when hasLetterDraft
   const hasReachedDailyLimit = !shouldBypassLimits && sessionCount >= MESSAGE_LIMIT;
+  const isLimitReached = hasReachedDailyLimit; // used for showing upgrade popup and blocking input
   const showDisclaimer = sessionCount >= DISCLAIMER_TRIGGER;
   const trimmedInput = input.trim();
   

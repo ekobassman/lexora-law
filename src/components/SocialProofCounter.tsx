@@ -79,6 +79,7 @@ export function SocialProofCounter() {
   const animationRef = useRef<number | null>(null);
   const hasAnimated = useRef(false);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const fetchCountRef = useRef<(() => Promise<boolean>) | null>(null);
 
   // Total = base (pre-migration) + count from DB (global_stats.documents_processed)
   const totalCount = BASE_COUNT + dbCount;
@@ -95,7 +96,7 @@ export function SocialProofCounter() {
     return 0;
   }
 
-  // Fetch count from DB (retries, then periodic refetch; also refetch when tab becomes visible)
+  // Fetch count from DB (retries, periodic refetch, refetch when tab visible or section visible)
   useEffect(() => {
     async function fetchCount(): Promise<boolean> {
       const { data, error } = await supabase
@@ -113,6 +114,7 @@ export function SocialProofCounter() {
       }
       return false;
     }
+    fetchCountRef.current = fetchCount;
 
     let retries = 0;
     const maxRetries = 3;
@@ -126,7 +128,7 @@ export function SocialProofCounter() {
     };
     tryFetch();
 
-    const interval = setInterval(fetchCount, 60_000);
+    const interval = setInterval(fetchCount, 30_000);
 
     const onVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
@@ -167,7 +169,7 @@ export function SocialProofCounter() {
     };
   }, []);
 
-  // Animate count from 0 to total when section becomes visible
+  // Animate count from 0 to total when section becomes visible; refetch when section visible so counter updates after generating a document
   useEffect(() => {
     if (hasAnimated.current) {
       // If already animated, just update display count directly
@@ -178,30 +180,27 @@ export function SocialProofCounter() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasAnimated.current && totalCount > 0) {
-            hasAnimated.current = true;
-            setIsAnimating(true);
-            
-            const startTime = Date.now();
-            const animate = () => {
-              const elapsed = Date.now() - startTime;
-              const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
-              
-              // Easing function (ease-out)
-              const easeOut = 1 - Math.pow(1 - progress, 3);
-              const current = Math.floor(easeOut * totalCount);
-              
-              setDisplayCount(current);
-              
-              if (progress < 1) {
-                animationRef.current = requestAnimationFrame(animate);
-              } else {
-                setDisplayCount(totalCount);
-                setIsAnimating(false);
-              }
-            };
-            
-            animationRef.current = requestAnimationFrame(animate);
+          if (entry.isIntersecting) {
+            fetchCountRef.current?.();
+            if (!hasAnimated.current && totalCount > 0) {
+              hasAnimated.current = true;
+              setIsAnimating(true);
+              const startTime = Date.now();
+              const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(easeOut * totalCount);
+                setDisplayCount(current);
+                if (progress < 1) {
+                  animationRef.current = requestAnimationFrame(animate);
+                } else {
+                  setDisplayCount(totalCount);
+                  setIsAnimating(false);
+                }
+              };
+              animationRef.current = requestAnimationFrame(animate);
+            }
           }
         });
       },
