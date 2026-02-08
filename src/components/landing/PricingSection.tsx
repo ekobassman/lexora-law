@@ -16,6 +16,7 @@ export function PricingSection({ id }: PricingSectionProps) {
   const { t } = useLanguage();
 
   const handleCheckout = async (planId: 'starter' | 'plus' | 'pro') => {
+    console.log('Checkout plan', planId);
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
