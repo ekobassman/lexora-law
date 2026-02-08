@@ -83,6 +83,7 @@ async function checkGeoBlock(req: Request): Promise<{ blocked: boolean; countryC
 }
 
 // Plan definitions - single source of truth (backend)  
+// MUST MATCH _shared/plans.ts configuration
 // null = unlimited (for admin bypass and unlimited plan)
 const PLANS: Record<
   string,
@@ -95,7 +96,7 @@ const PLANS: Record<
 > = {
   free: {
     max_cases: 1,
-    messages_per_case: 10,
+    messages_per_case: 15, // 15 messages per day, not per case
     ai_credits: 100,
     features: {
       scan_letter: true,
@@ -106,8 +107,8 @@ const PLANS: Record<
     },
   },
   starter: {
-    max_cases: 3,
-    messages_per_case: 15,
+    max_cases: 5,
+    messages_per_case: null, // unlimited
     ai_credits: 500,
     features: {
       scan_letter: true,
@@ -117,10 +118,22 @@ const PLANS: Record<
       urgent_reply: false,
     },
   },
+  plus: {
+    max_cases: 20,
+    messages_per_case: null, // unlimited
+    ai_credits: 1500,
+    features: {
+      scan_letter: true,
+      ai_draft: true,
+      ai_chat: true,
+      export_pdf: true,
+      urgent_reply: false,
+    },
+  },
   pro: {
-    max_cases: 10,
-    messages_per_case: 30,
-    ai_credits: 2000,
+    max_cases: null, // unlimited
+    messages_per_case: null, // unlimited
+    ai_credits: 999999, // effectively unlimited
     features: {
       scan_letter: true,
       ai_draft: true,
@@ -129,10 +142,11 @@ const PLANS: Record<
       urgent_reply: true,
     },
   },
+  // Legacy mapping
   unlimited: {
-    max_cases: null,  // null = truly unlimited
-    messages_per_case: null,  // null = truly unlimited
-    ai_credits: null,  // null = truly unlimited
+    max_cases: null, // unlimited
+    messages_per_case: null, // unlimited
+    ai_credits: null, // unlimited
     features: {
       scan_letter: true,
       ai_draft: true,
@@ -308,11 +322,13 @@ serve(async (req) => {
       }
     }
 
-    // Get usage data
+    // Get usage data from NEW usage_counters_monthly table
+    const currentYm = new Date().toISOString().slice(0, 7); // '2026-01'
     const { data: usage, error: usageError } = await supabase
-      .from("user_usage")
-      .select("*")
+      .from("usage_counters_monthly")
+      .select("cases_created")
       .eq("user_id", userId)
+      .eq("ym", currentYm)
       .maybeSingle();
 
     if (usageError) logStep("Error fetching usage", { error: usageError.message });
@@ -338,12 +354,15 @@ serve(async (req) => {
 
     if (!usage) {
       logStep("Creating default usage for user");
-      await supabase.from("user_usage").upsert(
+      await supabase.from("usage_counters_monthly").upsert(
         {
           user_id: userId,
+          ym: currentYm,
           cases_created: 0,
+          credits_spent: 0,
+          ai_sessions_started: 0,
         },
-        { onConflict: "user_id" },
+        { onConflict: "user_id,ym" },
       );
     }
 
@@ -366,7 +385,8 @@ serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("user_id", userId);
 
-    const casesUsed = actualCasesCount ?? usage?.cases_created ?? 0;
+    // Use NEW usage_counters_monthly table as primary source
+    const casesUsed = usage?.cases_created ?? actualCasesCount ?? 0;
     
     // For display: null means unlimited, otherwise use actual number
     const casesMax = casesMaxRaw;
