@@ -51,6 +51,17 @@ export const DOCUMENT_LETTER_RULE = `
 - Se manca qualcosa che non è nel documento → cerca online prima; solo se non trovato chiedi una volta in modo specifico.
 `;
 
+/** When DOCUMENT_TEXT is present: extract addresses/names from it; never ask for "address" or output placeholders. */
+export const DOCUMENT_DATA_EXTRACTION_RULE = `
+=== ESTRAZIONE DATI DAL DOCUMENTO (QUANDO DOCUMENT_TEXT È PRESENTE – OBBLIGATORIO) ===
+- Il blocco DOCUMENT_TEXT contiene il testo completo della lettera (OCR). DEVI ESTRARRE da lì: mittente, destinatario, indirizzo mittente, indirizzo destinatario/ufficio, numero pratica (Aktenzeichen/rif.), oggetto, date.
+- USA questi dati nella lettera di risposta. NON chiedere MAI all'utente "indirizzo", "standard address", "Standard office address", "Address from the letter", "office address", "Adresse", "indirizzo standard".
+- VIETATO usare placeholder [Address], [Indirizzo], [Adresse], [Recipient address] quando il documento è in contesto: copia l'indirizzo esatto dal DOCUMENT_TEXT.
+- Se nel documento c'è un intestatario/ufficio con indirizzo (es. Familienkasse, Finanzamt, scuola), quello È l'indirizzo del destinatario: usalo così com'è.
+- Se proprio non riesci a estrarre un indirizzo dal testo, usa una riga "________________" o ometti; NON chiedere all'utente.
+- Una volta estratti mittente, destinatario, indirizzi e riferimento: mostra un breve riepilogo e chiedi SOLO "Posso creare il documento o vuole aggiungere altro?" (o equivalente in lingua utente). Poi genera la lettera dopo conferma.
+`;
+
 /** VIETATO: dire che non hai ricevuto la lettera o chiedere all'utente di "riportare i dati". Comportati come ChatGPT: se il doc c'è usalo; se non c'è invita solo a caricare/incollare. */
 export const NEVER_ASK_LETTER_DATA_RULE = `
 === VIETATO – MAI DIRE QUESTO (TUTTE LE LINGUE) ===
@@ -103,10 +114,10 @@ export const FIRST_MESSAGE_LEXORA_RULE = `
 `;
 
 /** Combined policy for document/case chat (inside case view) */
-export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
+export const POLICY_DOCUMENT_CHAT = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + DOCUMENT_DATA_EXTRACTION_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DOCUMENT_CHAT + ABSOLUTE_RULE;
 
 /** Combined policy for edit/modify text mode */
-export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
+export const POLICY_EDIT_MODIFY = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + DOCUMENT_DATA_EXTRACTION_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_EDIT_MODIFY + ABSOLUTE_RULE;
 
 /** Combined policy for demo and dashboard chat */
-export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;
+export const POLICY_DEMO_DASHBOARD = GLOBAL_LEXORA_CHAT_PRINCIPLES + NO_SIGNATURE_RULE + NEVER_ASK_LETTER_DATA_RULE + DOCUMENT_LETTER_RULE + DOCUMENT_DATA_EXTRACTION_RULE + AFTER_CONFIRMATION_RULE + CONTEXT_DEMO_DASHBOARD + ABSOLUTE_RULE;

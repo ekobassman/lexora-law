@@ -1,12 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callOpenAI } from "../_shared/openai.ts";
-import { getIntakeModeRules, DOCUMENT_TYPE_DETECTION } from "../_shared/intakePromptRules.ts";
+import { getIntakeModeRules, DOCUMENT_TYPE_DETECTION, DOCUMENT_IN_CONTEXT_INTAKE_OVERRIDE } from "../_shared/intakePromptRules.ts";
 import { normLang } from "../_shared/lang.ts";
 import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
-import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, type DocumentData } from "../_shared/documentGate.ts";
+import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, CREATE_DOCUMENT_OR_ADD_MORE, type DocumentData } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
 import { LEXORA_CONTEXT_FIRST_RULES } from "../_shared/lexoraSystemPrompt.ts";
 import {
@@ -751,9 +751,11 @@ Usa questi dati automaticamente quando generi lettere.
       const snippet = resolvedLetterText.length > 8000 ? resolvedLetterText.slice(0, 8000) + "...[troncato]" : resolvedLetterText;
       systemPrompt += `
 
+${DOCUMENT_IN_CONTEXT_INTAKE_OVERRIDE}
+
 === DOCUMENTO GIÀ RICEVUTO E LETTO – USA QUESTO PER RISPONDERE ===
 Il testo completo è nel blocco DOCUMENT_TEXT (authoritative) iniettato dal sistema. Rispondi SEMPRE basandoti su quelle informazioni (destinatario, indirizzi, date, riferimenti).
-REGOLA OBBLIGATORIA: Hai già il documento. Non dire mai "non ho trovato" o "indicami l'indirizzo". NON chiedere MAI dati che compaiono nel documento. NON chiedere la firma. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA OBBLIGATORIA: Hai già il documento. ESTRAGGI mittente, destinatario e indirizzi dal DOCUMENT_TEXT e usali nella lettera. Non dire mai "non ho trovato" o "indicami l'indirizzo". NON chiedere MAI "standard address", "Standard office address", "Address from the letter" né dati che compaiono nel documento. NON chiedere la firma. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web. Se gli indirizzi sono nel testo, copiali; non usare placeholder [Address].
 `;
     }
 
@@ -1023,17 +1025,18 @@ REGOLE CONTESTO FASCICOLO (OBBLIGATORIE):
     // Add gate instruction to system prompt
     let gateInstruction = '';
     if (!allowDocumentGeneration) {
+      const createDocPhrase = CREATE_DOCUMENT_OR_ADD_MORE[normLang(responseLanguage)] ?? CREATE_DOCUMENT_OR_ADD_MORE.EN;
       gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
 CRITICAL: Before generating ANY final document/letter, you MUST:
 1. First show a SUMMARY of all data you will use (from the document in context – do NOT ask for data already there; do NOT ask for signature/firma).
-2. Ask ONE question only: "Posso creare il documento / vuole aggiungere altro?" (or equivalent: "Can I create the document or do you want to add something?").
+2. Ask ONE question only, in the user's interface language, exactly this (or equivalent): "${createDocPhrase}"
 3. Then WAIT. Do NOT ask for signature or any other data. ONLY after user confirms (yes/ok/genera/no), generate the letter with [LETTER]...[/LETTER].
 
 The user has NOT confirmed yet. Do NOT generate final letters yet. Do NOT ask for signature or extra data.`;
     } else {
       gateInstruction = `\n\n=== CONFIRMATION RECEIVED ===
 User has confirmed. Generate IMMEDIATELY the final letter with [LETTER]...[/LETTER] tags.
-DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiungere altro?". Generate ONLY the letter. One brief phrase then [LETTER]...[/LETTER] only.`;
+DO NOT ask for ANYTHING else: no signature, no further data, no "create document or add more?" in any language. Generate ONLY the letter. One brief phrase then [LETTER]...[/LETTER] only.`;
       console.log(`[DASHBOARD-CHAT] Document generation ALLOWED after confirmation`);
     }
     const isFirstMessage = !chatHistory || chatHistory.length === 0;

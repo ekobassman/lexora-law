@@ -25,8 +25,24 @@ const FORBIDDEN_PHRASES_DOCUMENT_NOT_RECEIVED: RegExp[] = [
   /no (document|letter) (text )?(has been )?(provided|received)/i,
 ];
 
+/** When document is in context: phrases that mean "ask user for address" – forbidden; use document data instead. */
+const FORBIDDEN_PHRASES_ASK_ADDRESS_WHEN_DOCUMENT: RegExp[] = [
+  /standard\s+address/i,
+  /standard\s+office\s+address/i,
+  /address\s+from\s+the\s+letter/i,
+  /(please|kindly|could you|can you)\s+(provide|give|send|indicate)\s+(the\s+)?(standard\s+)?(office\s+)?address/i,
+  /(indicami|forniscimi|inviami)\s+(l['']?indirizzo|l['']?address)/i,
+  /(I\s+need|we\s+need)\s+(the\s+)?(sender|recipient|office)\s+address/i,
+  /(bitte|please)\s+(nennen|provide|geben)\s+(Sie\s+)?(die\s+)?(Adresse|address)/i,
+  /(chiedere|to\s+ask)\s+(per\s+)?(l['']?indirizzo|the\s+address)/i,
+];
+
 export const SAFE_FALLBACK_MESSAGE =
   "Technical error: document context missing or not injected. Please retry.";
+
+/** When document is in context but model asked for address: tell user we use document data and offer to generate. */
+export const SAFE_FALLBACK_USE_DOCUMENT_ADDRESS =
+  "I will use the sender and recipient addresses from the document you uploaded. Can I create the document now, or do you want to add something?";
 
 export type OpenAIMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -159,7 +175,8 @@ export function expectDocumentGuardrail(
 
 /**
  * If document was provided (documentTextLength > 0) and the model output contains
- * forbidden phrases (e.g. "I did not receive the letter"), return safe fallback and log.
+ * forbidden phrases (e.g. "I did not receive the letter" or "please provide the address"),
+ * return safe fallback and log.
  */
 export function validateOutputForbiddenPhrases(
   documentTextLength: number,
@@ -170,18 +187,31 @@ export function validateOutputForbiddenPhrases(
     return { ok: true, response: modelOutput };
   }
 
-  const hasForbidden = FORBIDDEN_PHRASES_DOCUMENT_NOT_RECEIVED.some((r) => r.test(modelOutput));
-  if (!hasForbidden) {
-    return { ok: true, response: modelOutput };
+  const hasNotReceived = FORBIDDEN_PHRASES_DOCUMENT_NOT_RECEIVED.some((r) => r.test(modelOutput));
+  if (hasNotReceived) {
+    const ctx = logContext ? ` ${JSON.stringify(logContext)}` : "";
+    console.error(
+      `[documentChatGuardrails] FORBIDDEN_PHRASE_IN_OUTPUT: document_text_length=${documentTextLength}, output_snippet=${modelOutput.slice(0, 200)}...${ctx}`
+    );
+    return {
+      ok: false,
+      response: SAFE_FALLBACK_MESSAGE,
+      logged: true,
+    };
   }
 
-  const ctx = logContext ? ` ${JSON.stringify(logContext)}` : "";
-  console.error(
-    `[documentChatGuardrails] FORBIDDEN_PHRASE_IN_OUTPUT: document_text_length=${documentTextLength}, output_snippet=${modelOutput.slice(0, 200)}...${ctx}`
-  );
-  return {
-    ok: false,
-    response: SAFE_FALLBACK_MESSAGE,
-    logged: true,
-  };
+  const hasAskAddress = FORBIDDEN_PHRASES_ASK_ADDRESS_WHEN_DOCUMENT.some((r) => r.test(modelOutput));
+  if (hasAskAddress) {
+    const ctx = logContext ? ` ${JSON.stringify(logContext)}` : "";
+    console.error(
+      `[documentChatGuardrails] ASK_ADDRESS_WHEN_DOCUMENT: document_text_length=${documentTextLength}, output_snippet=${modelOutput.slice(0, 300)}...${ctx}`
+    );
+    return {
+      ok: false,
+      response: SAFE_FALLBACK_USE_DOCUMENT_ADDRESS,
+      logged: true,
+    };
+  }
+
+  return { ok: true, response: modelOutput };
 }

@@ -5,7 +5,7 @@ import { normLang } from "../_shared/lang.ts";
 import { checkScope, getRefusalMessage } from "../_shared/scopeGate.ts";
 import { webSearch, formatSourcesSection, type SearchResult } from "../_shared/webAssist.ts";
 import { intelligentSearch, detectSearchIntent, detectInfoRequest } from "../_shared/intelligentSearch.ts";
-import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary } from "../_shared/documentGate.ts";
+import { hasUserConfirmed, isDocumentGenerationAttempt, buildSummaryBlock, extractDocumentData, wasPreviousMessageSummary, CREATE_DOCUMENT_OR_ADD_MORE } from "../_shared/documentGate.ts";
 import { POLICY_DEMO_DASHBOARD } from "../_shared/lexoraChatPolicy.ts";
 import { LEXORA_CONTEXT_FIRST_RULES } from "../_shared/lexoraSystemPrompt.ts";
 import {
@@ -485,8 +485,8 @@ serve(async (req) => {
 L'utente ha appena caricato questa lettera/documento. Tu l'hai GIÀ ricevuto: il testo completo è nel blocco DOCUMENT_TEXT (authoritative) iniettato dal sistema. Prima di rispondere, considera che SAI già cosa c'è scritto (destinatario, indirizzi, date, riferimenti, oggetto, contenuto). Rispondi SEMPRE basandoti su queste informazioni.
 
 REGOLA OBBLIGATORIA (tutte le lingue):
-- Hai già il documento sopra: usalo come unica fonte per rispondere. Non dire mai "non ho trovato" o "non ho ricevuto" o "indicami l'indirizzo" – le informazioni sono nel testo sopra.
-- NON chiedere MAI all'utente dati che compaiono nel documento (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente.
+- ESTRAGGI mittente, destinatario e indirizzi dal DOCUMENT_TEXT e usali nella lettera. Non dire mai "non ho trovato" o "non ho ricevuto" o "indicami l'indirizzo" – le informazioni sono nel testo sopra.
+- NON chiedere MAI "standard address", "Standard office address", "Address from the letter" né dati che compaiono nel documento (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi, autorità). Usali SEMPRE direttamente. Non usare placeholder [Address] quando il documento contiene indirizzi.
 - NON chiedere MAI la firma (signature, firma, Unterschrift). Il cliente firma su carta dopo la stampa. Nella lettera usa solo nome a stampa o "________________".
 - Se questo è il primo messaggio con il documento: conferma brevemente di aver letto il documento e di essere pronto ad aiutare, poi proponi il passo successivo (es. riassunto o bozza di risposta).
 - Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
@@ -577,17 +577,18 @@ REGOLA OBBLIGATORIA (tutte le lingue):
     // Add gate instruction to system prompt
     let gateInstruction = '';
     if (!allowDocumentGeneration) {
+      const createDocPhrase = CREATE_DOCUMENT_OR_ADD_MORE[lang] ?? CREATE_DOCUMENT_OR_ADD_MORE.EN;
       gateInstruction = `\n\n=== DOCUMENT GENERATION GATE (ENFORCED BY SYSTEM) ===
 CRITICAL: Before generating ANY final document/letter, you MUST:
 1. First show a SUMMARY of all data you will use (from the document in chat – do NOT ask for data already there; do NOT ask for signature).
-2. Ask ONE question only: "Posso creare il documento / vuole aggiungere altro?" (or equivalent in user language: "Can I create the document or do you want to add something?").
+2. Ask ONE question only, in the user's interface language, exactly this (or equivalent): "${createDocPhrase}"
 3. Then WAIT. Do NOT ask for signature, firma, or any other data. ONLY after user confirms (yes/ok/genera/no), generate the letter with [LETTER]...[/LETTER].
 
 The user has NOT confirmed yet. Do NOT generate final letters yet. Do NOT ask for signature or extra data.`;
     } else {
       gateInstruction = `\n\n=== CONFIRMATION RECEIVED ===
 User has confirmed. Proceed IMMEDIATELY to create the letter with [LETTER]...[/LETTER] tags.
-DO NOT ask for ANYTHING else: no signature, no further data, no "vuole aggiungere altro?". Generate ONLY the letter. Say one brief phrase (e.g. "Ecco la lettera.") then output [LETTER]...[/LETTER] only.
+DO NOT ask for ANYTHING else: no signature, no further data, no "create document or add more?" in any language. Generate ONLY the letter. Say one brief phrase (e.g. "Ecco la lettera.") then output [LETTER]...[/LETTER] only.
 DO NOT mention or correct typos in the user's confirmation. Just generate the document.`;
       console.log(`[homepage-trial-chat] Document generation ALLOWED after confirmation`);
     }

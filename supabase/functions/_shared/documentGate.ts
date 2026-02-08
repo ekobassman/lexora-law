@@ -75,6 +75,21 @@ const CONFIRMATION_PROMPTS: Record<SupportedLang, string> = {
   UK: "\n\n✅ **Щоб створити документ, відповідайте \"ПІДТВЕРДЖУЮ\" або \"OK\".**",
 };
 
+/** Phrase the AI must use (in user language) before generating the letter: "Can I create the document or do you want to add something?" */
+export const CREATE_DOCUMENT_OR_ADD_MORE: Record<SupportedLang, string> = {
+  IT: "Posso creare il documento o vuole aggiungere altro?",
+  EN: "Can I create the document or do you want to add something?",
+  DE: "Soll ich das Dokument erstellen oder möchten Sie noch etwas hinzufügen?",
+  FR: "Puis-je créer le document ou souhaitez-vous ajouter quelque chose ?",
+  ES: "¿Puedo crear el documento o desea añadir algo más?",
+  PL: "Czy mogę utworzyć dokument, czy chcą Państwo coś dodać?",
+  RO: "Pot crea documentul sau doriți să adăugați ceva?",
+  TR: "Belgeyi oluşturayım mı yoksa eklemek istediğiniz bir şey var mı?",
+  AR: "هل أنشئ المستند أم تريد إضافة شيء آخر؟",
+  UK: "Можу створити документ чи хочете щось додати?",
+  RU: "Могу создать документ или вы хотите что-то добавить?",
+};
+
 export interface DocumentData {
   senderName?: string;
   senderAddress?: string;

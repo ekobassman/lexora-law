@@ -239,7 +239,7 @@ DOCUMENTO ORIGINALE (OCR) – FONTE UNICA DI VERITÀ – GIÀ IN TUO POSSESSO:
 Le informazioni stanno in questo documento; usalo come fonte primaria. Non chiedere all'utente dove trovarle.
 ${letterSnippet || "Nessun documento."}
 
-REGOLA CRITICA (tutte le lingue): Non chiedere MAI all'utente dati che compaiono nel DOCUMENTO sopra (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Non chiedere MAI la firma (signature/firma/Unterschrift): il cliente firma su carta dopo la stampa; nella bozza usa nome a stampa o "________________". Usali direttamente. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
+REGOLA CRITICA (tutte le lingue): ESTRAGGI mittente, destinatario e indirizzi dal DOCUMENTO sopra e usali nella bozza. Non chiedere MAI "standard address", "Standard office address", "Address from the letter" né dati che compaiono nel documento (destinatario, riferimento, scadenza, nomi, date, numeri, indirizzi). Non chiedere MAI la firma (signature/firma/Unterschrift): il cliente firma su carta dopo la stampa; nella bozza usa nome a stampa o "________________". Usali direttamente. Non usare placeholder [Address]. Chiedi SOLO informazioni AGGIUNTIVE non presenti nella lettera, oppure cerca sul web.
 
 BOZZA ATTUALE:
 ${(draftResponse || "").trim().slice(0, 4000) || "Nessuna bozza."}

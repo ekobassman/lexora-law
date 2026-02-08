@@ -348,6 +348,14 @@ Tam, baskıya hazır mektubu oluşturun, placeholder OLMADAN ve meta-yorum OLMAD
 `,
 };
 
+/** When DOCUMENT_TEXT / letter OCR is in context: data extractable from it is ALREADY COLLECTED. Do not ask for it. */
+export const DOCUMENT_IN_CONTEXT_INTAKE_OVERRIDE = `
+WHEN A LETTER/DOCUMENT IS PROVIDED IN CONTEXT (DOCUMENT_TEXT block):
+- Consider ALL data that can be extracted from the document as ALREADY COLLECTED: sender name/address, recipient/authority name/address, reference number (Aktenzeichen), subject, dates, deadlines.
+- Do NOT ask the user for "standard address", "office address", "address from the letter", or any field that appears in the document text. EXTRACT and use it.
+- Only ask for data that is genuinely NOT present in the document. Once you have extracted what you need from the document, show a brief summary and ask only: "Can I create the document or do you want to add something?" (or equivalent in user language), then generate after confirmation.
+`;
+
 // Get intake mode rules for a specific language
 export function getIntakeModeRules(language: string): string {
   const lang = (language || 'EN').toUpperCase();
