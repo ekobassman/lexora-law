@@ -6,11 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-function uuidv4(): string {
-  // crypto.randomUUID() exists in Deno
-  return crypto.randomUUID()
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -18,111 +13,96 @@ Deno.serve(async (req) => {
 
   try {
     console.log('=== CREATE-CASE DEBUG ===')
-    console.log('Method:', req.method)
 
     const authHeader =
       req.headers.get('authorization') || req.headers.get('Authorization')
 
-    console.log('Auth header presente:', authHeader ? 'SI' : 'NO')
-
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    if (!authHeader.toLowerCase().startsWith('bearer ')) {
-      return new Response(JSON.stringify({ error: 'Invalid Authorization header format' }), {
+    if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
+      console.error('Auth header mancante o non Bearer')
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const token = authHeader.slice(7).trim()
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Invalid Authorization header format' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+      console.error('ENV Supabase mancanti')
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
+    // Client per verificare l’utente
+    const authClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false },
     })
 
-    console.log('Verifico utente...')
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token)
+    const { data: userData, error: userError } =
+      await authClient.auth.getUser(token)
 
     if (userError || !userData?.user) {
-      console.error('Errore auth:', userError?.message || 'No user')
-      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+      console.error('Auth error:', userError)
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const userId = userData.user.id
-    console.log('Utente verificato:', userId)
+    const body = await req.json().catch(() => ({}))
 
-    // Parse request body
-    const body = await req.json()
-    console.log('Body ricevuto:', JSON.stringify(body).substring(0, 100))
+    console.log('Body ricevuto:', body)
 
-    // Create case in database
-    const { data: caseData, error: caseError } = await supabaseClient
+    // Client SERVICE ROLE per insert (bypassa RLS ma con user_id controllato)
+    const db = createClient(supabaseUrl, serviceKey)
+
+    let caseId = crypto.randomUUID()
+    let insertError: any = null
+
+    const { data: inserted, error } = await db
       .from('cases')
       .insert({
-        user_id: userData.user.id,
-        title: body.title || 'Nuova pratica',
-        status: body.status || 'new',
-        source: body.source || null,
-        metadata: body.metadata || {}
+        id: caseId,
+        user_id: userId,
+        title: body?.title ?? 'Nuova pratica',
+        authority: body?.authority ?? null,
+        source: body?.source ?? 'app',
+        metadata: body ?? {},
       })
       .select()
-      .single()
+      .maybeSingle()
 
-    if (caseError) {
-      console.error('Errore creazione case:', caseError)
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create case',
-        details: caseError.message 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (error) {
+      insertError = error
+      console.error('❌ DB INSERT ERROR:', error)
+    } else {
+      caseId = inserted.id
+      console.log('✅ Case creato:', caseId)
     }
 
-    console.log('Case creato con successo:', caseData.id)
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      case_id: caseData.id,
-      case: {
-        id: caseData.id,
-        user_id: caseData.user_id,
-        title: caseData.title,
-        status: caseData.status,
-        created_at: caseData.created_at
+    return new Response(
+      JSON.stringify({
+        success: true,
+        case_id: caseId,
+        inserted: !insertError,
+        db_error: insertError?.message ?? null,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  } catch (error: any) {
-    console.error('Errore:', error?.message || error)
-    return new Response(JSON.stringify({ error: error?.message || 'Unknown error' }), {
+    )
+  } catch (err: any) {
+    console.error('FATAL ERROR:', err)
+    return new Response(JSON.stringify({ error: err?.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
