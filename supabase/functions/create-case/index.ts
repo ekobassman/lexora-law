@@ -1,9 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { corsHeaders, handleOptions } from '../_shared/cors'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 Deno.serve(async (req) => {
-  const opt = handleOptions(req);
-  if (opt) return opt;
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   try {
     console.log('=== CREATE-CASE DEBUG ===')
