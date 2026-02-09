@@ -302,12 +302,12 @@ export default function AppDashboard() {
     // Fetch payment_status from profiles
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('payment_status')
+      .select('*')
       .eq('id', user?.id)
-      .single();
+      .maybeSingle();
     
     if (profileData?.payment_status) {
-      setPaymentStatus(profileData.payment_status);
+      setPaymentStatus((profileData as any).payment_status);
     }
 
     const { data: praticheData } = await supabase

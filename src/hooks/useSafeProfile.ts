@@ -26,15 +26,26 @@ export function useSafeProfile() {
         .select(`
           id,
           email,
-          created_at,
-          last_seen_at,
           plan,
-          age_confirmed,
-          privacy_version,
+          created_at,
+          updated_at,
+          payment_status,
+          first_name,
+          last_name,
+          full_name,
+          address,
+          city,
+          postal_code,
+          country,
+          sender_full_name,
+          sender_address,
+          sender_city,
+          sender_postal_code,
+          sender_country,
           terms_version
         `)
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('[useSafeProfile] Profile fetch error:', {
@@ -53,13 +64,39 @@ export function useSafeProfile() {
         throw error;
       }
 
+      // Handle null data (no profile found)
+      if (!data) {
+        console.log('[useSafeProfile] Nessun profilo trovato per utente:', user.id);
+        return null;
+      }
+
       console.log('[useSafeProfile] Profile loaded successfully:', {
         id: data.id,
         plan: data.plan,
         email: data.email
       });
 
-      return data;
+      return {
+        id: data.id,
+        plan: data.plan || 'free',
+        email: data.email || '',
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        payment_status: data.payment_status || null,
+        first_name: data.first_name || null,
+        last_name: data.last_name || null,
+        full_name: data.full_name || null,
+        address: data.address || null,
+        city: data.city || null,
+        postal_code: data.postal_code || null,
+        country: data.country || null,
+        sender_full_name: data.sender_full_name || null,
+        sender_address: data.sender_address || null,
+        sender_city: data.sender_city || null,
+        sender_postal_code: data.sender_postal_code || null,
+        sender_country: data.sender_country || null,
+        terms_version: data.terms_version || null,
+      };
     },
     enabled: !!user?.id,
     retry: (failureCount, error) => {

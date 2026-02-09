@@ -35,13 +35,23 @@ export function useTermsCheck(userId: string | null): TermsCheckResult {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('terms_version, privacy_version, age_confirmed, age_policy_version')
+        .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('[useTermsCheck] Error fetching profile:', error);
         // On error, don't block the user - assume terms are OK
+        setTermsOutdated(false);
+        setPrivacyOutdated(false);
+        setAgeNotConfirmed(false);
+        setLoading(false);
+        return;
+      }
+
+      // Handle case where profile doesn't exist
+      if (!profile) {
+        console.log('[useTermsCheck] No profile found for user:', userId);
         setTermsOutdated(false);
         setPrivacyOutdated(false);
         setAgeNotConfirmed(false);
