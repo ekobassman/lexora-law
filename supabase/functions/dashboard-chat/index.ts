@@ -55,23 +55,24 @@ interface CaseContext {
   }>;
 }
 
-// Message limits per plan (per day)
-const PLAN_LIMITS: Record<string, number> = {
-  free: 3,
-  starter: 15,
-  pro: 50,
-  unlimited: 999999,
+// Message limits per plan (per calendar day). Free: 15/day; starter/plus/pro: unlimited (entitlements returns null)
+const PLAN_LIMITS: Record<string, number | null> = {
+  free: 15,
+  starter: null,
+  plus: null,
+  pro: null,
+  unlimited: null,
 };
 
-// Plan features
-const PLAN_FEATURES: Record<string, { 
+const PLAN_FEATURES: Record<string, {
   allowsStructuredSuggestions: boolean;
   allowsLegalReferences: boolean;
   allowsFullStrategy: boolean;
 }> = {
   free: { allowsStructuredSuggestions: false, allowsLegalReferences: false, allowsFullStrategy: false },
   starter: { allowsStructuredSuggestions: true, allowsLegalReferences: false, allowsFullStrategy: false },
-  pro: { allowsStructuredSuggestions: true, allowsLegalReferences: true, allowsFullStrategy: false },
+  plus: { allowsStructuredSuggestions: true, allowsLegalReferences: true, allowsFullStrategy: false },
+  pro: { allowsStructuredSuggestions: true, allowsLegalReferences: true, allowsFullStrategy: true },
   unlimited: { allowsStructuredSuggestions: true, allowsLegalReferences: true, allowsFullStrategy: true },
 };
 
@@ -542,14 +543,14 @@ serve(async (req) => {
       userPlan = entitlements.plan || 'free';
       userRole = entitlements.role || 'user';
       
-      // Use entitlements limits (null = unlimited)
       const messagesMax = entitlements.limits?.messages;
-      messageLimit = messagesMax !== undefined ? messagesMax : (PLAN_LIMITS[userPlan] || PLAN_LIMITS.free);
+      messageLimit = messagesMax !== undefined ? messagesMax : (PLAN_LIMITS[userPlan] ?? (userPlan === 'free' ? 15 : null));
       
       console.log(`[DASHBOARD-CHAT] User ${user.id}: role=${userRole}, plan=${userPlan}, messageLimit=${messageLimit === null ? '∞' : messageLimit}`);
     }
 
-    const planFeatures = PLAN_FEATURES[userPlan] || PLAN_FEATURES.free;
+    const planKey = userPlan === 'unlimited' ? 'pro' : userPlan;
+    const planFeatures = PLAN_FEATURES[planKey] ?? PLAN_FEATURES[userPlan] ?? PLAN_FEATURES.free;
 
     // Check today's message count
     const today = new Date().toISOString().split('T')[0];
@@ -569,11 +570,12 @@ serve(async (req) => {
     if (shouldEnforceLimit && messageLimit !== null && currentCount >= messageLimit) {
       console.log(`[DASHBOARD-CHAT] Message limit reached: ${currentCount}/${messageLimit}`);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'limit_reached',
+          message: 'Limite giornaliero di 15 messaggi raggiunto con il piano Free. Passa a un piano superiore per messaggi illimitati.',
           messagesUsed: currentCount,
           messagesLimit: messageLimit,
-          plan: userPlan
+          plan: userPlan,
         }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

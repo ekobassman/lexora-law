@@ -1263,10 +1263,11 @@
       "popular": "Popolare",
       "trustNote": "Nessuna carta di credito richiesta per il piano gratuito. Annulla quando vuoi.",
       "plans": {
-        "free": { "name": "Gratuito", "description": "Perfetto per provare", "cta": "Inizia Gratis", "features": ["1 pratica inclusa", "Analisi documenti AI", "Generazione automatica risposta", "Archiviazione 30 giorni"] },
-        "starter": { "name": "Starter", "description": "Per uso occasionale", "cta": "Scegli Starter", "features": ["3 pratiche al mese", "15 messaggi AI per pratica", "Esportazione PDF", "Invio email", "Tracciamento scadenze"] },
-        "pro": { "name": "Pro", "description": "Per utenti regolari", "cta": "Scegli Pro", "features": ["10 pratiche al mese", "30 messaggi AI per pratica", "Tutto da Starter", "Supporto famiglia", "Supporto prioritario"] },
-        "unlimited": { "name": "Unlimited", "description": "Per professionisti", "cta": "Scegli Unlimited", "features": ["Pratiche illimitate", "Messaggi AI illimitati", "Documenti illimitati", "Tutto da Pro", "Supporto professionale"] }
+        "free": { "name": "Gratuito", "description": "Perfetto per provare", "cta": "Inizia Gratis", "features": ["1 pratica al mese", "15 messaggi chat al giorno", "Analisi documenti AI", "Archiviazione 30 giorni"] },
+        "starter": { "name": "Starter", "description": "Per uso occasionale", "cta": "Scegli Starter", "features": ["5 pratiche al mese", "Messaggi chat illimitati", "Esportazione PDF", "Invio email", "Tracciamento scadenze"] },
+        "plus": { "name": "Plus", "description": "Per utenti regolari", "cta": "Scegli Plus", "features": ["20 pratiche al mese", "Messaggi chat illimitati", "Tutto da Starter", "Supporto famiglia", "Supporto prioritario"] },
+        "pro": { "name": "Pro", "description": "Per professionisti", "cta": "Scegli Pro", "features": ["Pratiche illimitate", "Messaggi chat illimitati", "Documenti illimitati", "Tutto da Plus", "Supporto professionale"] },
+        "unlimited": { "name": "Pro", "description": "Per professionisti", "cta": "Scegli Pro", "features": ["Pratiche illimitate", "Messaggi chat illimitati", "Documenti illimitati", "Tutto da Plus", "Supporto professionale"] }
       }
     },
     "testimonials": {

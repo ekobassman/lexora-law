@@ -1,5 +1,5 @@
-// Lexora subscription plans - STATIC DECLARATIVE CONFIG ONLY
-// NO side effects, NO Stripe checks, NO user state
+// Lexora subscription plans - display config (aligned with src/lib/plans.ts)
+// free, starter, plus, pro. NO side effects, NO Stripe checks.
 
 export type PlanType = 'free' | 'starter' | 'plus' | 'pro';
 
@@ -18,13 +18,13 @@ export interface PlanConfig {
     urgent_reply: boolean;
   };
   highlighted?: boolean;
-  featureKeys: string[]; // For display in pricing UI
+  featureKeys: string[];
 }
 
 export const PLANS: Record<PlanType, PlanConfig> = {
   free: {
     id: 'free',
-    name: 'FREE',
+    name: 'Free',
     price: 0,
     priceDisplay: '€0',
     maxCasesPerMonth: 1,
@@ -48,7 +48,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   },
   starter: {
     id: 'starter',
-    name: 'STARTER',
+    name: 'Starter',
     price: 3.99,
     priceDisplay: '€3.99',
     maxCasesPerMonth: 5,
@@ -119,20 +119,19 @@ export const PLANS: Record<PlanType, PlanConfig> = {
 
 export const PLAN_ORDER: PlanType[] = ['free', 'starter', 'plus', 'pro'];
 
-// Legacy mapping for backwards compatibility
 export const LEGACY_PLAN_MAP: Record<string, PlanType> = {
   basic: 'starter',
   unlimited: 'pro', // Map old unlimited to new pro
 };
 
 export function normalizePlanKey(planKey: string): PlanType {
-  const lower = planKey.toLowerCase();
-  return LEGACY_PLAN_MAP[lower] || (lower as PlanType) || 'free';
+  const lower = (planKey || '').toLowerCase().trim();
+  return LEGACY_PLAN_MAP[lower] ?? (PLAN_ORDER.includes(lower as PlanType) ? (lower as PlanType) : 'free');
 }
 
 export function getPlanConfig(planKey: string): PlanConfig {
   const normalized = normalizePlanKey(planKey);
-  return PLANS[normalized] || PLANS.free;
+  return PLANS[normalized] ?? PLANS.free;
 }
 
 // Helper functions for limits

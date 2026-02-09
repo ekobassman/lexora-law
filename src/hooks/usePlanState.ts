@@ -16,7 +16,7 @@ import { useEntitlements } from './useEntitlements';
 import { useSyncSubscription } from './useSyncSubscription';
 
 export interface PlanState {
-  plan: 'free' | 'starter' | 'pro' | 'unlimited';
+  plan: 'free' | 'starter' | 'plus' | 'pro' | 'unlimited';
   is_active: boolean;
   monthly_case_limit: number;
   cases_remaining: number;
@@ -152,7 +152,7 @@ export function usePlanState(): UsePlanStateReturn {
     
     const casesUsed = creditsStatus.cases_used_this_month;
     const casesRemaining = Math.max(0, monthlyCaseLimit - casesUsed);
-    const atCaseLimit = canonicalPlan !== 'unlimited' && casesRemaining <= 0;
+    const atCaseLimit = canonicalPlan !== 'unlimited' && canonicalPlan !== 'pro' && casesRemaining <= 0;
     
     return {
       plan: canonicalPlan,

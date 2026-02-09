@@ -4,13 +4,13 @@ import { supabase } from '@/lib/supabaseClient';
 // Legacy plan types for backwards compatibility
 export type LegacyPlanType = 'free' | 'basic' | 'plus' | 'pro';
 
-// Plan mapping for checkout (maps old names to new names)
+// Plan keys sent to create-checkout: starter, plus, pro (free has no checkout)
 const PLAN_CHECKOUT_MAP: Record<string, string> = {
   basic: 'starter',
   starter: 'starter',
-  plus: 'pro',
+  plus: 'plus',
   pro: 'pro',
-  unlimited: 'unlimited',
+  unlimited: 'pro',
 };
 
 export function useCheckout() {

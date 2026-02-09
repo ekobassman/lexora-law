@@ -1283,25 +1283,31 @@
           "name": "Kostenlos",
           "description": "Perfekt zum Ausprobieren",
           "cta": "Kostenlos starten",
-          "features": ["1 Vorgang inklusive", "KI-Dokumentenanalyse", "Automatische Antwortgenerierung", "30 Tage Speicherung"]
+          "features": ["1 Vorgang pro Monat", "15 Chat-Nachrichten pro Tag", "KI-Dokumentenanalyse", "30 Tage Speicherung"]
         },
         "starter": {
           "name": "Starter",
           "description": "Für gelegentliche Nutzung",
           "cta": "Starter wählen",
-          "features": ["3 Vorgänge pro Monat", "15 KI-Nachrichten pro Vorgang", "PDF-Export", "E-Mail-Versand", "Fristenverfolgung"]
+          "features": ["5 Vorgänge pro Monat", "Unbegrenzte Chat-Nachrichten", "PDF-Export", "E-Mail-Versand", "Fristenverfolgung"]
+        },
+        "plus": {
+          "name": "Plus",
+          "description": "Für regelmäßige Nutzer",
+          "cta": "Plus wählen",
+          "features": ["20 Vorgänge pro Monat", "Unbegrenzte Chat-Nachrichten", "Alles aus Starter", "Familien-Unterstützung", "Prioritäts-Support"]
         },
         "pro": {
           "name": "Pro",
-          "description": "Für regelmäßige Nutzer",
+          "description": "Für Profis & Vielnutzer",
           "cta": "Pro wählen",
-          "features": ["10 Vorgänge pro Monat", "30 KI-Nachrichten pro Vorgang", "Alles aus Starter", "Familien-Unterstützung", "Prioritäts-Support"]
+          "features": ["Unbegrenzte Vorgänge", "Unbegrenzte Chat-Nachrichten", "Unbegrenzte Dokumente", "Alles aus Plus", "Professioneller Support"]
         },
         "unlimited": {
-          "name": "Unlimited",
+          "name": "Pro",
           "description": "Für Profis & Vielnutzer",
-          "cta": "Unlimited wählen",
-          "features": ["Unbegrenzte Vorgänge", "Unbegrenzte KI-Nachrichten", "Unbegrenzte Dokumente", "Alles aus Pro", "Professioneller Support"]
+          "cta": "Pro wählen",
+          "features": ["Unbegrenzte Vorgänge", "Unbegrenzte Chat-Nachrichten", "Unbegrenzte Dokumente", "Alles aus Plus", "Professioneller Support"]
         }
       }
     },

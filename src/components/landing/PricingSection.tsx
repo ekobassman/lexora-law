@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Check, Sparkles, Zap, Building2, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCheckout } from '@/hooks/useCheckout';
 
 interface PricingSectionProps {
   id?: string;
@@ -14,6 +16,8 @@ interface PricingSectionProps {
 export function PricingSection({ id }: PricingSectionProps) {
   const [isYearly, setIsYearly] = useState(false);
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { createCheckoutSession, isLoading: checkoutLoading } = useCheckout();
 
   const handleCheckout = async (planId: 'starter' | 'plus' | 'pro') => {
     console.log('Checkout plan', planId);

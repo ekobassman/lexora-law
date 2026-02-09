@@ -233,7 +233,8 @@ async function handleCheckoutComplete(
     return; // Do not modify protected users
   }
 
-  const planKey = session.metadata?.plan_key || "starter";
+  const rawPlan = session.metadata?.plan_key || "starter";
+  const planKey = normalizePlanKey(rawPlan);
   logStep(correlationId, "User and plan resolved", { userId, planKey });
 
   // Get subscription details if this was a subscription checkout
@@ -280,12 +281,10 @@ async function handleSubscriptionUpdate(
     return; // Do not modify protected users
   }
 
-  const planKey = subscription.metadata?.plan_key || getPlanFromPriceId(subscription);
-  
-  // Check if subscription status requires blocking
+  const rawPlan = subscription.metadata?.plan_key || getPlanFromPriceId(subscription);
+  const planKey = normalizePlanKey(rawPlan);
   const blockingStatuses = ['unpaid', 'canceled', 'past_due'];
   const shouldBlock = blockingStatuses.includes(subscription.status);
-  
   await updateUserSubscription(supabase, userId, subscription, planKey, subscription.customer as string, correlationId, shouldBlock);
 }
 
@@ -318,8 +317,7 @@ async function handleSubscriptionCanceled(
     return; // Do not modify protected users
   }
 
-  // Downgrade to free and BLOCK access
-  await upsertSubscription(supabase, userId, "free", "canceled", subscription.customer as string, subscription.id, null, correlationId, true);
+  await upsertSubscription(supabase, userId, "free" as PlanKey, "canceled", subscription.customer as string, subscription.id, null, correlationId, true);
   logStep(correlationId, "User downgraded to free and blocked", { userId });
 }
 
@@ -571,7 +569,7 @@ async function updateUserSubscription(
   supabase: any,
   userId: string,
   subscription: Stripe.Subscription,
-  planKey: string,
+  planKey: PlanKey,
   customerId: string,
   correlationId: string,
   forceBlock: boolean = false
@@ -598,7 +596,7 @@ async function updateUserSubscription(
 async function upsertSubscription(
   supabase: any,
   userId: string,
-  planKey: string,
+  planKey: PlanKey,
   status: string,
   customerId: string | null,
   subscriptionId: string | null,
@@ -610,7 +608,6 @@ async function upsertSubscription(
   const accessState = blockAccess ? "blocked" : "active";
   const stripeStatus = status === "active" ? "active" : status;
 
-  // Upsert user_subscriptions
   const { error: subError } = await supabase.from("user_subscriptions").upsert({
     user_id: userId,
     plan_key: planKey,
@@ -627,7 +624,6 @@ async function upsertSubscription(
     logStep(correlationId, "user_subscriptions updated", { userId, planKey, status });
   }
 
-  // Also update profiles table for backwards compatibility + access control
   const { error: profileError } = await supabase.from("profiles").update({
     plan: planKey,
     stripe_customer_id: customerId,
@@ -643,9 +639,23 @@ async function upsertSubscription(
   } else {
     logStep(correlationId, "profiles updated", { userId, planKey, accessState });
   }
+
+  const { error: stateError } = await supabase.from("subscriptions_state").upsert({
+    user_id: userId,
+    plan: planKey,
+    monthly_case_limit: monthlyCaseLimit,
+    is_active: accessState === "active",
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id" });
+
+  if (stateError) {
+    logStep(correlationId, "Warning: subscriptions_state update failed", { error: stateError.message });
+  } else {
+    logStep(correlationId, "subscriptions_state updated", { userId, planKey, monthlyCaseLimit });
+  }
 }
 
-function getPlanFromPriceId(subscription: Stripe.Subscription): string {
+function getPlanFromPriceId(subscription: Stripe.Subscription): PlanKey {
   const priceId = subscription.items.data[0]?.price?.id;
   return STRIPE_PRICE_TO_PLAN[priceId] || "starter";
 }

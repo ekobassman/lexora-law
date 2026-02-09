@@ -1157,10 +1157,11 @@
       "popular": "Popular",
       "trustNote": "No se requiere tarjeta de crédito para el plan gratuito. Cancela cuando quieras.",
       "plans": {
-        "free": { "name": "Gratuito", "description": "Perfecto para probar", "cta": "Empezar Gratis", "features": ["1 caso incluido", "Análisis de documentos IA", "Generación automática de respuesta", "Almacenamiento 30 días"] },
-        "starter": { "name": "Starter", "description": "Para uso ocasional", "cta": "Elegir Starter", "features": ["3 casos por mes", "15 mensajes IA por caso", "Exportación PDF", "Envío email", "Seguimiento de plazos"] },
-        "pro": { "name": "Pro", "description": "Para usuarios regulares", "cta": "Elegir Pro", "features": ["10 casos por mes", "30 mensajes IA por caso", "Todo de Starter", "Soporte familiar", "Soporte prioritario"] },
-        "unlimited": { "name": "Unlimited", "description": "Para profesionales", "cta": "Elegir Unlimited", "features": ["Casos ilimitados", "Mensajes IA ilimitados", "Documentos ilimitados", "Todo de Pro", "Soporte profesional"] }
+        "free": { "name": "Gratuito", "description": "Perfecto para probar", "cta": "Empezar Gratis", "features": ["1 caso al mes", "15 mensajes chat al día", "Análisis de documentos IA", "Almacenamiento 30 días"] },
+        "starter": { "name": "Starter", "description": "Para uso ocasional", "cta": "Elegir Starter", "features": ["5 casos por mes", "Mensajes chat ilimitados", "Exportación PDF", "Envío email", "Seguimiento de plazos"] },
+        "plus": { "name": "Plus", "description": "Para usuarios regulares", "cta": "Elegir Plus", "features": ["20 casos por mes", "Mensajes chat ilimitados", "Todo de Starter", "Soporte familiar", "Soporte prioritario"] },
+        "pro": { "name": "Pro", "description": "Para profesionales", "cta": "Elegir Pro", "features": ["Casos ilimitados", "Mensajes chat ilimitados", "Documentos ilimitados", "Todo de Plus", "Soporte profesional"] },
+        "unlimited": { "name": "Pro", "description": "Para profesionales", "cta": "Elegir Pro", "features": ["Casos ilimitados", "Mensajes chat ilimitados", "Documentos ilimitados", "Todo de Plus", "Soporte profesional"] }
       }
     },
     "testimonials": {

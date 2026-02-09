@@ -87,36 +87,19 @@ async function checkGeoBlock(req: Request): Promise<{ blocked: boolean; countryC
 // null = unlimited (for admin bypass and unlimited plan)
 const PLANS: Record<
   string,
-  {
-    max_cases: number | null;
-    messages_per_case: number | null;
-    ai_credits: number | null;
-    features: Record<string, boolean>;
-  }
+  { max_cases: number | null; messages_per_case: number | null; ai_credits: number | null; features: Record<string, boolean> }
 > = {
   free: {
     max_cases: 1,
     messages_per_case: 15, // 15 messages per day, not per case
     ai_credits: 100,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: false,
-      urgent_reply: false,
-    },
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
   },
   starter: {
     max_cases: 5,
     messages_per_case: null, // unlimited
     ai_credits: 500,
-    features: {
-      scan_letter: true,
-      ai_draft: true,
-      ai_chat: true,
-      export_pdf: true,
-      urgent_reply: false,
-    },
+    features: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: false },
   },
   plus: {
     max_cases: 20,
@@ -366,13 +349,12 @@ serve(async (req) => {
       );
     }
 
-    // Admins (including imbimbo.bassman@gmail.com) always display as "unlimited" in UI (hamburger menu)
     if (isAdmin) {
-      effectivePlan = "unlimited";
+      effectivePlan = "pro";
       planSource = "override";
     }
-
-    const planConfig = PLANS[effectivePlan] || PLANS.free;
+    const normalizedPlan = effectivePlan === "unlimited" ? "pro" : effectivePlan;
+    const planConfig = PLANS[normalizedPlan] ?? PLANS[effectivePlan] ?? PLANS.free;
 
     // ADMIN BYPASS: Admins get null limits (truly unlimited)
     const casesMaxRaw = isAdmin ? null : planConfig.max_cases;
@@ -393,10 +375,10 @@ serve(async (req) => {
 
     const currentPeriodEnd = subscription?.current_period_end || null;
 
-    // NEW response shape (required by UX)
+    // NEW response shape (required by UX). Normalize plan to free|starter|plus|pro only.
     const normalized = {
       role: isAdmin ? "admin" : "user",
-      plan: effectivePlan,
+      plan: normalizedPlan,
       plan_source: planSource,
       status: subscription?.status || "active",
       current_period_end: currentPeriodEnd,
@@ -432,7 +414,7 @@ serve(async (req) => {
 
     // Backwards-compatible fields (keep existing UI working while we migrate)
     const legacy = {
-      plan_key: effectivePlan,
+      plan_key: normalizedPlan,
       max_cases: casesMax === null ? 999999 : casesMax,  // Legacy format expected number
       cases_created: casesUsed,
       can_create_case: casesMax === null || casesUsed < casesMax,

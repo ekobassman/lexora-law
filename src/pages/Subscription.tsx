@@ -10,11 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCheckout } from "@/hooks/useCheckout";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { useSyncSubscription } from "@/hooks/useSyncSubscription";
-import { getPlanConfig } from "@/lib/subscriptionPlans";
+import { getPlanConfig, normalizePlanKey, PLAN_ORDER } from "@/lib/subscriptionPlans";
 
 export default function Subscription() {
   const { entitlements, isLoading, error, refreshEntitlements, isPaid } = useEntitlements();
-  const { openCustomerPortal, isLoading: portalLoading } = useCheckout();
+  const { createCheckoutSession, openCustomerPortal, isLoading: portalLoading } = useCheckout();
   const { syncSubscription } = useSyncSubscription();
 
   // Sync subscription on mount (debounced)
@@ -48,8 +48,9 @@ export default function Subscription() {
     return isCanceled ? `Expires on ${format(date, "dd MMM yyyy")}` : `Renews on ${format(date, "dd MMM yyyy")}`;
   }, [entitlements.current_period_end, entitlements.status]);
 
-  const casesMax = entitlements.limits?.casesMax ?? 1;
-  const casesUsed = entitlements.usage?.casesUsed ?? 0;
+  const casesMax = entitlements.limits?.casesMax ?? entitlements.limits?.practices ?? 1;
+  const casesUsed = entitlements.usage?.casesUsed ?? entitlements.usage?.practicesUsed ?? 0;
+  const isUnlimited = casesMax === 999999 || casesMax == null;
 
   const primaryAction = useMemo(() => {
     const status = (entitlements.status || "active").toLowerCase();
@@ -132,7 +133,7 @@ export default function Subscription() {
                   <>
                     <div className="space-y-1">
                       <p className="text-sm text-navy/60">Current plan</p>
-                      <p className="text-xl font-semibold text-navy">{planConfig.id === "free" ? "Free" : `${planConfig.id.charAt(0).toUpperCase()}${planConfig.id.slice(1)} Plan`}</p>
+                      <p className="text-xl font-semibold text-navy">{planConfig.name} {planConfig.id !== "free" ? "Plan" : ""}</p>
                       {periodLabel && <p className="text-sm text-navy/60">{periodLabel}</p>}
                     </div>
 
@@ -143,7 +144,10 @@ export default function Subscription() {
                       </div>
                       <div className="rounded-lg border border-navy/10 bg-white p-4">
                         <p className="text-sm text-navy/60">Usage</p>
-                        <p className="text-navy font-medium">Cases used: {casesUsed} / {casesMax === 999999 ? "∞" : casesMax}</p>
+                        <p className="text-navy font-medium">Cases used: {casesUsed} / {isUnlimited ? "∞" : casesMax}</p>
+                        {planConfig.maxChatMessagesPerDay != null && (
+                          <p className="text-sm text-navy/60 mt-1">Chat: {planConfig.maxChatMessagesPerDay} messages/day</p>
+                        )}
                       </div>
                     </div>
 
@@ -175,6 +179,49 @@ export default function Subscription() {
                 )}
               </CardContent>
             </Card>
+          </section>
+
+          <section aria-label="Upgrade plan">
+            <h2 className="text-xl font-semibold text-navy mb-4">Plans</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {PLAN_ORDER.map((planId) => {
+                const config = getPlanConfig(planId);
+                const isCurrent = normalizePlanKey(entitlements.plan) === planId;
+                const isPaidPlan = planId !== "free";
+                return (
+                  <Card key={planId} className={isCurrent ? "border-gold border-2" : "border-navy/10"}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg text-navy">{config.name}</CardTitle>
+                      <CardDescription>{config.priceDisplay}/month</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-navy/70">
+                        {config.maxCases === 999999 || config.maxCases == null ? "Unlimited" : config.maxCases} cases/month
+                      </p>
+                      {isCurrent ? (
+                        <Badge variant="secondary" className="w-full justify-center">Current plan</Badge>
+                      ) : isPaidPlan ? (
+                        <Button
+                          variant={config.highlighted ? "default" : "outline"}
+                          className="w-full"
+                          disabled={portalLoading}
+                          onClick={async () => {
+                            try {
+                              const { url } = await createCheckoutSession(planId);
+                              if (url) window.location.href = url;
+                            } catch {
+                              // useCheckout sets error state
+                            }
+                          }}
+                        >
+                          Upgrade
+                        </Button>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </section>
         </div>
       </main>

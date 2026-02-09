@@ -64,13 +64,13 @@ export function PaywallDialog({ open, onOpenChange }: PaywallDialogProps) {
   const getPlanIcon = (plan: PlanType) => {
     switch (plan) {
       case 'starter': return <Zap className="h-5 w-5" />;
-      case 'pro': return <Sparkles className="h-5 w-5" />;
-      case 'unlimited': return <Crown className="h-5 w-5" />;
+      case 'plus': return <Sparkles className="h-5 w-5" />;
+      case 'pro': return <Crown className="h-5 w-5" />;
       default: return null;
     }
   };
 
-  const paidPlans: PaidPlanKey[] = ['starter', 'pro', 'unlimited'];
+  const paidPlans: PaidPlanKey[] = ['starter', 'plus', 'pro'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
