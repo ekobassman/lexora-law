@@ -2,12 +2,12 @@
  * Format postal code and city, omitting placeholders.
  * Returns empty string if both are missing.
  */
-export function formatCapCity(zip?: string | null, city?: string | null): string {
-  const zipCode = (zip ?? "").trim();
-  const cityName = (city ?? "").trim();
-  if (!zipCode && !cityName) return "";        // no data = no line
-  if (zipCode && cityName) return `${zipCode} ${cityName}`; // "12345 Roma"
-  return zipCode || cityName;                  // only one available
+export function formatAddress(zip?: string | null, city?: string | null): string {
+  const zipClean = (zip ?? "").trim();
+  const cityClean = (city ?? "").trim();
+  
+  if (zipClean && cityClean) return `${zipClean} ${cityClean}`;
+  return zipClean || cityClean;
 }
 
 /**
