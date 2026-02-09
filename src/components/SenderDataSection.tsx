@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Pencil, Save, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { formatCapCity } from '@/lib/formatAddress';
+import { formatAddress } from '@/lib/formatAddress';
 
 interface SenderData {
   sender_name: string | null;
@@ -343,8 +343,8 @@ export function SenderDataSection({ praticaId, senderData, onSenderDataUpdate }:
               <>
                 {effective.name && <div className="font-medium">{effective.name}</div>}
                 {effective.address && <div>{effective.address}</div>}
-                {formatCapCity(effective.postal_code, effective.city) && (
-                  <div>{formatCapCity(effective.postal_code, effective.city)}</div>
+                {formatAddress(effective.postal_code, effective.city) && (
+                  <div>{formatAddress(effective.postal_code, effective.city)}</div>
                 )}
                 {effective.country && <div>{effective.country}</div>}
                 <div className="pt-2 text-muted-foreground">
