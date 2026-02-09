@@ -32,6 +32,21 @@ FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own messages" ON dashboard_chat_messages
 FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+-- 8. VERIFICA POLICY APPLICATE
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual 
+FROM pg_policies 
+WHERE tablename IN ('profiles', 'dashboard_chat_messages');
+
+-- 9. VERIFICA STRUTTURA TABELLE DASHBOARD_CHAT_MESSAGES
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'dashboard_chat_messages' 
+ORDER BY ordinal_position;
+
+-- 7. POLICY PER DASHBOARD_CHAT_MESSAGES (inserimento solo propri messaggi)
+CREATE POLICY "Users can insert own messages" ON dashboard_chat_messages
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 -- 8. POLICY PER DASHBOARD_CHAT_MESSAGES (aggiornamento solo propri messaggi)
 CREATE POLICY "Users can update own messages" ON dashboard_chat_messages
 FOR UPDATE USING (auth.uid() = user_id);

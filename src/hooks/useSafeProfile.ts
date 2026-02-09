@@ -81,7 +81,7 @@ export function useDashboardMessages() {
 
       const { data, error } = await supabase
         .from('dashboard_chat_messages')
-        .select('messages_count, created_at')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);

@@ -12,3 +12,9 @@ verify_jwt = false
 
 [functions.analyze-letter]
 verify_jwt = false
+
+[functions.create-case]
+verify_jwt = false
+
+[functions.entitlements]
+verify_jwt = false
