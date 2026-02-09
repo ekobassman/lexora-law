@@ -1,15 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders, handleOptions } from '../_shared/cors'
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  const opt = handleOptions(req);
+  if (opt) return opt;
 
   try {
     console.log('=== CREATE-CASE DEBUG ===')
@@ -18,20 +12,17 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     console.log('Auth header presente:', authHeader ? 'SI' : 'NO')
     
-    if (authHeader) {
-      console.log('Token preview:', authHeader.substring(0, 30) + '...')
-    } else {
+    if (!authHeader) {
       console.error('ERRORE: Authorization header mancante!')
       return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { 
         status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: corsHeaders(req) 
       })
     }
 
     const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('VITE_SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('VITE_SUPABASE_ANON_KEY')
-
     const supabaseClient = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: `Bearer ${token}` } }
@@ -42,14 +33,14 @@ Deno.serve(async (req) => {
     
     if (userError || !userData.user) {
       console.error('Errore auth:', userError?.message || 'No user')
-      return new Response(JSON.stringify({ error: 'Invalid token' }), { 
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
         status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: corsHeaders(req) 
       })
     }
-
-    console.log('Utente OK:', userData.user.id)
-
+    
+    console.log('Utente verificato:', userData.user?.id || 'No user ID')
+    console.log('Email utente:', userData.user?.email || 'No email')  
     const body = await req.json()
     console.log('Body ricevuto:', JSON.stringify(body).substring(0, 100))
 
