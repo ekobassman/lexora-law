@@ -3,11 +3,11 @@
  * Returns empty string if both are missing.
  */
 export function formatCapCity(zip?: string | null, city?: string | null): string {
-  const z = (zip ?? "").trim();
-  const c = (city ?? "").trim();
-  if (!z && !c) return "";        // no data = no line
-  if (z && c) return `${z} ${c}`; // "12345 Roma"
-  return z || c;                  // only one available
+  const zipCode = (zip ?? "").trim();
+  const cityName = (city ?? "").trim();
+  if (!zipCode && !cityName) return "";        // no data = no line
+  if (zipCode && cityName) return `${zipCode} ${cityName}`; // "12345 Roma"
+  return zipCode || cityName;                  // only one available
 }
 
 /**
