@@ -1,26 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { z } from 'zod';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Header } from '@/components/Header';
-import { FilePreview } from '@/components/FilePreview';
-import { AnalysisStatus, AnalysisStep } from '@/components/AnalysisStatus';
-import { CameraScan } from '@/components/CameraScan';
-import { PlanLimitPopup } from '@/components/PlanLimitPopup';
-import { BlitzerWizard } from '@/components/BlitzerWizard';
-import { AutoveloxWizard } from '@/components/AutoveloxWizard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements } from '@/hooks/useEntitlements';
+import { useEntitlements, refreshEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/lib/supabaseClient';
-import { invokeExtractText } from '@/lib/invokeExtractText';
-import { toast } from 'sonner';
-import { Loader2, Upload, ArrowLeft, Calendar, FileText, Building2, Hash, Sparkles } from 'lucide-react';
 import { LegalLoader } from '@/components/LegalLoader';
+import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { analyzeLetter } from '@/lib/canonicalPipeline';
+import { useGeoLocale } from '@/hooks/useGeoLocale';
 
 const praticaSchema = z.object({
   title: z.string().min(1, 'required').max(200),
@@ -36,6 +30,7 @@ export default function NewPratica() {
   const { entitlements, isLoading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { country, language: geoLanguage } = useGeoLocale(); // Aggiunto hook geo locale
   
   // Check for blitzer/autovelox template
   const template = searchParams.get('template');
@@ -87,8 +82,16 @@ export default function NewPratica() {
 
     const createBlitzerCase = async () => {
       try {
+        // Get session for JWT token
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
         // Create the blitzer case via backend
         const { data, error } = await supabase.functions.invoke('create-case', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
           body: {
             title: 'Einspruch gegen Blitzer-Bußgeld',
             authority: 'Bußgeldstelle',
@@ -130,8 +133,16 @@ export default function NewPratica() {
 
     const createAutoveloxCase = async () => {
       try {
+        // Get session for JWT token
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
         // Create the autovelox case via backend
         const { data, error } = await supabase.functions.invoke('create-case', {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
           body: {
             title: 'Ricorso Multa Autovelox – Italia',
             authority: 'Prefettura / Giudice di Pace',
@@ -416,26 +427,33 @@ export default function NewPratica() {
     setIsLoading(true);
     
     try {
-      // Use backend edge function for case creation (enforces limits server-side)
+      // Get session for JWT token
+      const { data: { session } } = await supabase.auth.getSession();
+        
+      if (!session?.access_token) throw new Error('Sessione scaduta, effettua il login');
+        
+      // Use backend edge function for case creation// Create the autovelox case via backend
       const { data, error } = await supabase.functions.invoke('create-case', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
-          title: formData.title.trim(),
+          title: `Autovelox - ${formData.licensePlate}`,
           authority: formData.authority.trim() || null,
-          aktenzeichen: formData.aktenzeichen.trim() || null,
+          aktenzeichen: formData.licensePlate?.trim() || null,
           deadline: formData.deadline || null,
           letter_text: formData.letter_text.trim() || null,
           file_url: fileUrl,
-          status: analysisResult ? 'in_progress' : 'new',
-          explanation: analysisResult?.explanation || null,
-          risks: analysisResult?.risks || null,
-          draft_response: analysisResult?.draft_response || null,
+          status: 'new',
+          locale: geoLanguage?.toLowerCase() || language?.toLowerCase() || 'it', // Usa locale dinamico da geolocalizzazione
+          source: 'autovelox', // Aggiunto source per tracciamento
         },
       });
       
       if (error) throw error;
       
       // Check for LIMIT_REACHED error from backend
-      if (data?.error === 'LIMIT_REACHED') {
+      if (data?.error === 'LIMIT_REACHED' || data?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowPaywall(true);
         toast.error(data.message || t('subscription.limitReached'));
         return;
@@ -450,7 +468,18 @@ export default function NewPratica() {
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Save error:', error);
-      toast.error(error.message || t('newPratica.error.save'));
+      
+      // Gestione errori specifici dal backend
+      if (error.message?.includes('VALIDATION_ERROR')) {
+        toast.error('Dati non validi. Controlla tutti i campi obbligatori.');
+      } else if (error.message?.includes('PERMISSION_DENIED')) {
+        toast.error('Non hai i permessi per creare questa pratica.');
+      } else if (error.message?.includes('PRACTICE_LIMIT_REACHED')) {
+        setShowPaywall(true);
+        toast.error(error.message || t('subscription.limitReached'));
+      } else {
+        toast.error(error.message || t('newPratica.error.save'));
+      }
     } finally {
       setIsLoading(false);
     }

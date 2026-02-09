@@ -2,23 +2,12 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { getPriceToPlanMap, getMonthlyCaseLimitForDb, normalizePlanKey, type PlanKey } from "../_shared/plans.ts";
+import { PLANS, normalizePlanKey, getCaseLimit, STRIPE_PRICE_TO_PLAN } from "../_shared/plans.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
-
-// Price ID → plan (env STRIPE_PRICE_STARTER, STRIPE_PRICE_PLUS, STRIPE_PRICE_PRO; fallback legacy IDs)
-function getPriceToPlan(): Record<string, PlanKey> {
-  const fromEnv = getPriceToPlanMap(Deno.env);
-  if (Object.keys(fromEnv).length > 0) return fromEnv;
-  return {
-    "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
-    "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus",
-    "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
-  };
-}
 
 const logStep = (correlationId: string, step: string, details?: unknown) => {
   console.log(`[STRIPE-WEBHOOK][${correlationId}] ${step}`, details ? JSON.stringify(details) : "");
@@ -615,7 +604,7 @@ async function upsertSubscription(
   correlationId: string,
   blockAccess: boolean = false
 ) {
-  const monthlyCaseLimit = getMonthlyCaseLimitForDb(planKey);
+  const planLimits = getCaseLimit(planKey) || 1;
   const accessState = blockAccess ? "blocked" : "active";
   const stripeStatus = status === "active" ? "active" : status;
 
@@ -641,7 +630,7 @@ async function upsertSubscription(
     stripe_subscription_id: subscriptionId,
     stripe_status: stripeStatus,
     access_state: accessState,
-    cases_limit: monthlyCaseLimit,
+    cases_limit: planLimits === null ? 999999 : planLimits,
     updated_at: new Date().toISOString(),
   }).eq("id", userId);
 
@@ -668,5 +657,5 @@ async function upsertSubscription(
 
 function getPlanFromPriceId(subscription: Stripe.Subscription): PlanKey {
   const priceId = subscription.items.data[0]?.price?.id;
-  return getPriceToPlan()[priceId] ?? "starter";
+  return STRIPE_PRICE_TO_PLAN[priceId] || "starter";
 }

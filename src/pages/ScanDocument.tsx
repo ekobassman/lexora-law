@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Header } from '@/components/Header';
@@ -11,11 +11,12 @@ import { InAppCamera } from '@/components/InAppCamera';
 import { LegalLoader } from '@/components/LegalLoader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEntitlements } from '@/hooks/useEntitlements';
+import { useEntitlements, refreshEntitlements } from '@/hooks/useEntitlements';
 import { supabase } from '@/lib/supabaseClient';
 import { invokeExtractText } from '@/lib/invokeExtractText';
-import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle } from 'lucide-react';
+import { useGeoLocale } from '@/hooks/useGeoLocale';
 import { toast } from 'sonner';
+import { Camera, Upload, FileText, Loader2, ArrowRight, ArrowLeft, X, AlertCircle, Check } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +33,7 @@ export default function ScanDocument() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [showLimitPopup, setShowLimitPopup] = useState(false);
+  const { country, language: geoLanguage } = useGeoLocale(); // Aggiunto hook geo locale
   
   // Multi-document state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -198,12 +200,27 @@ export default function ScanDocument() {
     setProcessingStep(t('scan.step.creating'));
     
     try {
+      // Get session for JWT token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) throw new Error('Sessione scaduta, effettua il login');
+      
       const { data: caseResponse, error: caseError } = await supabase.functions.invoke('create-case', {
-        body: { title: name.trim(), status: 'new' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: { 
+        title: name.trim(), 
+        status: 'new',
+        locale: geoLanguage?.toLowerCase() || language?.toLowerCase() || 'it', // Usa locale dinamico da geolocalizzazione
+        source: 'scan', // Aggiunto source per tracciamento
+      },
       });
 
       if (caseError) throw caseError;
-      if (caseResponse?.error === 'LIMIT_REACHED') {
+      if (caseResponse?.error === 'LIMIT_REACHED' || caseResponse?.error === 'PRACTICE_LIMIT_REACHED') {
         setShowLimitPopup(true);
         toast.error(caseResponse.message || t('subscription.limitReached'));
         return;

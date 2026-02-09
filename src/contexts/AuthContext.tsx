@@ -69,17 +69,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Se login successo, crea automaticamente il profilo se non esiste
+    if (!error && data.user) {
+      console.log('[AuthContext] Login successful, checking profile for user:', data.user.id);
+      
+      try {
+        // Verifica se il profilo esiste già
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('id, email, plan, created_at')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        console.log('[AuthContext] Profile check result:', { 
+          userId: data.user.id, 
+          existingProfile: existingProfile, 
+          checkError: checkError 
+        });
+
+        // Se non esiste, crealo con dettagli completi
+        if (!existingProfile && !checkError) {
+          console.log('[AuthContext] Creating NEW profile for user:', data.user.id);
+          
+          const profileData = {
+            id: data.user.id,
+            email: data.user.email || email,
+            created_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+            plan: 'free',
+            age_confirmed: true, // Default per nuovi utenti
+            privacy_version: '1.0',
+            terms_version: '1.0',
+            first_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || '',
+            last_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || '',
+          };
+
+          console.log('[AuthContext] Profile data to insert:', profileData);
+
+          const { error: profileError, data: newProfile } = await supabase
+            .from('profiles')
+            .insert(profileData)
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error('[AuthContext] ERROR creating profile:', profileError);
+          } else if (newProfile) {
+            console.log('[AuthContext] Profile CREATED successfully:', newProfile);
+          } else {
+            console.warn('[AuthContext] Profile insert returned no data');
+          }
+        } else if (existingProfile) {
+          console.log('[AuthContext] Profile already exists, skipping creation');
+        } else if (checkError) {
+          console.error('[AuthContext] ERROR checking profile existence:', checkError);
+        }
+      } catch (err) {
+        console.error('[AuthContext] CRITICAL ERROR in profile creation:', err);
+      }
+    } else {
+      console.log('[AuthContext] Login failed:', error);
+    }
+
     return { error: error as Error | null };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
     
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -89,6 +152,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
+
+    // Se signup successo, crea automaticamente il profilo
+    if (!error && data.user) {
+      try {
+        console.log('[AuthContext] Creating profile for new user after signup:', data.user.id);
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email || email,
+            created_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+            plan: 'free',
+            age_confirmed: true, // Default per nuovi utenti
+            privacy_version: '1.0',
+            terms_version: '1.0',
+          })
+          .select()
+          .single();
+
+        if (profileError) {
+          console.error('[AuthContext] Error creating profile after signup:', profileError);
+        } else {
+          console.log('[AuthContext] Profile created successfully after signup for user:', data.user.id);
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error creating profile after signup:', err);
+      }
+    }
     
     return { error: error as Error | null };
   };

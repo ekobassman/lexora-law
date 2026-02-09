@@ -23,7 +23,7 @@ export interface AnonymousCase {
 }
 
 const STORAGE_KEY = 'lexora_anonymous_session';
-const MAX_CASES = 3; // Limit anonymous cases
+const MAX_CASES = 1; // Limit anonymous cases to match free plan
 
 function getStorage(): { cases: AnonymousCase[]; lastUpdated: string } | null {
   try {

@@ -9,21 +9,50 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function getPriceToPlan(): Record<string, PlanKey> {
-  const fromEnv = getPriceToPlanMap(Deno.env);
-  if (Object.keys(fromEnv).length > 0) return fromEnv;
-  return {
-    "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
-    "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus",
-    "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
-  };
-}
+// Price ID to plan mapping - MUST match Stripe products
+const PRICE_TO_PLAN: Record<string, string> = {
+  "price_1SivfMKG0eqN9CTOVXhLdPo7": "starter",
+  "price_1SivfjKG0eqN9CTOXzYLuH7v": "plus", // Updated to plus
+  "price_1Sivg3KG0eqN9CTORmNvZX1Z": "pro",
+};
 
-const PLAN_FEATURES: Record<PlanKey, Record<string, boolean>> = {
-  free: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: false, urgent_reply: false },
-  starter: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: false },
-  plus: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
-  pro: { scan_letter: true, ai_draft: true, ai_chat: true, export_pdf: true, urgent_reply: true },
+const PLAN_LIMITS: Record<string, { max_cases: number | null; messages_per_case: number | null }> = {
+  free: { max_cases: 1, messages_per_case: 15 }, // 15 messages per day, not per case
+  starter: { max_cases: 5, messages_per_case: null }, // unlimited messages
+  plus: { max_cases: 20, messages_per_case: null }, // unlimited messages
+  pro: { max_cases: null, messages_per_case: null }, // unlimited
+  unlimited: { max_cases: null, messages_per_case: null }, // unlimited
+};
+
+const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
+  free: {
+    scan_letter: true,
+    ai_draft: true,
+    ai_chat: true,
+    export_pdf: false,
+    urgent_reply: false,
+  },
+  starter: {
+    scan_letter: true,
+    ai_draft: true,
+    ai_chat: true,
+    export_pdf: true,
+    urgent_reply: false,
+  },
+  pro: {
+    scan_letter: true,
+    ai_draft: true,
+    ai_chat: true,
+    export_pdf: true,
+    urgent_reply: true,
+  },
+  unlimited: {
+    scan_letter: true,
+    ai_draft: true,
+    ai_chat: true,
+    export_pdf: true,
+    urgent_reply: true,
+  },
 };
 
 const logStep = (step: string, details?: unknown) => {

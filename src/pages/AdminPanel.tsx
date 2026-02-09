@@ -179,45 +179,57 @@ export default function AdminPanel() {
     };
   }, [user?.email]);
 
-  // Check admin status via RPC (server-side role verification)
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setCheckingAdmin(false);
-        return;
-      }
+ // Check admin status via RPC (server-side role verification)
+useEffect(() => {
+  const checkAdminRole = async () => {
+    if (!user) {
+      setCheckingAdmin(false);
+      return;
+    }
 
-      try {
-        const { data, error } = await supabase.rpc('is_admin');
-        if (error) {
-          console.error('Admin check error:', error);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(data === true);
-        }
-      } catch (err) {
-        console.error('Admin check failed:', err);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      console.log('[ADMIN] sessionData for RPC check:', sessionData);
+      console.log('[ADMIN] token present?', !!token);
+
+      const { data, error } = await supabase.functions.invoke('admin-user-metrics', {
+        headers: { Authorization: `Bearer ${token}` },
+        body: { windowMinutes: 10 },
+      });
+
+      console.log('[ADMIN] admin-user-metrics response:', { data, error });
+
+      if (error) {
+        console.error('Admin check error:', error);
         setIsAdmin(false);
-      } finally {
-        setCheckingAdmin(false);
+      } else {
+        console.log('[ADMIN] RPC is_admin result:', data);
+        setIsAdmin(data === true);
       }
-    };
-
-    if (!authLoading) {
-      checkAdminRole();
+    } catch (err) {
+      console.error('Admin check failed:', err);
+      setIsAdmin(false);
+    } finally {
+      setCheckingAdmin(false);
     }
-  }, [user, authLoading]);
+  };
 
-  // Redirect non-admins to app dashboard
-  useEffect(() => {
-    if (!authLoading && !checkingAdmin) {
-      if (!user) {
-        navigate('/auth');
-      } else if (isAdmin === false) {
-        navigate('/app');
-      }
+  if (!authLoading) {
+    checkAdminRole();
+  }
+}, [user, authLoading]);
+
+// Redirect non-admins to app dashboard
+useEffect(() => {
+  if (!authLoading && !checkingAdmin) {
+    if (!user) {
+      navigate('/auth');
+    } else if (isAdmin === false) {
+      navigate('/app');
     }
-  }, [user, authLoading, isAdmin, checkingAdmin, navigate]);
+  }
+}, [user, authLoading, isAdmin, checkingAdmin, navigate]);
 
   // Fetch user metrics from edge function
   const fetchUserMetrics = useCallback(async (showToast = false) => {

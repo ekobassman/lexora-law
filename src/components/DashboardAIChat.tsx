@@ -133,13 +133,13 @@ function normalizeDraftDate(draft: string): string {
   return result;
 }
 
-// Per-plan message limits (backend enforces 15/day for free; others unlimited)
-const PLAN_MESSAGE_LIMITS: Record<string, number> = {
+// Daily AI message limits (only for free plan)
+const PLAN_MESSAGE_LIMITS: Record<string, number | null> = {
   free: 15,
-  starter: 999999,
-  plus: 999999,
-  pro: 999999,
-  unlimited: 999999,
+  starter: null, // unlimited
+  plus: null, // unlimited
+  pro: null, // unlimited
+  unlimited: null, // unlimited
 };
 
 function getSafeText(t: (key: string, options?: any) => string, key: string, fallback: string): string {
@@ -691,7 +691,7 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
         
         if (usageData) setMessagesUsed(usageData.messages_count);
         
-        setMessagesLimit(planState.messages_per_case || PLAN_MESSAGE_LIMITS[plan] || 10);
+        setMessagesLimit(planState.messages_per_case || PLAN_MESSAGE_LIMITS[plan] || 15);
         
         // Check for pending demo chat migration
         let migratedMessages: ChatMessage[] = [];
@@ -1347,18 +1347,16 @@ export function DashboardAIChat({ selectedCaseId, selectedCaseTitle, onCaseSelec
             title: titleToSave,
             draft_response: draftToSave,
             letter_text: letterTextForCase?.trim() || null,
-            status: 'in_progress',
+            source: 'chat', // Aggiunto source per tracciamento
+            locale: 'it', // Aggiunto locale
+            status: 'new'
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.code === 'CASE_LIMIT_REACHED') {
-          toast.error(t('credits.outOfMonthlyCases', 'You have used all your monthly cases.'));
-          return;
-        }
-        throw new Error(errorData.message || 'Failed to create case');
+      const errorData = await response.json();
+      if (errorData.code === 'CASE_LIMIT_REACHED') {
+        toast.error(t('credits.outOfMonthlyCases', 'You have used all your monthly cases.'));
       }
 
       const data = await response.json();

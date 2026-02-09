@@ -19,10 +19,32 @@ export function PricingSection({ id }: PricingSectionProps) {
   const { user } = useAuth();
   const { createCheckoutSession, isLoading: checkoutLoading } = useCheckout();
 
-  // 4 plans: Free, Starter (3,99 €), Plus (9,99 €), Pro (19,99 €)
+  const handleCheckout = async (planId: 'starter' | 'plus' | 'pro') => {
+    console.log('Checkout plan', planId);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      });
+
+      if (!res.ok) {
+        console.error('Stripe checkout error', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error('Stripe checkout exception', err);
+    }
+  };
+
   const plans = [
     {
-      planKey: 'free' as const,
+      id: 'free',
       name: t('landingSections.pricing.plans.free.name'),
       description: t('landingSections.pricing.plans.free.description'),
       monthlyPrice: 0,
@@ -40,7 +62,7 @@ export function PricingSection({ id }: PricingSectionProps) {
       variant: 'outline' as const,
     },
     {
-      planKey: 'starter' as const,
+      id: 'starter',
       name: t('landingSections.pricing.plans.starter.name'),
       description: t('landingSections.pricing.plans.starter.description'),
       monthlyPrice: 3.99,
@@ -59,7 +81,7 @@ export function PricingSection({ id }: PricingSectionProps) {
       variant: 'outline' as const,
     },
     {
-      planKey: 'plus' as const,
+      id: 'plus',
       name: t('landingSections.pricing.plans.plus.name'),
       description: t('landingSections.pricing.plans.plus.description'),
       monthlyPrice: 9.99,
@@ -78,7 +100,7 @@ export function PricingSection({ id }: PricingSectionProps) {
       variant: 'premium' as const,
     },
     {
-      planKey: 'pro' as const,
+      id: 'pro',
       name: t('landingSections.pricing.plans.pro.name'),
       description: t('landingSections.pricing.plans.pro.description'),
       monthlyPrice: 19.99,
@@ -189,25 +211,17 @@ export function PricingSection({ id }: PricingSectionProps) {
                 </CardContent>
                 
                 <CardFooter>
-                  {plan.planKey !== 'free' && user ? (
+                  {plan.id === 'free' ? (
+                    <Button variant={plan.variant} className="w-full" asChild>
+                      <Link to={plan.ctaLink}>{plan.cta}</Link>
+                    </Button>
+                  ) : (
                     <Button
                       variant={plan.variant}
                       className="w-full"
-                      disabled={checkoutLoading}
-                      onClick={async () => {
-                        try {
-                          const { url } = await createCheckoutSession(plan.planKey);
-                          if (url) window.location.href = url;
-                        } catch {
-                          // useCheckout sets error; user sees toast or retry
-                        }
-                      }}
+                      onClick={() => handleCheckout(plan.id as 'starter' | 'plus' | 'pro')}
                     >
                       {plan.cta}
-                    </Button>
-                  ) : (
-                    <Button variant={plan.variant} className="w-full" asChild>
-                      <Link to={plan.ctaLink}>{plan.cta}</Link>
                     </Button>
                   )}
                 </CardFooter>

@@ -75,12 +75,12 @@ serve(async (req) => {
       console.error("Error fetching usage:", usageError);
     }
 
-    const PLAN_DEFAULTS: Record<string, number> = {
+    // Plan-specific defaults for monthly_case_limit (single source of truth)
+    const PLAN_DEFAULTS: Record<string, number | null> = {
       free: 1,
       starter: 5,
       plus: 20,
-      pro: 999999,
-      unlimited: 999999,
+      pro: null, // unlimited
     };
 
     // Calculate values
@@ -100,16 +100,15 @@ serve(async (req) => {
     const lifetimeCredits = wallet?.lifetime_credits ?? 0;
 
     // Calculate cases remaining
-    const casesRemaining = Math.max(0, monthlyCaseLimit - casesUsedThisMonth);
+    const casesRemaining = monthlyCaseLimit === null ? 999999 : Math.max(0, monthlyCaseLimit - casesUsedThisMonth);
 
     // Calculate next refill date (first of next month)
     const now = new Date();
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const nextRefillDate = nextMonth.toISOString().split("T")[0];
 
-    // Check if at case limit (pro and unlimited = no limit)
-    const atCaseLimit =
-      plan !== "unlimited" && plan !== "pro" && casesUsedThisMonth >= monthlyCaseLimit;
+    // Check if at case limit (pro never hits limit)
+    const atCaseLimit = monthlyCaseLimit !== null && casesUsedThisMonth >= monthlyCaseLimit;
 
     console.log(`[credits-get-status] user=${userId} plan=${plan} monthly_case_limit=${monthlyCaseLimit} cases_used=${casesUsedThisMonth} remaining=${casesRemaining} at_limit=${atCaseLimit}`);
 

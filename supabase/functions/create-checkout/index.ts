@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { PLANS, normalizePlanKey, getStripePriceId } from "../_shared/plans.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,23 +11,6 @@ const corsHeaders = {
 const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
-
-// Plan configuration: Stripe price IDs from env (STRIPE_PRICE_STARTER, STRIPE_PRICE_PLUS, STRIPE_PRICE_PRO)
-// Fallback to legacy IDs if env not set
-function getPlanConfig(): Record<string, { priceId: string; name: string }> {
-  const env = (k: string) => Deno.env.get(k);
-  const starter = env("STRIPE_PRICE_STARTER") || "price_1SivfMKG0eqN9CTOVXhLdPo7";
-  const plus = env("STRIPE_PRICE_PLUS") || "price_1SivfjKG0eqN9CTOXzYLuH7v";
-  const pro = env("STRIPE_PRICE_PRO") || "price_1Sivg3KG0eqN9CTORmNvZX1Z";
-  return {
-    starter: { priceId: starter, name: "Starter" },
-    plus: { priceId: plus, name: "Plus" },
-    pro: { priceId: pro, name: "Pro" },
-    basic: { priceId: starter, name: "Starter" },
-    professional: { priceId: plus, name: "Plus" },
-    unlimited: { priceId: pro, name: "Pro" },
-  };
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -56,18 +40,19 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const { plan } = await req.json();
-    const normalizedPlan = (plan || "").toLowerCase();
-    if (normalizedPlan === "free") {
-      throw new Error("Free plan does not require checkout.");
+    const normalizedPlan = normalizePlanKey(plan || "");
+    
+    // Validate plan and get Stripe price ID
+    if (!PLANS[normalizedPlan]) {
+      throw new Error(`Invalid plan: ${plan}`);
     }
-    const PLAN_CONFIG = getPlanConfig();
-    const planConfig = PLAN_CONFIG[normalizedPlan];
-
-    if (!planConfig) {
-      throw new Error(`Invalid plan: ${plan}. Use starter, plus, or pro.`);
+    
+    const stripePriceId = getStripePriceId(normalizedPlan);
+    if (!stripePriceId) {
+      throw new Error(`No Stripe price ID configured for plan: ${normalizedPlan}`);
     }
 
-    logStep("Plan selected", { plan: normalizedPlan, priceId: planConfig.priceId });
+    logStep("Plan selected", { plan: normalizedPlan, stripePriceId });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -89,7 +74,7 @@ serve(async (req) => {
       client_reference_id: user.id, // CRITICAL: Binds session to user
       line_items: [
         {
-          price: planConfig.priceId,
+          price: stripePriceId,
           quantity: 1,
         },
       ],

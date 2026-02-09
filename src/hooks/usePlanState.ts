@@ -39,13 +39,13 @@ export interface UsePlanStateReturn {
   triggerSync: () => Promise<void>;
 }
 
-// Plan-specific defaults (must match _shared/plans.ts: free 1/15, starter 5, plus 20, pro unlimited)
-const PLAN_DEFAULTS: Record<string, { maxCases: number; messagesPerCase: number }> = {
-  free: { maxCases: 1, messagesPerCase: 15 },
-  starter: { maxCases: 5, messagesPerCase: 999999 },
-  plus: { maxCases: 20, messagesPerCase: 999999 },
-  pro: { maxCases: 999999, messagesPerCase: 999999 },
-  unlimited: { maxCases: 999999, messagesPerCase: 999999 },
+// Plan-specific defaults (must match new plan structure)
+const PLAN_DEFAULTS: Record<string, { maxCases: number | null; messagesPerCase: number | null }> = {
+  free: { maxCases: 1, messagesPerCase: 15 }, // 15 per day, not per case
+  starter: { maxCases: 5, messagesPerCase: null }, // unlimited
+  plus: { maxCases: 20, messagesPerCase: null }, // unlimited
+  pro: { maxCases: null, messagesPerCase: null }, // unlimited
+  unlimited: { maxCases: null, messagesPerCase: null }, // unlimited
 };
 
 const DEFAULT_PLAN_STATE: PlanState = {
@@ -144,8 +144,9 @@ export function usePlanState(): UsePlanStateReturn {
     // But if plan is paid and limit shows 1, use plan defaults instead
     let monthlyCaseLimit = creditsStatus.monthly_case_limit;
     if (canonicalPlan !== 'free' && monthlyCaseLimit <= 1) {
-      // This is the bug case: paid plan but showing free limits
-      monthlyCaseLimit = planDefaults.maxCases;
+      // This is bug case: paid plan but showing free limits
+      const planDefaults = PLAN_DEFAULTS[canonicalPlan] || PLAN_DEFAULTS.free;
+      monthlyCaseLimit = planDefaults.maxCases ?? 1;
       console.warn('[usePlanState] Correcting limit from 1 to', monthlyCaseLimit, 'for plan', canonicalPlan);
     }
     

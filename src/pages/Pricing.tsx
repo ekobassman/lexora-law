@@ -1,94 +1,140 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Header } from '@/components/Header';
 import { LegalFooter } from '@/components/LegalFooter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { useCheckout } from '@/hooks/useCheckout';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  CheckCircle2, 
+  Check, 
   Zap, 
   Sparkles, 
+  Building2,
   Crown, 
   ArrowLeft,
   Loader2
 } from 'lucide-react';
-import { PLANS, PlanType } from '@/lib/subscriptionPlans';
-import { getCurrencyByCountry, getCurrencySymbol, getTimezoneCountry } from '@/lib/currency';
-import { getDisplayPrice, PaidPlanKey } from '@/lib/pricingDisplay';
+import { Switch } from '@/components/ui/switch';
 
 export default function Pricing() {
-  const { t, isRTL, countryInfo } = useLanguage();
+  const [isYearly, setIsYearly] = useState(false);
+  const { t, isRTL } = useLanguage();
   const { entitlements } = useEntitlements();
-  const { createCheckoutSession } = useCheckout();
   const { user } = useAuth();
-  const [loadingPlan, setLoadingPlan] = useState<PaidPlanKey | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const currentPlan = entitlements.plan_key;
 
-  // Resolve country: countryInfo (from LanguageContext) > timezone guess
-  const tzCountry = getTimezoneCountry();
-  const resolvedCountry = countryInfo?.code || tzCountry;
-  const currency = getCurrencyByCountry(resolvedCountry);
-  const symbol = getCurrencySymbol(currency);
-
-  // Format price based on currency
-  const formatPriceDisplay = (planId: PaidPlanKey): string => {
-    const amount = getDisplayPrice(planId, currency);
-    const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(2).replace('.', ',');
-    
-    if (currency === 'USD' || currency === 'GBP') {
-      return `${symbol}${formatted}`;
-    }
-    return `${formatted}${symbol}`;
-  };
-
-  const handleUpgrade = async (plan: PaidPlanKey) => {
+  const handleCheckout = async (planId: 'starter' | 'plus' | 'pro') => {
+    console.log('Checkout plan', planId);
     if (!user) {
       window.location.href = '/auth';
       return;
     }
 
-    setLoadingPlan(plan);
+    setLoadingPlan(planId);
     try {
-      const { url } = await createCheckoutSession(plan);
-      window.location.href = url;
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      });
+
+      if (!res.ok) {
+        console.error('Stripe checkout error', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error('Stripe checkout exception', err);
     } finally {
       setLoadingPlan(null);
     }
   };
 
-  const getPlanIcon = (planId: PlanType) => {
-    switch (planId) {
-      case 'starter': return <Zap className="h-6 w-6" />;
-      case 'plus': return <Sparkles className="h-6 w-6" />;
-      case 'pro': return <Crown className="h-6 w-6" />;
-      default: return null;
-    }
-  };
-
-  const getPlanColor = (planId: PlanType) => {
-    switch (planId) {
-      case 'starter': return 'text-blue-500 bg-blue-500/10';
-      case 'plus': return 'text-gold bg-gold/10';
-      case 'pro': return 'text-purple-500 bg-purple-500/10';
-      default: return 'text-muted-foreground bg-muted';
-    }
-  };
-
-  const paidPlans: PaidPlanKey[] = ['starter', 'plus', 'pro'];
-
-  const features = [
-    'pricing.features.freeCase',
-    'pricing.features.noCard',
-    'pricing.features.cancelAnytime',
-    'pricing.features.clearPricing',
+  const plans = [
+    {
+      id: 'free',
+      name: t('landingSections.pricing.plans.free.name'),
+      description: t('landingSections.pricing.plans.free.description'),
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      icon: Zap,
+      features: [
+        t('landingSections.pricing.plans.free.features.0'),
+        t('landingSections.pricing.plans.free.features.1'),
+        t('landingSections.pricing.plans.free.features.2'),
+        t('landingSections.pricing.plans.free.features.3'),
+      ],
+      cta: t('landingSections.pricing.plans.free.cta'),
+      ctaLink: '/auth?mode=signup',
+      popular: false,
+      variant: 'outline' as const,
+    },
+    {
+      id: 'starter',
+      name: t('landingSections.pricing.plans.starter.name'),
+      description: t('landingSections.pricing.plans.starter.description'),
+      monthlyPrice: 3.99,
+      yearlyPrice: 39.90,
+      icon: Sparkles,
+      features: [
+        t('landingSections.pricing.plans.starter.features.0'),
+        t('landingSections.pricing.plans.starter.features.1'),
+        t('landingSections.pricing.plans.starter.features.2'),
+        t('landingSections.pricing.plans.starter.features.3'),
+        t('landingSections.pricing.plans.starter.features.4'),
+      ],
+      cta: t('landingSections.pricing.plans.starter.cta'),
+      ctaLink: '/auth?mode=signup&plan=starter',
+      popular: false,
+      variant: 'outline' as const,
+    },
+    {
+      id: 'plus',
+      name: t('landingSections.pricing.plans.plus.name'),
+      description: t('landingSections.pricing.plans.plus.description'),
+      monthlyPrice: 9.99,
+      yearlyPrice: 99.90,
+      icon: Building2,
+      features: [
+        t('landingSections.pricing.plans.plus.features.0'),
+        t('landingSections.pricing.plans.plus.features.1'),
+        t('landingSections.pricing.plans.plus.features.2'),
+        t('landingSections.pricing.plans.plus.features.3'),
+        t('landingSections.pricing.plans.plus.features.4'),
+      ],
+      cta: t('landingSections.pricing.plans.plus.cta'),
+      ctaLink: '/auth?mode=signup&plan=plus',
+      popular: true,
+      variant: 'premium' as const,
+    },
+    {
+      id: 'pro',
+      name: t('landingSections.pricing.plans.pro.name'),
+      description: t('landingSections.pricing.plans.pro.description'),
+      monthlyPrice: 19.99,
+      yearlyPrice: 199.90,
+      icon: Crown,
+      features: [
+        t('landingSections.pricing.plans.pro.features.0'),
+        t('landingSections.pricing.plans.pro.features.1'),
+        t('landingSections.pricing.plans.pro.features.2'),
+        t('landingSections.pricing.plans.pro.features.3'),
+        t('landingSections.pricing.plans.pro.features.4'),
+      ],
+      cta: t('landingSections.pricing.plans.pro.cta'),
+      ctaLink: '/auth?mode=signup&plan=pro',
+      popular: false,
+      variant: 'outline' as const,
+    },
   ];
 
   return (
@@ -112,36 +158,48 @@ export default function Pricing() {
           </p>
         </div>
 
-        {/* Info Bar - Centered checklist above cards */}
-        <div className="mx-auto max-w-3xl mb-10 px-4">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:flex md:flex-wrap md:justify-center md:gap-x-8 md:gap-y-2">
-            {features.map((feature) => (
-              <div key={feature} className="flex items-center gap-2 text-sm text-foreground/80">
-                <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                <span>{t(feature)}</span>
-              </div>
-            ))}
-          </div>
+        {/* Billing Toggle */}
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <span className={`text-sm ${!isYearly ? 'text-navy font-semibold' : 'text-navy/60'}`}>
+            {t('landingSections.pricing.monthly')}
+          </span>
+          <Switch
+            checked={isYearly}
+            onCheckedChange={setIsYearly}
+            className="data-[state=checked]:bg-gold"
+          />
+          <span className={`text-sm ${isYearly ? 'text-navy font-semibold' : 'text-navy/60'}`}>
+            {t('landingSections.pricing.yearly')}
+          </span>
+          {isYearly && (
+            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+              {t('landingSections.pricing.save')}
+            </Badge>
+          )}
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-          {paidPlans.map((planId) => {
-            const planConfig = PLANS[planId];
-            const isCurrentPlan = currentPlan === planId;
-            const isPopular = planConfig.highlighted;
-            const colorClasses = getPlanColor(planId);
-
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          {plans.map((plan) => {
+            const Icon = plan.icon;
+            const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+            const period = isYearly ? t('landingSections.pricing.perYear') : t('landingSections.pricing.perMonth');
+            const isCurrentPlan = currentPlan === plan.id;
+            
             return (
-              <Card 
-                key={planId} 
-                className={`relative overflow-hidden transition-all hover:shadow-lg ${
-                  isPopular ? 'border-gold ring-2 ring-gold/20' : ''
+              <Card
+                key={plan.name}
+                className={`relative flex flex-col ${
+                  plan.popular
+                    ? 'border-2 border-gold shadow-lg shadow-gold/10 scale-105'
+                    : 'border-navy/10'
                 } ${isCurrentPlan ? 'border-primary' : ''}`}
               >
-                {isPopular && (
-                  <div className="absolute top-0 right-0 bg-gold text-navy text-xs font-bold px-3 py-1 rounded-bl-lg">
-                    {t('pricing.popular')}
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-gold text-navy font-semibold px-4">
+                      {t('landingSections.pricing.popular')}
+                    </Badge>
                   </div>
                 )}
                 {isCurrentPlan && (
@@ -150,63 +208,67 @@ export default function Pricing() {
                   </div>
                 )}
                 
-                <CardHeader className="text-center pb-4 pt-8">
-                  <div className={`mb-4 mx-auto flex h-14 w-14 items-center justify-center rounded-full ${colorClasses}`}>
-                    {getPlanIcon(planId)}
+                <CardHeader className="text-center pb-4">
+                  <div className={`h-12 w-12 rounded-full mx-auto mb-3 flex items-center justify-center ${
+                    plan.popular ? 'bg-gold/20' : 'bg-navy/5'
+                  }`}>
+                    <Icon className={`h-6 w-6 ${plan.popular ? 'text-gold' : 'text-navy/70'}`} />
                   </div>
-                  <CardTitle className="text-xl">{planConfig.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-foreground">
-                      {formatPriceDisplay(planId)}
-                    </span>
-                    <span className="text-muted-foreground">/{t('pricing.perMonth')}</span>
-                  </div>
-                  <CardDescription className="mt-2">
-                    {t(`pricing.plans.${planId}.description`)}
-                  </CardDescription>
+                  <CardTitle className="text-xl text-navy">{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
-
-                <CardContent className="space-y-4">
+                
+                <CardContent className="flex-1">
+                  <div className="text-center mb-6">
+                    <span className="text-4xl font-bold text-navy">
+                      {price === 0 ? t('landingSections.pricing.free') : `€${price.toFixed(2).replace('.', ',')}`}
+                    </span>
+                    {price > 0 && (
+                      <span className="text-navy/60 text-sm">{period}</span>
+                    )}
+                  </div>
+                  
                   <ul className="space-y-3">
-                    {planConfig.featureKeys.slice(0, 4).map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span>{t(feature)}</span>
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-navy/80">
+                        <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        {feature}
                       </li>
                     ))}
                   </ul>
-
-                  <Button
-                    className="w-full mt-6"
-                    variant={isPopular ? 'default' : 'outline'}
-                    disabled={isCurrentPlan || loadingPlan === planId}
-                    onClick={() => handleUpgrade(planId)}
-                  >
-                    {loadingPlan === planId ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isCurrentPlan ? (
-                      t('pricing.currentPlan')
-                    ) : (
-                      t('pricing.activate')
-                    )}
-                  </Button>
                 </CardContent>
+                
+                <CardFooter>
+                  {plan.id === 'free' ? (
+                    <Button variant={plan.variant} className="w-full" asChild>
+                      <Link to={plan.ctaLink}>{plan.cta}</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={plan.variant}
+                      className="w-full"
+                      disabled={isCurrentPlan || loadingPlan === plan.id}
+                      onClick={() => handleCheckout(plan.id as 'starter' | 'plus' | 'pro')}
+                    >
+                      {loadingPlan === plan.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isCurrentPlan ? (
+                        t('pricing.currentPlan')
+                      ) : (
+                        plan.cta
+                      )}
+                    </Button>
+                  )}
+                </CardFooter>
               </Card>
             );
           })}
         </div>
 
-        {/* Local Currency Note */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {t('pricing.localCurrencyNote')}
+        {/* Trust note */}
+        <p className="text-center text-sm text-navy/60 mt-8">
+          {t('landingSections.pricing.trustNote')}
         </p>
-
-        {/* Legal Microcopy */}
-        <div className="mt-10 text-center">
-          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-            {t('pricing.legal')}
-          </p>
-        </div>
       </section>
 
       <LegalFooter />

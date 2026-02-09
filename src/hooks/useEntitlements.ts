@@ -12,7 +12,7 @@ const DEFAULT_ENTITLEMENTS: EntitlementsDTO = {
   limits: { 
     practices: 1,
     aiCredits: 100,
-    messages: 10,
+    messages: 15, // Updated to 15 per day for free plan
     casesMax: 1,
   },
   usage: { 
@@ -26,7 +26,7 @@ const DEFAULT_ENTITLEMENTS: EntitlementsDTO = {
   max_cases: 1,
   cases_created: 0,
   can_create_case: true,
-  messages_per_case: 10,
+  messages_per_case: 15, // Updated to 15 per day for free plan
   features: {
     scan_letter: true,
     ai_draft: true,
